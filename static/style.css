@@ -1,0 +1,288 @@
+#dubaiMap { 
+  height: 100vh; /* 100% of the viewport height */
+  width: 100vw; /* 100% of the viewport width */
+  position: fixed; /* Make the map stay in place even when scrolling */
+  top: 0; /* Align the top edge of the map with the viewport */
+  left: 0; /* Align the left edge of the map with the viewport */
+}
+#info-panel {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 20px; /* Distance from the top */
+    left: 20px; /* Positioned on the left side */
+    bottom: 20px; /* Distance from the bottom, ensuring it's almost as tall as the window */
+    background: white;
+    padding: 10px;
+    border: 1px solid #ddd;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    width: 550px; /* Adjust the width as needed */
+    overflow-y: auto; /* Allows scrolling if the content is taller than the panel */
+}
+.area-title {
+  font-size: 2em; /* Makes the font larger */
+  text-align: center; /* Centers the text */
+  text-transform: capitalize; /* Capitalizes the first letter of each word */
+}
+/* Style for the close button inside the panel */
+#info-panel button {
+    position: absolute; /* Position the button absolutely within the panel */
+    top: 5px; /* Position it close to the top */
+    right: 5px; /* Position it close to the right */
+    width: 30px; /* Square shape */
+    height: 30px; /* Square shape */
+    padding: 0; /* Adjust padding as necessary */
+    margin: 0; /* No need for margin */
+    border: none;
+    background: #ccc;
+    cursor: pointer;
+}
+#stats-container {
+  display: flex;
+  gap: 10px; /* Space between cards */
+  overflow-x: auto; /* Enable horizontal scrolling */
+}
+
+/* Styles the scrollbar track */
+::-webkit-scrollbar-track {
+  background-color: #f0f0f0; /* Light grey track */
+  border-radius: 10px; /* Rounded corners for the track */
+}
+
+/* Styles the scrollbar handle */
+::-webkit-scrollbar-thumb {
+  background-color: #bdbdbd; /* Darker grey for the handle */
+  border-radius: 10px; /* Rounded corners for the handle */
+  border: 3px solid #f0f0f0; /* Creates some padding from the track */
+}
+
+/* Styles the scrollbar itself (width and color) */
+::-webkit-scrollbar {
+  width: 6px; /* Width of the scrollbar */
+}
+
+/* Optional: styles the scrollbar button (up and down arrows) */
+::-webkit-scrollbar-button {
+  display: none; /* Usually, it's better to hide these for a modern look */
+}
+
+.info-card {
+  flex: 0 0 auto;
+  background: #f9f9f9; /* Lighter background for a softer look */
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px; /* Rounded corners for a modern look */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 15px; /* Space between cards */
+  transition: all 0.3s ease; /* Smooth transition for hover effects */
+}
+
+.info-card:hover {
+  transform: translateY(-5px); /* Levitate effect on hover */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Deeper shadow on hover */
+}
+
+.info-card .title {
+  font-weight: bold; /* Bold for titles */
+  color: #032c58; /* Blue color for titles for distinction */
+  margin-bottom: 5px; /* Space between title and value */
+}
+
+.info-card .value {
+  color: #333; /* Darker text color for value */
+  font-size: 1.1em; /* Slightly larger font for value */
+}
+
+.scrollable-container {
+  overflow-x: auto; /* Enables horizontal scrolling if table exceeds container width */
+  margin: 0 auto; /* Center align the container if needed */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+}
+
+table {
+  width: auto; /* Ensures the table can expand horizontally */
+  border-collapse: separate;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Subtle shadow for depth */
+  font-family: 'Arial', sans-serif;
+  border-radius: 8px; 
+  overflow: hidden;
+}
+
+th, td {
+  padding: 10px 15px;
+  text-align: left;
+  background-color: #fff;
+  border-bottom: 1px solid #eaeaea; /* Lighter, more subtle border */
+}
+th {
+  background-color: #f5f5f5; /* Slightly different shade for headers */
+  color: #333; /* Darker text for contrast */
+  font-weight: 500; /* Medium font weight */
+}
+/* Assign a minimum width to your columns other than the first one to prevent them from shrinking too much */
+th:not(:first-child), td:not(:first-child) {
+  min-width: 120px; /* Adjust based on your content needs */
+}
+th, td {
+  border: none;
+}
+tr:hover {
+  background-color: #f1f1f1;
+}
+
+th:first-child, td:first-child {
+  padding-left: 25px; /* Increase padding for a more modern feel */
+}
+
+
+th:last-child, td:last-child {
+  padding-right: 25px; /* Symmetrical padding for aesthetic balance */
+}
+
+tbody td {
+  font-size: 0.75em;
+}
+
+.expand-arrow, .collapsible {
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
+}
+
+.indent-1 {
+  padding-left: 20px;
+}
+
+.indent-2 {
+  padding-left: 40px;
+}
+
+.floating-btn {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  z-index: 1000;
+  background-color: #ffffff49;
+  color: rgb(12, 12, 12);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.floating-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(255, 255, 255, 0.288);
+  padding: 5px; /* Reduced padding */
+  font-size: 26px;
+  cursor: pointer;
+  border-radius: 100%; /* Ensure the button is always a circle */
+  width: 40px; /* Specify a fixed width */
+  height: 40px; /* Specify a fixed height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #cccccc00; /* Explicitly define a border */
+}
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1050;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6); /* Darker overlay for more focus on modal */
+}
+
+.modal-content {
+  background-color: #ffffff;
+  margin: 5% auto;
+  padding: 20px;
+  border: none; /* Removed the border */
+  width: 50%; /* Ideal for desktop, consider responsive units for mobile */
+  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2); /* More pronounced shadow */
+  border-radius: 20px; /* Rounded corners for a softer look */
+  z-index: 1051;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
+}
+
+.close-button {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+  color: #222222;
+  cursor: pointer;
+}
+
+.settings-section h3 {
+  color: #333; /* Darker, more legible text color */
+  margin-bottom: 15px;
+}
+
+.form-check {
+  display: flex;
+  align-items: center; /* Aligns checkbox and label */
+  margin-bottom: 15px;
+}
+
+.form-check-input {
+  accent-color: #007bff; /* Modern checkbox color */
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.form-check-label {
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+
+
+.hierarchy-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.hierarchy-list li {
+  position: relative;
+  padding-left: 20px;
+}
+
+.hierarchy-list li:not(:first-child) {
+  margin-top: 10px;
+}
+
+/* Incremental indents for each level */
+.hierarchy-list li:nth-child(2) { padding-left: 40px; }
+.hierarchy-list li:nth-child(3) { padding-left: 60px; }
+.hierarchy-list li:nth-child(4) { padding-left: 80px; }
+
+.save-btn {
+  display: block; /* Full width */
+  width: 100%;
+  padding: 12px 0;
+  background-color: #28a745; /* Vibrant green */
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px; /* Larger font */
+  margin-top: 30px; /* More space above the button */
+}
+
+.save-btn:hover {
+  background-color: #218838; /* Darker on hover */
+}

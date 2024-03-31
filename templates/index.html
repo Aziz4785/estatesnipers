@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dubai Areas Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="../static/style.css" />
+</head>
+<body>
+    <div id="dubaiMap"></div>
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h2>Settings</h2>
+            <div class="settings-section">
+                <h3>Color Mapping</h3>
+                <form id="colorMapping">
+                    <div class="form-check">
+                        <input type="radio" id="avgMeterPrice" name="colorMapping" value="fillColorPrice" class="form-check-input">
+                        <label for="avgMeterPrice" class="form-check-label">By average meter price</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" id="capitalAppreciation" name="colorMapping" value="fillColorCA5" class="form-check-input">
+                        <label for="capitalAppreciation" class="form-check-label">By capital appreciation</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" id="roi" name="colorMapping" value="fillColorRoi" class="form-check-input">
+                        <label for="roi" class="form-check-label">By ROI</label>
+                    </div>
+                </form>
+            </div>
+            <div class="settings-section">
+                <h3>Default Hierarchy</h3>
+                <p>Drag and drop to rearrange the hierarchy:</p>
+                <ul id="hierarchyList" class="hierarchy-list">
+                    <li draggable="true" data-id = "2"><span class="drag-handle">⠿</span>Project</li>
+                    <li draggable="true" data-id = "1"><span class="drag-handle">⠿</span>Type (flat, villa ,shop ...)</li>
+                    <li draggable="true" data-id = "3"><span class="drag-handle">⠿</span>Usage (residential, commercial ...)</li>
+                    <li draggable="true" data-id = "4"><span class="drag-handle">⠿</span>Sub Type (number of rooms, shop type, ..)</li>
+                </ul>
+            </div>
+            <button id="saveSettings" class="save-btn">Save</button>
+        </div>
+    </div>
+    
+    <button id="settingsBtn" class="floating-btn">⚙️</button>
+    <div id="info-panel" style="display:none; position: fixed; top: 20px; right: 20px; background: white; padding: 10px; border: 1px solid #ddd; z-index: 1000;">
+        <!-- Area name will be inserted here -->
+        <button id="close-panel">X</button>
+        <div id="panel-content">
+            <div id = "area_info"></div>
+            <div class="scrollable-container">
+            <table id="nestedTable" border="1">
+                <thead>
+                    <tr>
+                        <th>...</th>
+                        <th>Capital Appr. 5Y %</th>
+                        <th>Capital Appr. 10Y %</th>
+                        <th>ROI %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be inserted here using JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="../static/app.js"></script>
+    <script src="../static/settings.js"></script>
+</body>
+</html>
