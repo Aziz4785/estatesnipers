@@ -14,15 +14,15 @@ def get_color(price, min_price, max_price):
     # Normalize price to a 0-1 scale
     normalized_price = (price - min_price) / (max_price - min_price)
     
-    if normalized_price < 0.2:
+    if normalized_price < 0.4:
         # Gradient from (0, 0, 255) to (185, 185, 255)
-        a= (0-185)/(0-0.2)
+        a= (0-185)/(0-0.4)
         red = green = int(a*normalized_price)
         blue = 255
     else:
         # Gradient from (255, 185, 185) to (255, 0, 0)
-        a= (185-0)/(0.2-1)
-        blue = green = int(a*normalized_price +(185 - a*0.2))
+        a= (185-0)/(0.4-1)
+        blue = green = int(a*normalized_price +(185 - a*0.4))
         red = 255
     
     # Construct the color string
