@@ -90,7 +90,7 @@ document.getElementById("saveSettings").onclick = function() {
     applyGeoJSONLayer(); // Reapply the GeoJSON layer with the new fill color
 
     
-    const listOrder = getListOrder(); // Assuming getListOrder() is the function we discussed earlier
+    const listOrder = getListOrder();
     document.getElementById("settingsModal").style.display = "none";
     fetch('http://localhost:5000/save-list-order', {
         method: 'POST',

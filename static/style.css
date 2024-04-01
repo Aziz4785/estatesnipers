@@ -18,24 +18,29 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     width: 550px; /* Adjust the width as needed */
     overflow-y: auto; /* Allows scrolling if the content is taller than the panel */
+    border-radius: 15px; 
 }
 .area-title {
+  color: #032c58;
   font-size: 2em; /* Makes the font larger */
   text-align: center; /* Centers the text */
   text-transform: capitalize; /* Capitalizes the first letter of each word */
 }
 /* Style for the close button inside the panel */
 #info-panel button {
-    position: absolute; /* Position the button absolutely within the panel */
-    top: 5px; /* Position it close to the top */
-    right: 5px; /* Position it close to the right */
-    width: 30px; /* Square shape */
-    height: 30px; /* Square shape */
-    padding: 0; /* Adjust padding as necessary */
-    margin: 0; /* No need for margin */
-    border: none;
-    background: #ccc;
-    cursor: pointer;
+  position: absolute; /* Position the button absolutely within the panel */
+  top: 5px; /* Position it close to the top */
+  right: 5px; /* Position it close to the right */
+  line-height: 30px; /* Center the 'X' vertically */
+  text-align: center; /* Center the 'X' horizontally */
+  padding: 0; /* Adjust padding as necessary */
+  margin: 0; /* No need for margin */
+  border: none;
+  background: transparent; /* Changed to a transparent background */
+  color: #aaaaaa; 
+  font-size: 28px; /* Larger to easily recognize */
+  font-weight: bold; /* Make the 'X' bold */
+  border-radius: 15px; /* Rounded corners for consistency */
 }
 #stats-container {
   display: flex;
@@ -274,7 +279,7 @@ tbody td {
   display: block; /* Full width */
   width: 100%;
   padding: 12px 0;
-  background-color: #28a745; /* Vibrant green */
+  background-color: #032c58; /* Vibrant green */
   color: white;
   border: none;
   border-radius: 10px;

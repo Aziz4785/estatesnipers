@@ -6,18 +6,21 @@ var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Duba
     maxZoom: 19,
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);*/
-/*L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors, © CARTO',
-    maxZoom: 19
-}).addTo(map);*/
-
-L.tileLayer('https://cartocdn_{s}.global.ssl.fastly.net/base-midnight/{z}/{x}/{y}.png', {
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     attribution: '© OpenStreetMap contributors, © CARTO',
     maxZoom: 19
 }).addTo(map);
 
+/*L.tileLayer('https://cartocdn_{s}.global.ssl.fastly.net/base-midnight/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors, © CARTO',
+    maxZoom: 19
+}).addTo(map);*/
+
+
+
 document.addEventListener('DOMContentLoaded', function () {
-    
+    // Set the default checked radio button
+    document.getElementById('avgMeterPrice').checked = true;
     const ele = document.querySelector('.scrollable-container');
     let pos = { top: 0, left: 0, x: 0, y: 0 };
 
@@ -237,7 +240,7 @@ function areaStyle(feature, fillColorProperty) {
         weight: 0,
         opacity: 1,
         color: 'white',
-        fillOpacity: 0.3
+        fillOpacity: 0.7
     }; 
 }
 

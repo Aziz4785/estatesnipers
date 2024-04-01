@@ -3,6 +3,7 @@ from flask_cors import CORS
 import pymysql
 import mysql.connector
 import json
+from flask import session
 import time
 import datetime
 import math
@@ -17,7 +18,7 @@ pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
 CORS(app)
-
+app.secret_key = 'some_secret_key'
 db_config = {
     'host': 'localhost',
     'user': 'root',
@@ -38,6 +39,7 @@ list_order_in_memory = []
 
 @app.route('/get-area-details')
 def get_area_details():
+    hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
     area_id = request.args.get('area_id')
     connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
     engine = create_engine(connection_url)
@@ -59,20 +61,13 @@ def get_area_details():
         t.property_sub_type_id = pst.property_sub_type_id
     WHERE area_id = {area_id} AND instance_year IN (2023, 2018, 2013);
     """
-    hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
 
     start_time = time.time()
     df = pd.read_sql_query(sql_query, engine)
     print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
 
     nested_dicts = {}
-    # Define groupings
-    groupings = [
-        ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'],
-        ['grouped_project','property_sub_type_en', 'property_usage_en'],
-        ['grouped_project','property_sub_type_en'],
-        ['grouped_project']
-    ]
+    groupings = create_groupings(hierarchy_keys)
     list_of_dicts = []
     for group_index,group in enumerate(groupings):
         grouping_start_time = time.time()
@@ -137,8 +132,7 @@ def save_list_order():
     global list_order_in_memory  # Reference the global variable
     data = request.json
     list_order_in_memory = data.get('listOrder', [])
-    
-    print(list_order_in_memory)
+    session['hierarchy_keys'] = map_text_to_field(list_order_in_memory)
 
     return jsonify({'message': 'List order saved successfully!'})
 

@@ -14,15 +14,15 @@ def get_color(price, min_price, max_price):
     # Normalize price to a 0-1 scale
     normalized_price = (price - min_price) / (max_price - min_price)
     
-    if normalized_price < 0.4:
+    if normalized_price < 0.3:
         # Gradient from (0, 0, 255) to (185, 185, 255)
-        a= (0-185)/(0-0.4)
+        a= (0-185)/(0-0.3)
         red = green = int(a*normalized_price)
         blue = 255
     else:
         # Gradient from (255, 185, 185) to (255, 0, 0)
-        a= (185-0)/(0.4-1)
-        blue = green = int(a*normalized_price +(185 - a*0.4))
+        a= (185-0)/(0.3-1)
+        blue = green = int(a*normalized_price +(185 - a*0.3))
         red = 255
     
     # Construct the color string
@@ -131,3 +131,30 @@ def conditional_avg(df, group,year, threshold=5):
     result = filtered_df.groupby(group, dropna=False)['meter_sale_price'].agg(lambda x: x.mean() if len(x) > threshold else np.nan)
     
     return result
+
+def map_text_to_field(input_list):
+    #transform the hierarchy defined by the user in settings to a list
+    mapping = {
+        "2": "grouped_project",
+        "1": "property_sub_type_en",
+        "3": "property_usage_en",
+        "4": "rooms_en"
+    }
+    
+    # Sorting the input list based on the 'order' key
+    sorted_input = sorted(input_list, key=lambda x: x['order'])
+    
+    # Mapping the 'text' in each item to its corresponding field using the 'mapping' dictionary
+    output_list = [mapping[item['text']] for item in sorted_input]
+    
+    return output_list
+
+def create_groupings(input_list):
+    groupings = []
+    
+    # Iterate over the input list, reducing its length by one with each iteration
+    for i in range(len(input_list), 0, -1):
+        # Append a slice of the input list from the beginning up to the current iteration index
+        groupings.append(input_list[:i])
+    
+    return groupings
