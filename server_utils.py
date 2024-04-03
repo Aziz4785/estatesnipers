@@ -3,14 +3,17 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 
-def get_min_max(valid_prices):
+def get_min_median_max(valid_prices):
     if valid_prices:
-        min_price, max_price = min(valid_prices), max(valid_prices)
+        valid_prices_np = np.array(valid_prices)
+        min_price = np.min(valid_prices_np)
+        max_price = np.max(valid_prices_np)
+        median = np.median(valid_prices_np)
+        return min_price,median,max_price 
     else:
-        min_price, max_price = None, None 
-    return min_price,max_price
+        return None, None, None
 
-def get_color(price, min_price, max_price):
+def get_color_old(price, min_price, max_price):
     # Normalize price to a 0-1 scale
     normalized_price = (price - min_price) / (max_price - min_price)
     
@@ -24,6 +27,32 @@ def get_color(price, min_price, max_price):
         a= (185-0)/(0.3-1)
         blue = green = int(a*normalized_price +(185 - a*0.3))
         red = 255
+    
+    # Construct the color string
+    color_string = f"rgb({red}, {green}, {blue})"
+    return color_string
+
+def get_color(price, min_price,med_price, max_price):
+    # Normalize price to a 0-1 scale
+    normalized_price = (price - min_price) / (max_price - min_price)
+    normalized_med = (med_price - min_price) / (max_price - min_price)
+    
+    if normalized_price < normalized_med/2.0:
+        red = 0
+        blue = 192
+        green = 0 
+    elif normalized_price < normalized_med:
+        red = 82
+        blue = 223
+        green = 82
+    elif normalized_price < normalized_med+(1.0-normalized_med)/2.0:
+        red = 223
+        blue = 82
+        green = 82
+    else:
+        red = 192
+        blue = 0 
+        green = 0
     
     # Construct the color string
     color_string = f"rgb({red}, {green}, {blue})"

@@ -126,6 +126,26 @@ def get_area_details():
     else:
         return jsonify({'message': 'No data found'}), 404
     
+
+@app.route('/get-lands-stats')
+def get_lands_stats():
+    area_id = request.args.get('area_id')
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    
+    # Use a parameterized query to safely include user input
+    query = """
+    SELECT land_type_en, COUNT(*) AS count
+    FROM lands
+    WHERE area_id = %s
+    GROUP BY land_type_en;
+    """
+    cursor.execute(query, (area_id,))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    fetched_rows_json = jsonify(fetched_rows)
+    return fetched_rows_json
 @app.route('/save-list-order', methods=['POST'])
 def save_list_order():
     # todo
@@ -145,13 +165,17 @@ def get_list_order():
 def dubai_areas():
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi FROM areas')
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, Supply_Finished_Pro, Supply_OffPlan_Pro, Supply_Lands FROM areas')
     fetched_rows = cursor.fetchall()  # Fetch all rows once
 
     price_data = {}
     capAp_5Y_data = {}
     capAp_10Y_data = {}
     avg_roi_data = {}
+    Supply_Finished_Pro_data = {}
+    Supply_OffPlan_Pro_data = {}
+    Supply_lands_data ={}
+
     for row in fetched_rows:
         if row['average_sale_price'] is not None:
             price_data[row['area_id']] = float(row['average_sale_price'])
@@ -161,13 +185,19 @@ def dubai_areas():
             capAp_10Y_data[row['area_id']] = row['avg_ca_10']
         if row['avg_roi'] is not None:
             avg_roi_data[row['area_id']] = float(row['avg_roi'])
+        if row['Supply_Finished_Pro'] is not None:
+            Supply_Finished_Pro_data[row['area_id']] = int(row['Supply_Finished_Pro'])
+        if row['Supply_OffPlan_Pro'] is not None:
+            Supply_OffPlan_Pro_data[row['area_id']] = int(row['Supply_OffPlan_Pro'])
+        if row['Supply_Lands'] is not None:
+            Supply_lands_data[row['area_id']] = int(row['Supply_Lands'])
 
     valid_prices = [price for price in price_data.values() if price is not None]
     valid_CA = [ca for ca in capAp_5Y_data.values() if ca is not None]
     valid_roi = [ro for ro in avg_roi_data.values() if ro is not None]
-    min_price, max_price = get_min_max(valid_prices)
-    min_ca, max_ca = get_min_max(valid_CA)
-    min_roi, max_roi = get_min_max(valid_roi)
+    min_price, med_price, max_price = get_min_median_max(valid_prices)
+    min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
+    min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
 
     # Load the GeoJSON file
     with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
@@ -178,7 +208,7 @@ def dubai_areas():
         area_id = int(feature['area_id'])
         if area_id in price_data:
             price = price_data[area_id]
-            feature['fillColorPrice'] = get_color(price, min_price, max_price)
+            feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
         else:
             # Default color if no price data is available
             feature['fillColorPrice'] = 'rgb(95,95,95)'  #  grey
@@ -186,7 +216,7 @@ def dubai_areas():
         if area_id in capAp_5Y_data:
             ca = capAp_5Y_data[area_id]
             feature["avgCA_5Y"] = capAp_5Y_data[area_id]
-            feature['fillColorCA5'] = get_color(ca, min_ca, max_ca)
+            feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
         else:
             feature["avgCA_5Y"] = None
             feature['fillColorCA5'] = 'rgb(95,95,95)'  #  grey
@@ -199,11 +229,25 @@ def dubai_areas():
         if area_id in avg_roi_data:
             roi = avg_roi_data[area_id]
             feature["avg_roi"] = avg_roi_data[area_id]
-            feature['fillColorRoi'] = get_color(roi, min_roi, max_roi)
+            feature['fillColorRoi'] = get_color(roi, min_roi,med_roi, max_roi)
         else:
             feature["avg_roi"] = None
             feature['fillColorRoi'] = 'rgb(95,95,95)'
+        
+        if area_id in Supply_Finished_Pro_data:
+            feature["Supply_Finished_Pro"] = Supply_Finished_Pro_data[area_id]
+        else:
+            feature["Supply_Finished_Pro"] = None
+        
+        if area_id in Supply_OffPlan_Pro_data:
+            feature["Supply_OffPlan_Pro"] = Supply_OffPlan_Pro_data[area_id]
+        else:
+            feature["Supply_OffPlan_Pro"] = None
 
+        if area_id in Supply_lands_data:
+            feature["Supply_lands"] = Supply_lands_data[area_id]
+        else:
+            feature["Supply_lands"] = None
     cursor.close()
     connection.close()
     return jsonify(geojson)

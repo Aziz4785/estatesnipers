@@ -169,7 +169,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 }
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
-                row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
+                row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
             }
             else if(value.hasOwnProperty('means'))
             {
@@ -280,9 +280,12 @@ function onEachFeature(feature, layer) {
 
             const areaId = feature.properties.area_id; // Get areaId from feature
             const areaName = feature.properties.name;
-            const avgCA_5Y = (feature.properties.avgCA_5Y * 100).toFixed(2);
+            const avgCA_5Y = !isNaN(feature.properties.avgCA_5Y) ?(feature.properties.avgCA_5Y * 100).toFixed(2) : "-";
             const avgCA_10Y = (feature.properties.avgCA_10Y * 100).toFixed(2);
-            const avgROI = (feature.properties.avg_roi* 100).toFixed(2);
+            const avgROI = !isNaN(feature.properties.avg_roi) ?(feature.properties.avg_roi* 100).toFixed(2) : "-";
+            const supply_Finished_Pro = feature.properties.Supply_Finished_Pro;
+            const supply_OffPlan_Pro = feature.properties.Supply_OffPlan_Pro;
+            const supply_Lands = feature.properties.Supply_lands;
             // Set the initial content of the panel to show the area name and a loading message
             const panelContent = document.getElementById('panel-content');
             const areaInfo = document.getElementById('area_info');
@@ -309,6 +312,24 @@ function onEachFeature(feature, layer) {
 <div class="info-card">
   <div class="title">Avg. ROI:</div>
   <div class="value">${avgROI}</div>
+</div>
+<div class="info-card supply-projects">
+  <div class="title">Supply of Projects:</div>
+  <div class="supply-details">
+    <div class="supply-column">
+      <div class="sub-title">Finished</div>
+      <div class="value">${supply_Finished_Pro}</div>
+    </div>
+    <div class="supply-column">
+      <div class="sub-title">Off Plan</div>
+      <div class="value">${supply_OffPlan_Pro}</div>
+    </div>
+  </div>
+</div>
+<div class="info-card">
+  <div class="title">Supply of Lands:</div>
+  <div class="value">${supply_Lands}</div>
+  <button class="stats-button"><i class="fas fa-chart-pie"></i></button>
 </div>
             `;
 
@@ -339,9 +360,6 @@ function onEachFeature(feature, layer) {
                 return response.json(); // Proceed with processing the response as JSON
               })
             .then(data => {
-                console.log("json received")
-                console.log("raw data :")
-                console.log(data)
                 const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
                 tableBody.innerHTML = ''; // Clear existing rows
                 processDictionary(data); // Process and display the fetched data
@@ -349,10 +367,92 @@ function onEachFeature(feature, layer) {
             .catch(error => {
                 console.log('Error fetching area details:', error);
             });
+
+
+            const statsButtons = statsContainer.querySelectorAll('.stats-button');
+            statsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    fetch(`http://localhost:5000/get-lands-stats?area_id=${areaId}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            renderLandStatsChart(data); 
+                        })
+                        .catch(error => {
+                            console.log('Error fetching land stats:', error);
+                        });
+                });
+            });
+
         }
     });
 }
 
+// Declare a variable outside of the function to hold the chart instance
+let landStatsChartInstance = null;
+function renderLandStatsChart(data) {
+    const ctx = document.getElementById('landStatsChart').getContext('2d');
+
+    // If there's an existing chart instance, destroy it
+    if (landStatsChartInstance) {
+        landStatsChartInstance.destroy();
+    }
+
+    // Prepare the data for the pie chart
+    const labels = data.map(item => item.land_type_en || 'Unknown');
+    const counts = data.map(item => item.count);
+
+    // Instantiate the pie chart
+     landStatsChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'number of lands',
+                data: counts,
+                backgroundColor: [
+                    'rgba(255, 99, 132)',
+                    'rgba(54, 162, 235)',
+                    'rgba(255, 206, 86)',
+                    'rgba(46, 135, 43)',
+                    'rgba(246, 15, 238)',
+                    // Add more colors if needed
+                ],
+                borderColor: [
+                    'rgba(0, 0, 0)',
+                    // Add more border colors if needed
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: true,
+                    text: 'Land Type Distribution'
+                }
+            }
+        },
+    });
+
+    // Show the modal
+    const chartModal = document.getElementById('chartModal');
+    chartModal.style.display = 'block';
+
+    // Close the modal when the close button is clicked
+    const closeButton = document.querySelector('.close');
+    closeButton.onclick = function() {
+        chartModal.style.display = 'none';
+    }
+}
 // On document ready or when initializing your app
 applyGeoJSONLayer();
 

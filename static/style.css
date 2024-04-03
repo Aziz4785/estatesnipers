@@ -13,9 +13,8 @@
     bottom: 20px; /* Distance from the bottom, ensuring it's almost as tall as the window */
     background: white;
     padding: 10px;
-    border: 1px solid #ddd;
     z-index: 1000;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     width: 550px; /* Adjust the width as needed */
     overflow-y: auto; /* Allows scrolling if the content is taller than the panel */
     border-radius: 15px; 
@@ -27,20 +26,14 @@
   text-transform: capitalize; /* Capitalizes the first letter of each word */
 }
 /* Style for the close button inside the panel */
-#info-panel button {
+#close-panel {
   position: absolute; /* Position the button absolutely within the panel */
   top: 5px; /* Position it close to the top */
   right: 5px; /* Position it close to the right */
-  line-height: 30px; /* Center the 'X' vertically */
-  text-align: center; /* Center the 'X' horizontally */
-  padding: 0; /* Adjust padding as necessary */
-  margin: 0; /* No need for margin */
-  border: none;
-  background: transparent; /* Changed to a transparent background */
-  color: #aaaaaa; 
-  font-size: 28px; /* Larger to easily recognize */
-  font-weight: bold; /* Make the 'X' bold */
-  border-radius: 15px; /* Rounded corners for consistency */
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
 }
 #stats-container {
   display: flex;
@@ -72,30 +65,79 @@
 }
 
 .info-card {
+  display: flex; /* Use flexbox layout */
+  flex-direction: column; /* Stack children vertically */
+  justify-content: center; /* Center children vertically */
+  align-items: center; /* Center children horizontally */
   flex: 0 0 auto;
-  background: #f9f9f9; /* Lighter background for a softer look */
+  background: #f9f9f9;
   padding: 20px;
   border: 1px solid #ccc;
-  border-radius: 8px; /* Rounded corners for a modern look */
+  border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 15px; /* Space between cards */
-  transition: all 0.3s ease; /* Smooth transition for hover effects */
+  margin-bottom: 15px;
+  transition: all 0.3s ease;
+  text-align: center; /* Ensures text within children is centered, though flexbox alignment takes precedence for positioning */
 }
 
 .info-card:hover {
-  transform: translateY(-5px); /* Levitate effect on hover */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15); /* Deeper shadow on hover */
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.info-card .title {
-  font-weight: bold; /* Bold for titles */
-  color: #032c58; /* Blue color for titles for distinction */
-  margin-bottom: 5px; /* Space between title and value */
+.info-card .title, .info-card.supply-projects .title {
+  font-weight: bold;
+  color: #032c58;
+  margin-bottom: 5px;
+  text-align: center; /* Centers the title */
 }
 
 .info-card .value {
-  color: #333; /* Darker text color for value */
-  font-size: 1.1em; /* Slightly larger font for value */
+  color: #333;
+  font-size: 1.1em;
+  text-align: center; /* Centers the value */
+}
+
+.info-card.supply-projects .supply-details {
+  display: flex;
+  justify-content: space-between;
+}
+
+.info-card .supply-column {
+  flex: 1;
+  padding: 6px;
+  text-align: center; /* Center-align content within the column */
+}
+
+.info-card .supply-column:not(:last-child) {
+  border-right: 2px solid #c5c4c4; /* Subtle separator line */
+}
+
+.info-card .sub-title {
+  font-weight: bold;
+  color: #032c58;
+  margin-bottom: 5px;
+}
+
+.info-card .stats-button {
+  background-color: transparent; /* Transparent background */
+  border: none; /* Remove border */
+  cursor: pointer; /* Indicate it's clickable */
+  padding: 10px; /* Padding around the icon */
+  border-radius: 50%; /* Circular shape */
+  display: inline-flex; /* Center the icon inside the button */
+  align-items: center; /* Align icon vertically */
+  justify-content: center; /* Align icon horizontally */
+  transition: background-color 0.3s ease; /* Smooth transition for hover effect */
+}
+
+.info-card .stats-button:hover {
+  background-color: #f0f0f0; /* Light background on hover for feedback */
+}
+
+.info-card .stats-button i {
+  color: #68696b; /* Color of the icon */
+  font-size: 24px; /* Size of the icon */
 }
 
 .scrollable-container {
@@ -290,4 +332,57 @@ tbody td {
 
 .save-btn:hover {
   background-color: #218838; /* Darker on hover */
+}
+
+
+.modal_chart {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1050;
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Style for the modal content - make it smaller and centered */
+.modal-content_chart {
+  position: relative;
+  background-color: #fefefe;
+  margin: 20% auto; /* Increased margin from the top for better centering */
+  padding: 15px; /* Reduced padding */
+  border: 1px solid #888;
+  width: 40%; /* Smaller width */
+  border-radius: 20px;
+  max-width: 400px; /* Reduced max width */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+}
+
+/* The Close Button (x) */
+.close {
+  color: #aaa;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 10px 20px;
+  font-size: 30px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Style for the canvas to ensure it fits well within the modal content area */
+#landStatsChart {
+  width: 100%; /* Responsive width */
+  max-width: 100%; /* Ensure it doesn't overflow */
+  height: auto; /* Maintain aspect ratio */
 }
