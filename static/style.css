@@ -140,6 +140,35 @@
   font-size: 24px; /* Size of the icon */
 }
 
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+/* Style the buttons inside the tab */
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+  font-size: 17px;
+}
+
+/* Change background color of buttons on hover */
+.tab button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tab button.active {
+  background-color: #ccc;
+}
+
+
 .scrollable-container {
   overflow-x: auto; /* Enables horizontal scrolling if table exceeds container width */
   margin: 0 auto; /* Center align the container if needed */
@@ -355,7 +384,7 @@ tbody td {
   margin: 20% auto; /* Increased margin from the top for better centering */
   padding: 15px; /* Reduced padding */
   border: 1px solid #888;
-  width: 40%; /* Smaller width */
+  width: 80%; 
   border-radius: 20px;
   max-width: 400px; /* Reduced max width */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -385,4 +414,7 @@ tbody td {
   width: 100%; /* Responsive width */
   max-width: 100%; /* Ensure it doesn't overflow */
   height: auto; /* Maintain aspect ratio */
+}
+.clickable-chart {
+  cursor: pointer; /* Changes cursor to pointer on hover */
 }

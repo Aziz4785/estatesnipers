@@ -26,7 +26,11 @@
                     </div>
                     <div class="form-check">
                         <input type="radio" id="roi" name="colorMapping" value="fillColorRoi" class="form-check-input">
-                        <label for="roi" class="form-check-label">By ROI</label>
+                        <label for="roi" class="form-check-label">By Gross Rental ROI</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" id="acqDemand" name="colorMapping" value="fillColorAquDemand" class="form-check-input">
+                        <label for="acqDemand" class="form-check-label">By Acquisition Demand</label>
                     </div>
                 </form>
             </div>
@@ -49,31 +53,44 @@
             <canvas id="landStatsChart"></canvas>
         </div>
     </div>
+
     <button id="settingsBtn" class="floating-btn">⚙️</button>
     <div id="info-panel" style="display:none; position: fixed; top: 20px; right: 20px; background: white; padding: 10px; z-index: 1000;">
         <!-- Area name will be inserted here -->
         <button id="close-panel">x</button>
         <div id="panel-content">
             <div id = "area_info"></div>
-            <div class="scrollable-container">
-            <table id="nestedTable">
-                <thead>
-                    <tr>
-                        <th>...</th>
-                        <th>Capital Appr. 5Y %</th>
-                        <th>Capital Appr. 10Y %</th>
-                        <th>ROI %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Rows will be inserted here using JavaScript -->
-                </tbody>
-            </table>
-        </div>
+            <div class="tab">
+                <button class="tablinks" onclick="openTab(event, 'Details')">Details</button>
+                <button class="tablinks" onclick="openTab(event, 'ProjectsDemand')">Projects Demand</button>
+            </div>
+            <!-- Tab content -->
+            <div id="Details" class="tabcontent">
+                <div class="scrollable-container">
+                    <table id="nestedTable">
+                        <thead>
+                            <tr>
+                                <th>...</th>
+                                <th>Capital Appr. 5Y %</th>
+                                <th>Capital Appr. 10Y %</th>
+                                <th>Gross Rental ROI %</th>
+                                <th>Meter Sale Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be inserted here using JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="ProjectsDemand" class="tabcontent">
+            </div>
         </div>
     </div>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../static/functions.js"></script>
     <script src="../static/app.js"></script>
     <script src="../static/settings.js"></script>
 </body>

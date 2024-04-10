@@ -59,7 +59,7 @@ def get_area_details():
         propertysubtype pst 
     ON 
         t.property_sub_type_id = pst.property_sub_type_id
-    WHERE area_id = {area_id} AND instance_year IN (2023, 2018, 2013);
+    WHERE area_id = {area_id} AND instance_year >=2013;
     """
 
     start_time = time.time()
@@ -68,51 +68,50 @@ def get_area_details():
 
     nested_dicts = {}
     groupings = create_groupings(hierarchy_keys)
-    list_of_dicts = []
+    
+    # Initialize an empty list to store the final data
+    final_data = []
+
     for group_index,group in enumerate(groupings):
         grouping_start_time = time.time()
-        
+        print("grouping by : "+str(group))
+
         # # Apply the custom aggregation function for each year of interest
         avg_meter_price_2013 = conditional_avg(df,group ,2013).rename('AVG_meter_price_2013')
+        avg_meter_price_2014 = conditional_avg(df,group ,2014).rename('AVG_meter_price_2014')
+        avg_meter_price_2015 = conditional_avg(df,group ,2015).rename('AVG_meter_price_2015')
+        avg_meter_price_2016 = conditional_avg(df,group ,2016).rename('AVG_meter_price_2016')
+        avg_meter_price_2017 = conditional_avg(df,group ,2017).rename('AVG_meter_price_2017')
         avg_meter_price_2018 = conditional_avg(df,group ,2018).rename('AVG_meter_price_2018')
+        avg_meter_price_2019 = conditional_avg(df,group ,2019).rename('AVG_meter_price_2019')
+        avg_meter_price_2020 = conditional_avg(df,group ,2020).rename('AVG_meter_price_2020')
+        avg_meter_price_2021 = conditional_avg(df,group ,2021).rename('AVG_meter_price_2021')
+        avg_meter_price_2022 = conditional_avg(df,group ,2022).rename('AVG_meter_price_2022')
         avg_meter_price_2023 = conditional_avg(df, group,2023).rename('AVG_meter_price_2023')
         # For avg_roi, we can apply a simpler aggregation since it only pertains to 2023 without the custom logic
         avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
 
-        final_df = pd.concat([avg_meter_price_2013, avg_meter_price_2018, avg_meter_price_2023, avg_roi], axis=1).reset_index()
-#         final_df = df.groupby(group, dropna=False).agg(
-#             AVG_meter_price_2013=pd.NamedAgg(column='meter_sale_price', aggfunc=lambda x: np.mean(x[(df['instance_year'] == 2013) & (x.notnull())]) if x[(df['instance_year'] == 2013) & (x.notnull())].count() > 5 else np.nan),
-#             AVG_meter_price_2018=pd.NamedAgg(column='meter_sale_price', aggfunc=lambda x: np.mean(x[(df['instance_year'] == 2018) & (x.notnull())]) if x[(df['instance_year'] == 2018) & (x.notnull())].count() > 5 else np.nan),
-#             AVG_meter_price_2023=pd.NamedAgg(column='meter_sale_price', aggfunc=lambda x: np.mean(x[(df['instance_year'] == 2023) & (x.notnull())]) if x[(df['instance_year'] == 2023) & (x.notnull())].count() > 5 else np.nan),
-#             avg_roi=pd.NamedAgg(column='roi', aggfunc=lambda x: np.mean(x[(df['instance_year'] == 2023) & (x.notnull())]))
-# ).reset_index()
+        final_df = pd.concat([avg_meter_price_2013,avg_meter_price_2014,avg_meter_price_2015,avg_meter_price_2016, avg_meter_price_2017,avg_meter_price_2018,avg_meter_price_2019, avg_meter_price_2020,avg_meter_price_2021,avg_meter_price_2022,avg_meter_price_2023, avg_roi], axis=1).reset_index()
+
+        final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in ['AVG_meter_price_2013','AVG_meter_price_2014','AVG_meter_price_2015','AVG_meter_price_2016', 'AVG_meter_price_2017','AVG_meter_price_2018','AVG_meter_price_2019', 'AVG_meter_price_2020','AVG_meter_price_2021','AVG_meter_price_2022','AVG_meter_price_2023']], axis=1)
+
         print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
         #avergae capital apperication calculation for that group:
+
         final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
         final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
 
         # Identify all columns starting with 'avg'
 
-        avg_cap_appreciation_columns = [col for col in final_df.columns if col.startswith('avg')]
+        columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
         # Combine the columns : columns of the group + avg_cap_appreciation_columns
-        combined_columns = group + list(set(avg_cap_appreciation_columns) - set(group))
+        combined_columns = group + list(set(columns_containing_means) - set(group))
         # Reorder and filter the DataFrame according to the combined list of columns
         final_df = final_df[combined_columns]
-
         # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
         final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
-        
-        # if(group_index ==0):
-        #     list_of_dicts = final_df.to_dict(orient='records')
-        #     if list_of_dicts:
-        #         #we replace empty and None value with "-" because those values will be used as keys in the function transform_generic_aggregate
-        #         nested_dicts = replace_emptyAndNone_inList(list_of_dicts)
-        #         nested_dicts =transform_generic_aggregate(nested_dicts,hierarchy_keys)
-        #     else:
-        #         print("error !!! canot create list of dict")
-        #else :
-        #    update_nested_dict(final_df, nested_dicts, group)
         update_nested_dict(final_df, nested_dicts, group)
+
     print()
     
     # Close the connection
@@ -126,6 +125,41 @@ def get_area_details():
     else:
         return jsonify({'message': 'No data found'}), 404
     
+@app.route('/get-demand-per-project')
+def get_demand_per_project():
+    area_id = request.args.get('area_id')
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    
+    
+    query = """
+       SELECT 
+    p.project_name_en,
+    SUM(CASE WHEN t.instance_year = 2023 THEN 1 ELSE 0 END) / p.no_of_units AS internalDemand2023,
+    (SUM(CASE WHEN t.instance_year = 2023 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) * 100 AS externalDemand2023,
+    (SUM(CASE WHEN t.instance_year = 2022 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022)) * 100 AS externalDemand2022,
+    (SUM(CASE WHEN t.instance_year = 2021 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021)) * 100 AS externalDemand2021,
+    (SUM(CASE WHEN t.instance_year = 2020 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020)) * 100 AS externalDemand2020,
+    (SUM(CASE WHEN t.instance_year = 2019 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019)) * 100 AS externalDemand2019,
+    (SUM(CASE WHEN t.instance_year = 2018 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018)) * 100 AS externalDemand2018
+FROM 
+    transactions_per_year t
+JOIN 
+    projects p ON t.project_number = p.project_number
+WHERE 
+    t.area_id = %s
+    AND p.no_of_units > 80
+GROUP BY 
+    t.project_number, p.no_of_units;
+    """
+    cursor.execute(query, (area_id,))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    fetched_rows = group_external_demand_in_array(fetched_rows)
+    print(fetched_rows)
+    fetched_rows_json = jsonify(fetched_rows)
+    return fetched_rows_json
 
 @app.route('/get-lands-stats')
 def get_lands_stats():
@@ -165,40 +199,53 @@ def get_list_order():
 def dubai_areas():
     connection = get_db_connection()
     cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, Supply_Finished_Pro, Supply_OffPlan_Pro, Supply_Lands FROM areas')
-    fetched_rows = cursor.fetchall()  # Fetch all rows once
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, Supply_Finished_Pro, Supply_OffPlan_Pro, Supply_Lands, AquisitionDemand_2023,RentalDemand_2023 FROM areas')
+    fetched_rows = cursor.fetchall() 
 
-    price_data = {}
-    capAp_5Y_data = {}
-    capAp_10Y_data = {}
-    avg_roi_data = {}
-    Supply_Finished_Pro_data = {}
-    Supply_OffPlan_Pro_data = {}
-    Supply_lands_data ={}
+    # Data processing functions for each key
+    # Each function is responsible for converting the row entry to the desired type
+    process_funcs = {
+        'average_sale_price': float,
+        'avg_ca_5': float,
+        'avg_ca_10': float,  
+        'avg_roi': float,
+        'Supply_Finished_Pro': int,
+        'Supply_OffPlan_Pro': int,
+        'Supply_Lands': int,
+        'AquisitionDemand_2023' : float,
+        'RentalDemand_2023' : float
+    }
 
+    # Data storage dictionaries, keyed by type
+    data_stores = {
+        'average_sale_price': {},
+        'avg_ca_5': {},
+        'avg_ca_10': {},
+        'avg_roi': {},
+        'Supply_Finished_Pro': {},
+        'Supply_OffPlan_Pro': {},
+        'Supply_Lands': {},
+        'AquisitionDemand_2023' : {},
+        'RentalDemand_2023' : {}
+    }
+
+    # Process all rows in one loop
     for row in fetched_rows:
-        if row['average_sale_price'] is not None:
-            price_data[row['area_id']] = float(row['average_sale_price'])
-        if row['avg_ca_5'] is not None:
-            capAp_5Y_data[row['area_id']] = float(row['avg_ca_5'])
-        if row['avg_ca_10'] is not None:
-            capAp_10Y_data[row['area_id']] = row['avg_ca_10']
-        if row['avg_roi'] is not None:
-            avg_roi_data[row['area_id']] = float(row['avg_roi'])
-        if row['Supply_Finished_Pro'] is not None:
-            Supply_Finished_Pro_data[row['area_id']] = int(row['Supply_Finished_Pro'])
-        if row['Supply_OffPlan_Pro'] is not None:
-            Supply_OffPlan_Pro_data[row['area_id']] = int(row['Supply_OffPlan_Pro'])
-        if row['Supply_Lands'] is not None:
-            Supply_lands_data[row['area_id']] = int(row['Supply_Lands'])
+        area_id = row['area_id']
+        for column, changetype in process_funcs.items():
+            if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
+                data_stores[column][area_id] = changetype(row[column])
 
-    valid_prices = [price for price in price_data.values() if price is not None]
-    valid_CA = [ca for ca in capAp_5Y_data.values() if ca is not None]
-    valid_roi = [ro for ro in avg_roi_data.values() if ro is not None]
+    valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
+    valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
+    valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
+    valid_aquDemand = [aqd for aqd in data_stores['AquisitionDemand_2023'].values() if aqd is not None]
+    valid_rentDemand = [rd for rd in data_stores['RentalDemand_2023'].values() if rd is not None]
     min_price, med_price, max_price = get_min_median_max(valid_prices)
     min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
     min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
-
+    min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
+    min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
     # Load the GeoJSON file
     with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
         geojson = json.load(file)
@@ -206,48 +253,64 @@ def dubai_areas():
     # Enrich GeoJSON with price data and calculate fill colors
     for feature in geojson:
         area_id = int(feature['area_id'])
-        if area_id in price_data:
-            price = price_data[area_id]
+        if area_id in data_stores['average_sale_price']:
+            price = data_stores['average_sale_price'][area_id]
             feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
         else:
             # Default color if no price data is available
             feature['fillColorPrice'] = 'rgb(95,95,95)'  #  grey
 
-        if area_id in capAp_5Y_data:
-            ca = capAp_5Y_data[area_id]
-            feature["avgCA_5Y"] = capAp_5Y_data[area_id]
+        if area_id in data_stores['avg_ca_5']:
+            ca = data_stores['avg_ca_5'][area_id]
+            feature["avgCA_5Y"] = data_stores['avg_ca_5'][area_id]
             feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
         else:
             feature["avgCA_5Y"] = None
             feature['fillColorCA5'] = 'rgb(95,95,95)'  #  grey
 
-        if area_id in capAp_10Y_data:
-            feature["avgCA_10Y"] = capAp_10Y_data[area_id]
+        if area_id in data_stores['avg_ca_10']:
+            feature["avgCA_10Y"] = data_stores['avg_ca_10'][area_id]
         else:
             feature["avgCA_10Y"] = None
         
-        if area_id in avg_roi_data:
-            roi = avg_roi_data[area_id]
-            feature["avg_roi"] = avg_roi_data[area_id]
+        if area_id in data_stores['avg_roi']:
+            roi = data_stores['avg_roi'][area_id]
+            feature["avg_roi"] = data_stores['avg_roi'][area_id]
             feature['fillColorRoi'] = get_color(roi, min_roi,med_roi, max_roi)
         else:
             feature["avg_roi"] = None
             feature['fillColorRoi'] = 'rgb(95,95,95)'
         
-        if area_id in Supply_Finished_Pro_data:
-            feature["Supply_Finished_Pro"] = Supply_Finished_Pro_data[area_id]
+        if area_id in data_stores['Supply_Finished_Pro']:
+            feature["Supply_Finished_Pro"] = data_stores['Supply_Finished_Pro'][area_id]
         else:
             feature["Supply_Finished_Pro"] = None
         
-        if area_id in Supply_OffPlan_Pro_data:
-            feature["Supply_OffPlan_Pro"] = Supply_OffPlan_Pro_data[area_id]
+        if area_id in data_stores['Supply_OffPlan_Pro']:
+            feature["Supply_OffPlan_Pro"] = data_stores['Supply_OffPlan_Pro'][area_id]
         else:
             feature["Supply_OffPlan_Pro"] = None
 
-        if area_id in Supply_lands_data:
-            feature["Supply_lands"] = Supply_lands_data[area_id]
+        if area_id in data_stores['Supply_Lands']:
+            feature["Supply_lands"] = data_stores['Supply_Lands'][area_id]
         else:
             feature["Supply_lands"] = None
+
+        if area_id in data_stores['AquisitionDemand_2023']:
+            feature["AquisitionDemand_2023"] = data_stores['AquisitionDemand_2023'][area_id]
+            feature['fillColorAquDemand'] = get_color(feature["AquisitionDemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
+        else:
+            feature['fillColorAquDemand'] = 'rgb(95,95,95)'
+            feature["AquisitionDemand_2023"] = None
+            
+        if area_id in data_stores['RentalDemand_2023']:
+            feature["RentalDemand_2023"] = data_stores['RentalDemand_2023'][area_id]
+            feature['fillColorrentDemand'] = get_color(feature["RentalDemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
+        else:
+            feature['fillColorAquDemand'] = 'rgb(95,95,95)'
+            feature["RentalDemand_2023"] = None
+            
+
     cursor.close()
     connection.close()
     return jsonify(geojson)
