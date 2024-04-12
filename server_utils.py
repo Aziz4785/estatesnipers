@@ -13,25 +13,6 @@ def get_min_median_max(valid_prices):
     else:
         return None, None, None
 
-def get_color_old(price, min_price, max_price):
-    # Normalize price to a 0-1 scale
-    normalized_price = (price - min_price) / (max_price - min_price)
-    
-    if normalized_price < 0.3:
-        # Gradient from (0, 0, 255) to (185, 185, 255)
-        a= (0-185)/(0-0.3)
-        red = green = int(a*normalized_price)
-        blue = 255
-    else:
-        # Gradient from (255, 185, 185) to (255, 0, 0)
-        a= (185-0)/(0.3-1)
-        blue = green = int(a*normalized_price +(185 - a*0.3))
-        red = 255
-    
-    # Construct the color string
-    color_string = f"rgb({red}, {green}, {blue})"
-    return color_string
-
 def get_color(price, min_price,med_price, max_price):
     # Normalize price to a 0-1 scale
     normalized_price = (price - min_price) / (max_price - min_price)
@@ -57,40 +38,6 @@ def get_color(price, min_price,med_price, max_price):
     # Construct the color string
     color_string = f"rgb({red}, {green}, {blue})"
     return color_string
-
-
-def transform_generic_aggregate(data, hierarchy_keys):
-    # this function is not used
-    def insert_into_dict(target_dict, keys, value):
-        """Recursively insert value into target_dict based on the given keys."""
-        if len(keys) == 0: #new
-            target_dict["means"]=[value] #new
-        elif len(keys) == 1:
-            key = keys[0]
-            # Ensure the final value is stored in a list to aggregate multiple entries
-            if key not in target_dict:
-                #target_dict[key] = [value]  # Initialize as a list with one dict
-                target_dict[key] = {}
-                insert_into_dict(target_dict[key], keys[1:], value) #new
-            else:
-                target_dict[key].append(value)  # Append to the existing list
-        else:
-            key = keys[0]
-            if key not in target_dict:
-                target_dict[key] = {}
-            # Recursive call with the next level of the hierarchy
-            insert_into_dict(target_dict[key], keys[1:], value)
-    
-    result = {}
-
-    #data is a list of dict
-    for item in data:
-        #value_dict contains the metrics we want , it could be : {'avgCapitalAppreciation2018': '0.10', 'avg_roi': '-', 'avgCapitalAppreciation2013': '0.47'} 
-        value_dict = {k: v for k, v in item.items() if k not in hierarchy_keys}
-        hierarchy_values = [item.get(key) for key in hierarchy_keys if key in item]
-        insert_into_dict(result, hierarchy_values, value_dict)
-    
-    return result
 
 def replace_emptyAndNone(none_value):
     if none_value == "" or none_value is None or pd.isna(none_value):

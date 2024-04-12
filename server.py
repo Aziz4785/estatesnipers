@@ -69,9 +69,6 @@ def get_area_details():
     nested_dicts = {}
     groupings = create_groupings(hierarchy_keys)
     
-    # Initialize an empty list to store the final data
-    final_data = []
-
     for group_index,group in enumerate(groupings):
         grouping_start_time = time.time()
         print("grouping by : "+str(group))
@@ -88,7 +85,7 @@ def get_area_details():
         avg_meter_price_2021 = conditional_avg(df,group ,2021).rename('AVG_meter_price_2021')
         avg_meter_price_2022 = conditional_avg(df,group ,2022).rename('AVG_meter_price_2022')
         avg_meter_price_2023 = conditional_avg(df, group,2023).rename('AVG_meter_price_2023')
-        # For avg_roi, we can apply a simpler aggregation since it only pertains to 2023 without the custom logic
+
         avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
 
         final_df = pd.concat([avg_meter_price_2013,avg_meter_price_2014,avg_meter_price_2015,avg_meter_price_2016, avg_meter_price_2017,avg_meter_price_2018,avg_meter_price_2019, avg_meter_price_2020,avg_meter_price_2021,avg_meter_price_2022,avg_meter_price_2023, avg_roi], axis=1).reset_index()
@@ -112,8 +109,6 @@ def get_area_details():
         final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
         update_nested_dict(final_df, nested_dicts, group)
 
-    print()
-    
     # Close the connection
     engine.dispose()
     

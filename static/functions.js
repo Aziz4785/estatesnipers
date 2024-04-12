@@ -78,7 +78,7 @@ function updateLegend(averageSalePrice) {
     });
 }
 
-function openChartModal(chartId,start_year) {
+function openChartModal(chartId,start_year,end_year) {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];
     if (!dataset) {
@@ -86,7 +86,7 @@ function openChartModal(chartId,start_year) {
         return;
     }
     // Labels for the x-axis
-    const labels = Array.from({ length: 11 }, (v, i) => i + start_year);
+    const labels = Array.from({ length: end_year-start_year+1 }, (v, i) => i + start_year);
 
     // Ensure the canvas context is clear before drawing a new chart
     const ctx = document.getElementById('landStatsChart').getContext('2d');
