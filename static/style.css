@@ -5,6 +5,12 @@
   top: 0; /* Align the top edge of the map with the viewport */
   left: 0; /* Align the left edge of the map with the viewport */
 }
+.leaflet-top.leaflet-left {
+  display: none;
+}
+.leaflet-control-attribution {
+  display: none;
+}
 #info-panel {
     display: none; /* Hidden by default */
     position: fixed;
@@ -12,33 +18,46 @@
     left: 20px; /* Positioned on the left side */
     bottom: 20px; /* Distance from the bottom, ensuring it's almost as tall as the window */
     background: white;
-    padding: 10px;
+    padding: 10px 5px 10px 10px; /* Adjust padding: top right bottom left */
     z-index: 1000;
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     width: 550px; /* Adjust the width as needed */
-    overflow-y: auto; /* Allows scrolling if the content is taller than the panel */
+    /*overflow-y: auto;  Allows scrolling if the content is taller than the panel */
     border-radius: 15px; 
+    overflow: hidden;
+    font-family: 'Roboto', sans-serif;
 }
+#panel-content {
+  height: 100%; /* Make sure it spans the full height of the outer container */
+  overflow-y: auto; /* Enable vertical scrolling */
+  /* If necessary, adjust padding here or keep it on the #info-panel */
+}
+
 .area-title {
   color: #032c58;
-  font-size: 2em; /* Makes the font larger */
+  font-size: 2em;
+  font-weight: 600;
   text-align: center; /* Centers the text */
-  text-transform: capitalize; /* Capitalizes the first letter of each word */
+  text-transform: capitalize; 
 }
 /* Style for the close button inside the panel */
 #close-panel {
   position: absolute; /* Position the button absolutely within the panel */
   top: 5px; /* Position it close to the top */
-  right: 5px; /* Position it close to the right */
+  right: 12px; /* Position it close to the right */
   color: #aaaaaa;
   float: right;
+  background: transparent;
   font-size: 28px;
+  border: none; /* Removes the border */
+  cursor: pointer; 
   font-weight: bold;
 }
 #stats-container {
   display: flex;
   gap: 10px; /* Space between cards */
   overflow-x: auto; /* Enable horizontal scrolling */
+  padding-bottom: 5px;
 }
 
 /* Styles the scrollbar track */
@@ -56,7 +75,7 @@
 
 /* Styles the scrollbar itself (width and color) */
 ::-webkit-scrollbar {
-  width: 6px; /* Width of the scrollbar */
+  width: 12px; /* Width of the scrollbar */
 }
 
 /* Optional: styles the scrollbar button (up and down arrows) */
@@ -73,12 +92,14 @@
   background: #f9f9f9;
   padding: 20px;
   border: 1px solid #ccc;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 15px;
   transition: all 0.3s ease;
   text-align: center; /* Ensures text within children is centered, though flexbox alignment takes precedence for positioning */
 }
+
 
 .info-card:hover {
   transform: translateY(-5px);
@@ -88,6 +109,7 @@
 .info-card .title, .info-card.supply-projects .title {
   font-weight: bold;
   color: #032c58;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
   margin-bottom: 5px;
   text-align: center; /* Centers the title */
 }
@@ -95,11 +117,13 @@
 .info-card .value {
   color: #333;
   font-size: 1.1em;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
   text-align: center; /* Centers the value */
 }
 
 .info-card.supply-projects .supply-details {
   display: flex;
+  font-family: 'Roboto', sans-serif;
   justify-content: space-between;
 }
 
@@ -116,6 +140,7 @@
 .info-card .sub-title {
   font-weight: bold;
   color: #032c58;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
   margin-bottom: 5px;
 }
 
@@ -139,33 +164,43 @@
   color: #68696b; /* Color of the icon */
   font-size: 24px; /* Size of the icon */
 }
-
 .tab {
   overflow: hidden;
-  border: 1px solid #ccc;
   background-color: #f1f1f1;
+  margin-top: 20px; 
 }
 
-/* Style the buttons inside the tab */
 .tab button {
   background-color: inherit;
   float: left;
-  border: none;
+  border: 1px solid #ccc; /* Give definition */
+  border-bottom: none; /* Remove bottom border */
   outline: none;
   cursor: pointer;
   padding: 14px 16px;
   transition: 0.3s;
   font-size: 17px;
+  border-top-left-radius: 8px; /* Rounded corners on top */
+  border-top-right-radius: 8px;
 }
 
-/* Change background color of buttons on hover */
-.tab button:hover {
-  background-color: #ddd;
+.tab button:hover, .tab button.active {
+  background-color: #ddd; /* Lighter on hover/active */
+  border-color: #aaa; /* Darker border for definition */
 }
 
-/* Create an active/current tablink class */
 .tab button.active {
-  background-color: #ccc;
+  background-color: #fff; /* Active tab matches content */
+  border-bottom: 1px solid #fff; /* Hide border with content */
+}
+
+.tabcontent {
+  border-right: 1px solid #ccc; /* Apply right border */
+  border-bottom: 1px solid #ccc; /* Apply bottom border */
+  border-left: 1px solid #ccc; /* Apply left border */
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  padding: 10px;
+  background-color: #fff; /* Matches active tab */
 }
 
 
@@ -179,18 +214,19 @@ table {
   width: auto; /* Ensures the table can expand horizontally */
   border-collapse: separate;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* Subtle shadow for depth */
-  font-family: 'Arial', sans-serif;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
   border-radius: 8px; 
   overflow: hidden;
 }
 
 th, td {
-  padding: 10px 15px;
+  padding: 2px 15px;
   text-align: left;
   background-color: #fff;
   border-bottom: 1px solid #eaeaea; /* Lighter, more subtle border */
 }
 th {
+  padding: 10px 15px;
   background-color: #f5f5f5; /* Slightly different shade for headers */
   color: #333; /* Darker text for contrast */
   font-weight: 500; /* Medium font weight */
@@ -280,18 +316,17 @@ tbody td {
 
 .modal-content {
   background-color: #ffffff;
-  margin: 5% auto;
+  margin: 10% auto;
   padding: 20px;
-  border: none; /* Removed the border */
-  width: 50%; /* Ideal for desktop, consider responsive units for mobile */
-  box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2); /* More pronounced shadow */
-  border-radius: 20px; /* Rounded corners for a softer look */
+  width: 40%; /* Better suited for a variety of devices */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Softer shadow */
+  border-radius: 8px; /* Subtly rounded corners */
   z-index: 1051;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
+  font-family: 'Roboto', sans-serif;
 }
 
 .close-button {
-  color: #aaaaaa;
+  color: #767676;
   float: right;
   font-size: 28px;
   font-weight: bold;
@@ -299,23 +334,33 @@ tbody td {
 
 .close-button:hover,
 .close-button:focus {
-  color: #222222;
+  color: #333;
   cursor: pointer;
+  text-decoration: none;
+}
+.settings-section {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eaeaea; /* Adds a line to separate sections */
+}
+.settings-section:last-of-type {
+  border-bottom: none; /* Removes the border from the last element */
+}
+.settings-section h3 {
+  font-size: 18px; /* Increases the font size */
+  font-weight: 600; /* Makes the font bolder */
+  color: #000; /* Optional: Makes the heading text darker for more contrast */
+  padding-bottom: 10px; /* Adds space below the heading */
 }
 
-.settings-section h3 {
-  color: #333; /* Darker, more legible text color */
-  margin-bottom: 15px;
-}
 
 .form-check {
   display: flex;
   align-items: center; /* Aligns checkbox and label */
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .form-check-input {
-  accent-color: #007bff; /* Modern checkbox color */
   margin-right: 10px;
   cursor: pointer;
 }
@@ -323,28 +368,50 @@ tbody td {
 .form-check-label {
   margin-bottom: 0;
   cursor: pointer;
+  font-size: 14px;
 }
-
-
 
 .hierarchy-list {
   list-style: none;
   padding-left: 0;
+  background-color: #f9f9f9; 
+  margin-top: 10px;
+  border-radius: 4px; 
 }
 
+
 .hierarchy-list li {
-  position: relative;
-  padding-left: 20px;
+  border-left: 2px solid #d9d9d9;
+  padding: 8px 0;
+  font-weight: bold;
+  margin-left: 20px;
+  font-size: 14px;
+  cursor: move; /* Indicates that item is movable */
+}
+
+.hierarchy-list li .drag-handle {
+  user-select: none; /* Prevents text selection */
+  color: #ccc; /* More subtle handle */
+  margin-right: 5px;
+  cursor: move; /* Indicates a draggable handle */
+}
+
+/* Clearer draggable cues */
+.drag-handle::before {
+  color: #9e9e9e; /* Color for the drag handle */
+  font-size: 20px; /* Size of the drag handle icon */
+  line-height: 0; /* Adjust line height to match with the list item */
+  margin-right: 5px; /* Spacing between handle and label */
 }
 
 .hierarchy-list li:not(:first-child) {
-  margin-top: 10px;
+  margin-top: 5px;
 }
 
 /* Incremental indents for each level */
-.hierarchy-list li:nth-child(2) { padding-left: 40px; }
-.hierarchy-list li:nth-child(3) { padding-left: 60px; }
-.hierarchy-list li:nth-child(4) { padding-left: 80px; }
+.hierarchy-list li:nth-child(2) { padding-left: 20px; }
+.hierarchy-list li:nth-child(3) { padding-left: 40px; }
+.hierarchy-list li:nth-child(4) { padding-left: 60px; }
 
 .save-btn {
   display: block; /* Full width */
@@ -360,7 +427,7 @@ tbody td {
 }
 
 .save-btn:hover {
-  background-color: #218838; /* Darker on hover */
+  background-color: #003d82; /* Slightly darker background on hover for button */
 }
 
 

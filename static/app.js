@@ -11,64 +11,60 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
 }).addTo(map);
 
-/*L.tileLayer('https://cartocdn_{s}.global.ssl.fastly.net/base-midnight/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors, © CARTO',
-    maxZoom: 19
-}).addTo(map);*/
 
 
 let currentAreaId = null; 
 document.addEventListener('DOMContentLoaded', function () {
-    // Set the default checked radio button
+    // Set the default checked radio button (in settings)
     document.getElementById('avgMeterPrice').checked = true;
-    const ele = document.querySelector('.scrollable-container');
-    let pos = { top: 0, left: 0, x: 0, y: 0 };
+    const elements = document.querySelectorAll('.scrollable-container');
+    //initialisation of scrollable-containers
+    elements.forEach(function(ele) {
+        let pos = { top: 0, left: 0, x: 0, y: 0 };
 
-    //chatgpt code, maybe useless
-    const mouseDownHandler = function(e) {
-        ele.style.cursor = 'grabbing';
-        ele.style.userSelect = 'none';
+        const mouseDownHandler = function(e) {
+            ele.style.cursor = 'grabbing';
+            ele.style.userSelect = 'none';
 
-        pos = {
-            left: ele.scrollLeft,
-            top: ele.scrollTop,
-            // Get the current mouse position
-            x: e.clientX,
-            y: e.clientY,
+            pos = {
+                left: ele.scrollLeft,
+                top: ele.scrollTop,
+                x: e.clientX,
+                y: e.clientY,
+            };
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
         };
 
-        document.addEventListener('mousemove', mouseMoveHandler);
-        document.addEventListener('mouseup', mouseUpHandler);
-    };
+        const mouseMoveHandler = function(e) {
+            const dx = e.clientX - pos.x;
+            const dy = e.clientY - pos.y;
 
-    const mouseMoveHandler = function(e) {
-        // How far the mouse has been moved
-        const dx = e.clientX - pos.x;
-        const dy = e.clientY - pos.y;
+            ele.scrollTop = pos.top - dy;
+            ele.scrollLeft = pos.left - dx;
+        };
 
-        // Scroll the element
-        ele.scrollTop = pos.top - dy;
-        ele.scrollLeft = pos.left - dx;
-    };
+        const mouseUpHandler = function() {
+            ele.style.cursor = 'grab';
+            ele.style.removeProperty('user-select');
 
-    const mouseUpHandler = function() {
-        ele.style.cursor = 'grab';
-        ele.style.removeProperty('user-select');
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+        };
 
-        document.removeEventListener('mousemove', mouseMoveHandler);
-        document.removeEventListener('mouseup', mouseUpHandler);
-    };
-
-    // Attach the handler
-    ele.addEventListener('mousedown', mouseDownHandler);
+        ele.addEventListener('mousedown', mouseDownHandler);
+    });
 });
 
 // load the .geojson file to display the areas
-function applyGeoJSONLayer() {
+function applyGeoJSONLayer(currentLegend) {
     fetch('http://localhost:5000/dubai-areas')
     .then(response => response.json())
     .then(data => {
-        const features = data.map(item => ({
+        //data[0] contains legends of map and data[1] contains the areas
+        const legends = data[0];
+        const features = data[1].map(item => ({
             type: 'Feature',
             properties: item, // Store all item properties directly
             geometry: item.geometry
@@ -88,6 +84,8 @@ function applyGeoJSONLayer() {
             style: feature => areaStyle(feature, currentFillColor),
             onEachFeature: onEachFeature
         }).addTo(map);
+
+        updateLegend(legends[currentLegend]);
     })
     .catch(error => console.log('Error:', error));
 }
@@ -132,7 +130,8 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     row.insertCell();// Placeholder for avg_meter_price_2013_2023
     return rowId;
 }
-function createSvgLineChart(dataPoints,chartId) {
+
+function createSvgLineChart(dataPoints,chartId,startyear) {
     if (!dataPoints || !dataPoints.length) return '';
 
     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
@@ -159,52 +158,9 @@ function createSvgLineChart(dataPoints,chartId) {
         }
     });
 
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear})" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
             </svg>`
-}
-
-function openChartModal(chartId) {
-    // Fetch the dataset based on the chartId or directly pass the dataset
-    const dataset = chartDataMappings[chartId];
-    if (!dataset) {
-        console.error('Dataset not found for chartId:', chartId);
-        return;
-    }
-    // Labels for the x-axis
-    const labels = Array.from({ length: 11 }, (v, i) => i + 2013);
-
-    // Ensure the canvas context is clear before drawing a new chart
-    const ctx = document.getElementById('landStatsChart').getContext('2d');
-    // If there's an existing chart instance, destroy it to avoid overlay issues
-    if (window.myChartInstance) {
-        window.myChartInstance.destroy();
-    }
-
-    // Create a new chart instance
-    window.myChartInstance = new Chart(ctx, {
-        type: 'line', // Define the type of chart you want
-        data: {
-            labels: labels, // Years from 2013 to 2023
-            datasets: [{
-                label: 'avg meter sale price', // Chart label
-                data: dataset, // The dataset array from the mapping
-                fill: false, // Determines whether the chart should be filled
-                borderColor: 'rgb(36, 22, 235)', // Line color
-                tension: 0.2 // Line smoothness
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true // Ensures the y-axis starts at 0
-                }
-            }
-        }
-    });
-
-    // Show the modal
-    document.getElementById('chartModal').style.display = 'block';
 }
 
 // Close modal functionality
@@ -212,43 +168,10 @@ document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('chartModal').style.display = 'none';
 });
 
-function addRow_old(name, level, isParent, parentRowId = null) {
-    //parent rows are rows that are expandable
-
-    const rowId = `row-${rowIdCounter++}`;
-    const row = tableBody.insertRow();
-    row.setAttribute('data-row-id', rowId);
-    row.setAttribute('data-level', level);
-
-    if (parentRowId) {
-        //if parent row hide all children
-        row.setAttribute('data-parent-id', parentRowId);
-        row.style.display = 'none';
-    }
-
-    const indent = '&nbsp;'.repeat(level * 5);
-    let contentCellHtml = isParent ? `${indent}<span class="expand-arrow">▶&nbsp;</span>` : `${indent}`;
-    contentCellHtml += `${name || "-"}`;
-
-    if (isParent) {
-        row.classList.add('expandable');
-    }
-
-    const contentCell = row.insertCell();
-    contentCell.innerHTML = contentCellHtml; 
-    row.insertCell().innerHTML = ''; // Placeholder for Capital Appreciation
-    row.insertCell().innerHTML = ''; // Placeholder for Capital Appreciation
-    row.insertCell().innerHTML = ''; //placeholder for roi
-    row.insertCell().innerHTML = ''; //placeholder for avg_meter_price_2013_2023
-    return rowId; 
-}
-
 let chartDataMappings = {};
 
 function processDictionary(dictionary, level = 0, parentRowId = null) {
     Object.entries(dictionary).forEach(([key, value]) => {
-        console.log(" key value : ")
-        console.log([key, value])
         //if the value is a dict with a single key "means", it is a leaf node
 
         // Check if the value is an object and not null or an array
@@ -286,7 +209,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId);
+                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013);
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -304,7 +227,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId);
+                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013);
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
         }
@@ -346,7 +269,7 @@ function getListOrder() {
     const listItems = document.querySelectorAll('#hierarchyList li');
     const order = Array.from(listItems).map((item, index) => ({
         order: index,
-        text: item.getAttribute('data-id'), // Remove "⠿" from the item text  // or use item.getAttribute('data-id') if your items have unique IDs
+        text: item.getAttribute('data-id'),
     }));
     return order;
 }
@@ -387,23 +310,10 @@ function areaStyle(feature, fillColorProperty) {
 }
 
 
-function groupBy(array, key) {
-    if (!Array.isArray(array)) {
-        // Handle the case when array is not an array
-        console.warn('Input is not an array. Returning empty object.');
-        return {};
-    }
-
-    return array.reduce((result, currentValue) => {
-        (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
-        return result;
-    }, {});
-}
-
 function openTab(evt, tabName) {
     // Declare all variables
     var i, tabcontent, tablinks;
-
+    console.log("we call open tab")
     // Get all elements with class="tabcontent" and hide them
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) {
@@ -420,12 +330,17 @@ function openTab(evt, tabName) {
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
 
-    if (tabName === 'ProjectsDemand' && currentAreaId) {
+    if (tabName === 'ProjectsDemand') {
+        updateProjectsDemand();
+    }
+}
+
+function updateProjectsDemand() {
+    if (currentAreaId) {
         fetch(`http://localhost:5000/get-demand-per-project?area_id=${currentAreaId}`)
             .then(response => response.json())
             .then(data => {
-                console.log("Project Demand Data:", data);
-                var div = document.getElementById('ProjectsDemand'); // Get the div by its ID
+                var div = document.getElementById('ProjectsTableContainer'); // Get the div by its ID
                 // Check if a table already exists and remove it
                 var existingTable = div.querySelector('table');
                 if (existingTable) {
@@ -438,30 +353,25 @@ function openTab(evt, tabName) {
     }
 }
 
-function toggleGroupVisibility(typeId) {
-    const group = document.getElementById(`type-${typeId}-projects`);
-    const isVisible = group.style.display === 'block';
-    group.style.display = isVisible ? 'none' : 'block';
-    group.previousElementSibling.querySelector('.arrow').innerHTML = isVisible ? '&#9654;' : '&#9660;';
-}
-
 function onEachFeature(feature, layer) {
     layer.on({
         click: function(e) {
+            console.log("we call on each feature")
             // Clear the <tbody> of <table id="nestedTable"> at the beginning
             const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = ''; // Clear existing rows
 
             currentAreaId = feature.properties.area_id;
             const areaName = feature.properties.name;
-            const avgCA_5Y = !isNaN(feature.properties.avgCA_5Y) ?(feature.properties.avgCA_5Y * 100).toFixed(2) : "-";
-            const avgCA_10Y = (feature.properties.avgCA_10Y * 100).toFixed(2);
-            const avgROI = !isNaN(feature.properties.avg_roi) ?(feature.properties.avg_roi* 100).toFixed(2) : "-";
+            const avgMeterSale  = feature.properties.averageSalePrice;
+            const avgCA_5Y = feature.properties.avgCA_5Y ?(feature.properties.avgCA_5Y * 100).toFixed(2) : "-";
+            const avgCA_10Y = feature.properties.avgCA_10Y ? (feature.properties.avgCA_10Y * 100).toFixed(2): "-";
+            const avgROI = feature.properties.avg_roi ?(feature.properties.avg_roi* 100).toFixed(2) : "-";
             const supply_Finished_Pro = feature.properties.Supply_Finished_Pro;
             const supply_OffPlan_Pro = feature.properties.Supply_OffPlan_Pro;
             const supply_Lands = feature.properties.Supply_lands;
-            const aquisitionDemand_2023 = (feature.properties.AquisitionDemand_2023* 100).toFixed(2);
-            const rentalDemand_2023 = (feature.properties.RentalDemand_2023 * 100).toFixed(2);
+            const aquisitionDemand_2023 = feature.properties.AquisitionDemand_2023 ? (feature.properties.AquisitionDemand_2023* 100).toFixed(2): "-";
+            const rentalDemand_2023 = feature.properties.RentalDemand_2023 ? (feature.properties.RentalDemand_2023 * 100).toFixed(2): "-";
             // Set the initial content of the panel to show the area name and a loading message
             const panelContent = document.getElementById('panel-content');
             const areaInfo = document.getElementById('area_info');
@@ -478,16 +388,20 @@ function onEachFeature(feature, layer) {
             // Inserting individual cards for each piece of information
             statsContainer.innerHTML = `
             <div class="info-card">
+  <div class="title">Avg. Meter Sale Price:</div>
+  <div class="value">${avgMeterSale} AED</div>
+</div>
+            <div class="info-card">
   <div class="title">Avg. Capital Appr. 5Y:</div>
-  <div class="value">${avgCA_5Y}</div>
+  <div class="value">${avgCA_5Y} %</div>
 </div>
 <div class="info-card">
   <div class="title">Avg. Capital Appr. 10Y:</div>
-  <div class="value">${avgCA_10Y}</div>
+  <div class="value">${avgCA_10Y} %</div>
 </div>
 <div class="info-card">
   <div class="title">Avg. ROI:</div>
-  <div class="value">${avgROI}</div>
+  <div class="value">${avgROI} %</div>
 </div>
 <div class="info-card supply-projects">
   <div class="title">Supply of Projects:</div>
@@ -509,11 +423,11 @@ function onEachFeature(feature, layer) {
 </div>
 <div class="info-card">
   <div class="title">Acquisition Demand 2023:</div>
-  <div class="value">${aquisitionDemand_2023}</div>
+  <div class="value">${aquisitionDemand_2023} %</div>
 </div>
 <div class="info-card">
   <div class="title">Rental Demand 2023:</div>
-  <div class="value">${rentalDemand_2023}</div>
+  <div class="value">${rentalDemand_2023} %</div>
 </div>
             `;
 
@@ -528,7 +442,7 @@ function onEachFeature(feature, layer) {
             if (existingErrorMessage) {
                 existingErrorMessage.remove();
             }
-
+            console.log("current area_id = ",currentAreaId)
             fetch(`http://localhost:5000/get-area-details?area_id=${currentAreaId}`)
             .then(response => {
                 if (!response.ok) { // Check if the response status is not OK (200-299)
@@ -541,13 +455,11 @@ function onEachFeature(feature, layer) {
                   }
                   throw new Error('Network response was not ok.'); // Throw an error for other statuses or to stop processing
                 }
-                console.log('response:', response);
                 return response.json(); // Proceed with processing the response as JSON
               })
             .then(data => {
                 const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
                 tableBody.innerHTML = ''; // Clear existing rows
-                console.log("data received : ",data)
                 processDictionary(data); // Process and display the fetched data
             })
             .catch(error => {
@@ -555,7 +467,18 @@ function onEachFeature(feature, layer) {
                 console.log('Error fetching area details:', error);
             });
 
+            // If ProjectsDemand tab is active, refetch data with new area_id
 
+            // Simulate a click on the "Details" button
+            var evt = new MouseEvent("click", {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: 20,
+            });
+
+            var detailsButton = document.querySelector(".tablinks.active");
+            detailsButton.dispatchEvent(evt);
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
             statsButtons.forEach(button => {
                 button.addEventListener('click', function() {
@@ -641,5 +564,5 @@ function renderLandStatsChart(data) {
     }
 }
 // On document ready or when initializing your app
-applyGeoJSONLayer();
+applyGeoJSONLayer("averageSalePrice");
 

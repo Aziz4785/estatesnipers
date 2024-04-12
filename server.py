@@ -135,13 +135,13 @@ def get_demand_per_project():
     query = """
        SELECT 
     p.project_name_en,
-    SUM(CASE WHEN t.instance_year = 2023 THEN 1 ELSE 0 END) / p.no_of_units AS internalDemand2023,
-    (SUM(CASE WHEN t.instance_year = 2023 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) * 100 AS externalDemand2023,
-    (SUM(CASE WHEN t.instance_year = 2022 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022)) * 100 AS externalDemand2022,
-    (SUM(CASE WHEN t.instance_year = 2021 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021)) * 100 AS externalDemand2021,
-    (SUM(CASE WHEN t.instance_year = 2020 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020)) * 100 AS externalDemand2020,
-    (SUM(CASE WHEN t.instance_year = 2019 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019)) * 100 AS externalDemand2019,
-    (SUM(CASE WHEN t.instance_year = 2018 THEN 1 ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018)) * 100 AS externalDemand2018
+    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END) / p.no_of_units AS internalDemand2023,
+    (SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) AS externalDemand2023,
+    (SUM(CASE WHEN t.instance_year = 2022 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022))  AS externalDemand2022,
+    (SUM(CASE WHEN t.instance_year = 2021 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021))  AS externalDemand2021,
+    (SUM(CASE WHEN t.instance_year = 2020 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020))  AS externalDemand2020,
+    (SUM(CASE WHEN t.instance_year = 2019 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019))  AS externalDemand2019,
+    (SUM(CASE WHEN t.instance_year = 2018 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018))  AS externalDemand2018
 FROM 
     transactions_per_year t
 JOIN 
@@ -246,6 +246,14 @@ def dubai_areas():
     min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
     min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
     min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
+
+    legends = {
+        "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
+        "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
+        "avg_roi": [round(med_roi*100/2), round(med_roi*100), round((med_roi+(max_roi-med_roi)/2.0)*100)],
+        "AquisitionDemand_2023" : [round(med_aqDemand*100/2), round(med_aqDemand*100), round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100)]
+    }
+        
     # Load the GeoJSON file
     with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
         geojson = json.load(file)
@@ -255,6 +263,7 @@ def dubai_areas():
         area_id = int(feature['area_id'])
         if area_id in data_stores['average_sale_price']:
             price = data_stores['average_sale_price'][area_id]
+            feature["averageSalePrice"] = price
             feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
         else:
             # Default color if no price data is available
@@ -313,7 +322,7 @@ def dubai_areas():
 
     cursor.close()
     connection.close()
-    return jsonify(geojson)
+    return jsonify([legends, geojson])
 
 if __name__ == '__main__':
     app.run(debug=True)

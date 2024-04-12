@@ -85,9 +85,30 @@ let currentFillColor = 'fillColorPrice'; // Default value
 document.getElementById("saveSettings").onclick = function() {
 
     const selectedColorMapping = document.querySelector('input[name="colorMapping"]:checked').value;
-    currentFillColor = selectedColorMapping; // Update the current fill color based on the selection
-    console.log("currentFillColor = ",currentFillColor)
-    applyGeoJSONLayer(); // Reapply the GeoJSON layer with the new fill color
+    currentFillColor = selectedColorMapping; 
+    let currentLegend = "averageSalePrice"
+    if(selectedColorMapping == 0)
+    {
+        currentFillColor = "fillColorPrice"
+        currentLegend = "averageSalePrice"
+    }
+    else if (selectedColorMapping==1)
+    {
+        currentFillColor ="fillColorCA5"
+        currentLegend = "avgCA_5Y"
+    }
+    else if (selectedColorMapping==2)
+    {
+        currentFillColor="fillColorRoi"
+        currentLegend = "avg_roi"
+    }
+    else if (selectedColorMapping== 3)
+    {
+        currentFillColor ="fillColorAquDemand"
+        currentLegend = "AquisitionDemand_2023"
+    }
+    
+    applyGeoJSONLayer(currentLegend); // Reapply the GeoJSON layer with the new fill color
 
     
     const listOrder = getListOrder();

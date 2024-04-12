@@ -1,11 +1,10 @@
 function generateTable(data) {
     var table = document.createElement('table');
-    table.setAttribute('border', '1');
 
     // Create the table header
     var thead = document.createElement('thead');
     var headerRow = document.createElement('tr');
-    ['Project', 'Internal Demand 2023', 'External Demand 2023'].forEach(headerText => {
+    ['Project', 'Internal Demand 2023 %', 'External Demand 2023','External Demand 2018-2023'].forEach(headerText => {
         var header = document.createElement('th');
         header.textContent = headerText;
         headerRow.appendChild(header);
@@ -24,8 +23,13 @@ function generateTable(data) {
             cell.textContent = value;
             if (index === 3) { 
    
-                cell.innerHTML = createSvgLineChart(value, row_id);
-            } else {
+                cell.innerHTML = createSvgLineChart(value, row_id,2018);
+                chartDataMappings[row_id] = value; 
+            } 
+            else if(index > 0){
+                cell.textContent = (value*100).toFixed(2);
+            }
+            else {
                 cell.textContent = value;
             }
             row.appendChild(cell);
@@ -35,4 +39,84 @@ function generateTable(data) {
     table.appendChild(tbody);
 
     return table;
+}
+
+function updateLegend(averageSalePrice) {
+    const legendContent = document.getElementById('legendContent');
+    legendContent.innerHTML = ''; // Clear previous contents
+    const colors = [
+        { color: 'rgb(192, 0, 0)', label: `> ${averageSalePrice[2]}` },
+        { color: 'rgb(223, 82, 82)', label: `${averageSalePrice[2]} > > ${averageSalePrice[1]}` },
+        { color: 'rgb(82, 82, 223)', label: `${averageSalePrice[1]} > > ${averageSalePrice[0]}` },
+        { color: 'rgb(0, 0, 192)', label: `< ${averageSalePrice[0]}` }
+    ];
+
+    colors.forEach(col => {
+        // Create the container for the color square and the label
+        const legendItem = document.createElement('div');
+        legendItem.style.display = 'flex';
+        legendItem.style.alignItems = 'center';
+        legendItem.style.marginBottom = '4px';
+        
+        // Create the color square
+        const colorSquare = document.createElement('div');
+        colorSquare.style.width = '20px';
+        colorSquare.style.height = '20px';
+        colorSquare.style.backgroundColor = col.color;
+        colorSquare.style.marginRight = '8px';
+        
+        // Create the label text
+        const labelText = document.createElement('span');
+        labelText.textContent = col.label;
+        
+        // Append the color square and label text to the container
+        legendItem.appendChild(colorSquare);
+        legendItem.appendChild(labelText);
+        
+        // Append the container to the legend content
+        legendContent.appendChild(legendItem);
+    });
+}
+
+function openChartModal(chartId,start_year) {
+    // Fetch the dataset based on the chartId or directly pass the dataset
+    const dataset = chartDataMappings[chartId];
+    if (!dataset) {
+        console.error('Dataset not found for chartId:', chartId);
+        return;
+    }
+    // Labels for the x-axis
+    const labels = Array.from({ length: 11 }, (v, i) => i + start_year);
+
+    // Ensure the canvas context is clear before drawing a new chart
+    const ctx = document.getElementById('landStatsChart').getContext('2d');
+    // If there's an existing chart instance, destroy it to avoid overlay issues
+    if (window.myChartInstance) {
+        window.myChartInstance.destroy();
+    }
+
+    // Create a new chart instance
+    window.myChartInstance = new Chart(ctx, {
+        type: 'line', // Define the type of chart you want
+        data: {
+            labels: labels, // Years from 2013 to 2023
+            datasets: [{
+                label: 'avg meter sale price', // Chart label
+                data: dataset, // The dataset array from the mapping
+                fill: false, // Determines whether the chart should be filled
+                borderColor: 'rgb(36, 22, 235)', // Line color
+                tension: 0.2 // Line smoothness
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true // Ensures the y-axis starts at 0
+                }
+            }
+        }
+    });
+
+    // Show the modal
+    document.getElementById('chartModal').style.display = 'block';
 }
