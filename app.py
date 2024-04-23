@@ -34,7 +34,7 @@ db_config = {
     'password': r'DubaiAnalytics_123',
     'port': '5432'  # Default PostgreSQL port
 }
-db_url = "postgres://pmwpgrdxvmxhxk:8404b039bd928557bd7a2e186e19496afebb8ca0900d3b65a8d5354cda32cc36@ec2-18-204-162-101.compute-1.amazonaws.com:5432/da4qq1cljqip85"
+db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
 #db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
 @app.route('/')
