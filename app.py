@@ -5,8 +5,7 @@ import mysql.connector
 import json
 from flask import session
 import time
-import datetime
-import math
+import os
 from server_utils import * 
 from sqlalchemy import create_engine
 import psycopg2
@@ -44,7 +43,9 @@ def index():
 def get_db_connection():
     #connection = mysql.connector.connect(**db_config)
     #connection = psycopg2.connect(**db_config)
-    connection = psycopg2.connect(db_url) #here we use an url
+    #connection = psycopg2.connect(db_url) #here we use an url
+    DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')  # Fetch the correct environment variable
+    connection = psycopg2.connect(DATABASE_URL)
     return connection
 
 
