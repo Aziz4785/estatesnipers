@@ -63,7 +63,7 @@ def get_area_details():
     area_id = request.args.get('area_id')
     #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
     #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
-    connection_url = db_url
+    connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
     engine = create_engine(connection_url)
     
     sql_query = f"""
@@ -84,16 +84,16 @@ def get_area_details():
     WHERE area_id = {area_id} AND instance_year >=2013;
     """
 
-    start_time = time.time()
+    #start_time = time.time()
     df = pd.read_sql_query(sql_query, engine)
-    print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
+    #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
 
     nested_dicts = {}
     groupings = create_groupings(hierarchy_keys)
     
     for group_index,group in enumerate(groupings):
         grouping_start_time = time.time()
-        print("grouping by : "+str(group))
+        #print("grouping by : "+str(group))
 
         # # Apply the custom aggregation function for each year of interest
         avg_meter_price_2013 = conditional_avg(df,group ,2013).rename('AVG_meter_price_2013')
@@ -114,7 +114,7 @@ def get_area_details():
 
         final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in ['AVG_meter_price_2013','AVG_meter_price_2014','AVG_meter_price_2015','AVG_meter_price_2016', 'AVG_meter_price_2017','AVG_meter_price_2018','AVG_meter_price_2019', 'AVG_meter_price_2020','AVG_meter_price_2021','AVG_meter_price_2022','AVG_meter_price_2023']], axis=1)
 
-        print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
+        #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
         #avergae capital apperication calculation for that group:
 
         final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
