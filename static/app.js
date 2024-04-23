@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
 function applyGeoJSONLayer(currentLegend) {
-    fetch('http://localhost:5000/dubai-areas')
+    fetch('http://estatesnipers-1a1823af05ea.herokuapp.com/dubai-areas')
     .then(response => response.json())
     .then(data => {
         //data[0] contains legends of map and data[1] contains the areas
@@ -338,7 +338,8 @@ function openTab(evt, tabName) {
 
 function updateProjectsDemand() {
     if (currentAreaId) {
-        fetch(`http://localhost:5000/get-demand-per-project?area_id=${currentAreaId}`)
+        fetch(`https://estatesnipers-1a1823af05ea.herokuapp.com/get-demand-per-project?area_id=${currentAreaId}`)
+
             .then(response => response.json())
             .then(data => {
                 var div = document.getElementById('ProjectsTableContainer'); // Get the div by its ID
@@ -444,7 +445,7 @@ function onEachFeature(feature, layer) {
                 existingErrorMessage.remove();
             }
             console.log("current area_id = ",currentAreaId)
-            fetch(`http://localhost:5000/get-area-details?area_id=${currentAreaId}`)
+            fetch(`http://estatesnipers-1a1823af05ea.herokuapp.com/get-area-details?area_id=${currentAreaId}`)
             .then(response => {
                 if (!response.ok) { // Check if the response status is not OK (200-299)
                    if (response.status === 404) {
@@ -483,7 +484,7 @@ function onEachFeature(feature, layer) {
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
             statsButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    fetch(`http://localhost:5000/get-lands-stats?area_id=${currentAreaId}`)
+                    fetch(`http://estatesnipers-1a1823af05ea.herokuapp.com/get-lands-stats?area_id=${currentAreaId}`)
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error('Network response was not ok');
