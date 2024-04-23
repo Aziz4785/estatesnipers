@@ -9,7 +9,9 @@ import datetime
 import math
 from server_utils import * 
 from sqlalchemy import create_engine
-
+import psycopg2
+from flask import jsonify
+from psycopg2.extras import RealDictCursor
 
 pd.set_option('display.max_rows', None) 
 pd.set_option('display.max_columns', None)
@@ -19,19 +21,30 @@ pd.set_option('display.max_colwidth', None)
 app = Flask(__name__)
 CORS(app)
 app.secret_key = 'some_secret_key'
+# db_config = {
+#     'host': 'localhost',
+#     'user': 'root',
+#     'password': 'DubaiBelgiumAnalytics_123',
+#     'database': 'sniperdb'
+# }
 db_config = {
     'host': 'localhost',
-    'user': 'root',
-    'password': 'DubaiBelgiumAnalytics_123',
-    'database': 'sniperdb'
+    'dbname': 'SNIPERDB',  # 'database' in MySQL is 'dbname' in PostgreSQL
+    'user': 'postgres',
+    'password': r'DubaiAnalytics_123',
+    'port': '5432'  # Default PostgreSQL port
 }
+db_url = "postgres://pmwpgrdxvmxhxk:8404b039bd928557bd7a2e186e19496afebb8ca0900d3b65a8d5354cda32cc36@ec2-18-204-162-101.compute-1.amazonaws.com:5432/da4qq1cljqip85"
+#db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
 @app.route('/')
 def index():
     return render_template('index.html') 
 
 def get_db_connection():
-    connection = mysql.connector.connect(**db_config)
+    #connection = mysql.connector.connect(**db_config)
+    #connection = psycopg2.connect(**db_config)
+    connection = psycopg2.connect(db_url) #here we use an url
     return connection
 
 
@@ -41,7 +54,9 @@ list_order_in_memory = []
 def get_area_details():
     hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
     area_id = request.args.get('area_id')
-    connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
+    #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
+    #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
+    connection_url = db_url
     engine = create_engine(connection_url)
     
     sql_query = f"""
@@ -124,8 +139,8 @@ def get_area_details():
 def get_demand_per_project():
     area_id = request.args.get('area_id')
     connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
     
     query = """
        SELECT 
@@ -152,7 +167,7 @@ GROUP BY
     # Fetch and format the results
     fetched_rows = cursor.fetchall()
     fetched_rows = group_external_demand_in_array(fetched_rows)
-    print(fetched_rows)
+
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 
@@ -160,7 +175,8 @@ GROUP BY
 def get_lands_stats():
     area_id = request.args.get('area_id')
     connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
     
     # Use a parameterized query to safely include user input
     query = """
@@ -193,8 +209,9 @@ def get_list_order():
 @app.route('/dubai-areas')
 def dubai_areas():
     connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, Supply_Finished_Pro, Supply_OffPlan_Pro, Supply_Lands, AquisitionDemand_2023,RentalDemand_2023 FROM areas')
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
     fetched_rows = cursor.fetchall() 
 
     # Data processing functions for each key
@@ -204,11 +221,11 @@ def dubai_areas():
         'avg_ca_5': float,
         'avg_ca_10': float,  
         'avg_roi': float,
-        'Supply_Finished_Pro': int,
-        'Supply_OffPlan_Pro': int,
-        'Supply_Lands': int,
-        'AquisitionDemand_2023' : float,
-        'RentalDemand_2023' : float
+        'supply_finished_pro': int,
+        'supply_offplan_pro': int,
+        'supply_lands': int,
+        'aquisitiondemand_2023' : float,
+        'rentaldemand_2023' : float
     }
 
     # Data storage dictionaries, keyed by type
@@ -217,11 +234,11 @@ def dubai_areas():
         'avg_ca_5': {},
         'avg_ca_10': {},
         'avg_roi': {},
-        'Supply_Finished_Pro': {},
-        'Supply_OffPlan_Pro': {},
-        'Supply_Lands': {},
-        'AquisitionDemand_2023' : {},
-        'RentalDemand_2023' : {}
+        'supply_finished_pro': {},
+        'supply_offplan_pro': {},
+        'supply_lands': {},
+        'aquisitiondemand_2023' : {},
+        'rentaldemand_2023' : {}
     }
 
     # Process all rows in one loop
@@ -234,8 +251,8 @@ def dubai_areas():
     valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
     valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
     valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
-    valid_aquDemand = [aqd for aqd in data_stores['AquisitionDemand_2023'].values() if aqd is not None]
-    valid_rentDemand = [rd for rd in data_stores['RentalDemand_2023'].values() if rd is not None]
+    valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
+    valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
     min_price, med_price, max_price = get_min_median_max(valid_prices)
     min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
     min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
@@ -246,13 +263,17 @@ def dubai_areas():
         "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
         "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
         "avg_roi": [round(med_roi*100/2), round(med_roi*100), round((med_roi+(max_roi-med_roi)/2.0)*100)],
-        "AquisitionDemand_2023" : [round(med_aqDemand*100/2), round(med_aqDemand*100), round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100)]
+        "aquisitiondemand_2023" : [
+        round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
+        round(med_aqDemand*100) if med_aqDemand is not None else 0,
+        round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
+    ]
     }
-        
+    
     # Load the GeoJSON file
     with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
         geojson = json.load(file)
-
+   
     # Enrich GeoJSON with price data and calculate fill colors
     for feature in geojson:
         area_id = int(feature['area_id'])
@@ -285,38 +306,42 @@ def dubai_areas():
             feature["avg_roi"] = None
             feature['fillColorRoi'] = 'rgb(95,95,95)'
         
-        if area_id in data_stores['Supply_Finished_Pro']:
-            feature["Supply_Finished_Pro"] = data_stores['Supply_Finished_Pro'][area_id]
+        if area_id in data_stores['supply_finished_pro']:
+            feature["supply_finished_pro"] = data_stores['supply_finished_pro'][area_id]
         else:
-            feature["Supply_Finished_Pro"] = None
+            feature["supply_finished_pro"] = None
         
-        if area_id in data_stores['Supply_OffPlan_Pro']:
-            feature["Supply_OffPlan_Pro"] = data_stores['Supply_OffPlan_Pro'][area_id]
+        if area_id in data_stores['supply_offplan_pro']:
+            feature["supply_offplan_pro"] = data_stores['supply_offplan_pro'][area_id]
         else:
-            feature["Supply_OffPlan_Pro"] = None
+            feature["supply_offplan_pro"] = None
 
-        if area_id in data_stores['Supply_Lands']:
-            feature["Supply_lands"] = data_stores['Supply_Lands'][area_id]
+        if area_id in data_stores['supply_lands']:
+            feature["supply_lands"] = data_stores['supply_lands'][area_id]
         else:
-            feature["Supply_lands"] = None
+            feature["supply_lands"] = None
 
-        if area_id in data_stores['AquisitionDemand_2023']:
-            feature["AquisitionDemand_2023"] = data_stores['AquisitionDemand_2023'][area_id]
-            feature['fillColorAquDemand'] = get_color(feature["AquisitionDemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
+        if area_id in data_stores['aquisitiondemand_2023']:
+            feature["aquisitiondemand_2023"] = data_stores['aquisitiondemand_2023'][area_id]
+            feature['fillColorAquDemand'] = get_color(feature["aquisitiondemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
+            #print(f"{area_id} is  in data_stores['aquisitiondemand_2023'] so fill color = {feature['fillColorAquDemand']}")
         else:
+            #print(f"{area_id} is not in data_stores['aquisitiondemand_2023']")
             feature['fillColorAquDemand'] = 'rgb(95,95,95)'
-            feature["AquisitionDemand_2023"] = None
+            feature["aquisitiondemand_2023"] = None
             
-        if area_id in data_stores['RentalDemand_2023']:
-            feature["RentalDemand_2023"] = data_stores['RentalDemand_2023'][area_id]
-            feature['fillColorrentDemand'] = get_color(feature["RentalDemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
+        if area_id in data_stores['rentaldemand_2023']:
+            feature["rentaldemand_2023"] = data_stores['rentaldemand_2023'][area_id]
+            feature['fillColorrentDemand'] = get_color(feature["rentaldemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
         else:
-            feature['fillColorAquDemand'] = 'rgb(95,95,95)'
-            feature["RentalDemand_2023"] = None
-            
+            feature['fillColorrentDemand'] = 'rgb(95,95,95)'
+            feature["rentaldemand_2023"] = None
+ 
 
     cursor.close()
     connection.close()
+    #print("data beofre sending : ")
+    #print([legends, geojson])
     return jsonify([legends, geojson])
 
 if __name__ == '__main__':

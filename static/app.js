@@ -64,6 +64,7 @@ function applyGeoJSONLayer(currentLegend) {
     .then(data => {
         //data[0] contains legends of map and data[1] contains the areas
         const legends = data[0];
+        console.log("received data : ",data[1])
         const features = data[1].map(item => ({
             type: 'Feature',
             properties: item, // Store all item properties directly
@@ -367,11 +368,11 @@ function onEachFeature(feature, layer) {
             const avgCA_5Y = feature.properties.avgCA_5Y ?(feature.properties.avgCA_5Y * 100).toFixed(2) : "-";
             const avgCA_10Y = feature.properties.avgCA_10Y ? (feature.properties.avgCA_10Y * 100).toFixed(2): "-";
             const avgROI = feature.properties.avg_roi ?(feature.properties.avg_roi* 100).toFixed(2) : "-";
-            const supply_Finished_Pro = feature.properties.Supply_Finished_Pro;
-            const supply_OffPlan_Pro = feature.properties.Supply_OffPlan_Pro;
-            const supply_Lands = feature.properties.Supply_lands;
-            const aquisitionDemand_2023 = feature.properties.AquisitionDemand_2023 ? (feature.properties.AquisitionDemand_2023* 100).toFixed(2): "-";
-            const rentalDemand_2023 = feature.properties.RentalDemand_2023 ? (feature.properties.RentalDemand_2023 * 100).toFixed(2): "-";
+            const supply_Finished_Pro = feature.properties.supply_finished_pro ? feature.properties.supply_finished_pro: "-";
+            const supply_OffPlan_Pro = feature.properties.supply_offplan_pro ? feature.properties.supply_offplan_pro: "-";
+            const supply_lands = feature.properties.supply_lands? feature.properties.supply_lands: "-";
+            const aquisitionDemand_2023 = feature.properties.aquisitiondemand_2023 ? (feature.properties.aquisitiondemand_2023* 100).toFixed(2): "-";
+            const rentalDemand_2023 = feature.properties.rentaldemand_2023 ? (feature.properties.rentaldemand_2023 * 100).toFixed(2): "-";
             // Set the initial content of the panel to show the area name and a loading message
             const panelContent = document.getElementById('panel-content');
             const areaInfo = document.getElementById('area_info');
@@ -418,7 +419,7 @@ function onEachFeature(feature, layer) {
 </div>
 <div class="info-card">
   <div class="title">Supply of Lands:</div>
-  <div class="value">${supply_Lands}</div>
+  <div class="value">${supply_lands}</div>
   <button class="stats-button"><i class="fas fa-chart-pie"></i></button>
 </div>
 <div class="info-card">

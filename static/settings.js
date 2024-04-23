@@ -105,7 +105,7 @@ document.getElementById("saveSettings").onclick = function() {
     else if (selectedColorMapping== 3)
     {
         currentFillColor ="fillColorAquDemand"
-        currentLegend = "AquisitionDemand_2023"
+        currentLegend = "aquisitiondemand_2023"
     }
     
     applyGeoJSONLayer(currentLegend); // Reapply the GeoJSON layer with the new fill color
