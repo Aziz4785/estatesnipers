@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
 function applyGeoJSONLayer(currentLegend) {
-    fetch('http://estatesnipers-1a1823af05ea.herokuapp.com/dubai-areas')
+    fetch('https://estatesnipers-1a1823af05ea.herokuapp.com/dubai-areas')
     .then(response => response.json())
     .then(data => {
         //data[0] contains legends of map and data[1] contains the areas
@@ -445,7 +445,7 @@ function onEachFeature(feature, layer) {
                 existingErrorMessage.remove();
             }
             console.log("current area_id = ",currentAreaId)
-            fetch(`http://estatesnipers-1a1823af05ea.herokuapp.com/get-area-details?area_id=${currentAreaId}`)
+            fetch(`https://estatesnipers-1a1823af05ea.herokuapp.com/get-area-details?area_id=${currentAreaId}`)
             .then(response => {
                 if (!response.ok) { // Check if the response status is not OK (200-299)
                    if (response.status === 404) {
@@ -484,7 +484,7 @@ function onEachFeature(feature, layer) {
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
             statsButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    fetch(`http://estatesnipers-1a1823af05ea.herokuapp.com/get-lands-stats?area_id=${currentAreaId}`)
+                    fetch(`https://estatesnipers-1a1823af05ea.herokuapp.com/get-lands-stats?area_id=${currentAreaId}`)
                         .then(response => {
                             if (!response.ok) {
                                 throw new Error('Network response was not ok');
