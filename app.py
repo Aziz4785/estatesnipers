@@ -67,6 +67,9 @@ def get_area_details():
         #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
         #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
         connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+        if connection_url.startswith("postgres://"):
+            connection_url = connection_url.replace("postgres://", "postgresql://", 1)
+
         if not connection_url:
             return jsonify({'error': 'Database connection URL not found'}), 500
 
