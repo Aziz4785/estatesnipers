@@ -352,7 +352,7 @@ def dubai_areas():
         return jsonify([legends, geojson])
     except Exception as e:
         # Log the exception to the server's error log
-        #app.logger.error('Failed to fetch or process data', exc_info=True) 
+        app.logger.error('Failed to fetch or process data', exc_info=True) 
         app.logger.error(f'Error: {str(e)}')
         return jsonify({'error': 'Internal Server Error'}), 500
     
