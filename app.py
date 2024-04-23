@@ -278,8 +278,11 @@ def dubai_areas():
         ]
         }
         
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(base_dir, 'areas_coordinates', 'DubaiAreas.geojson')
+        
         # Load the GeoJSON file
-        with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
+        with open(file_path, 'r') as file:
             geojson = json.load(file)
     
         # Enrich GeoJSON with price data and calculate fill colors
