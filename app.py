@@ -59,89 +59,98 @@ list_order_in_memory = []
 
 @app.route('/get-area-details')
 def get_area_details():
-    hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
-    area_id = request.args.get('area_id')
-    #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
-    #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
-    connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
-    engine = create_engine(connection_url)
-    
-    sql_query = f"""
-    SELECT 
-        pst.property_sub_type_en, 
-        grouped_project, 
-        rooms_en, 
-        property_usage_en,
-        instance_year,
-        meter_sale_price,
-        roi
-    FROM 
-        base_table t
-    LEFT JOIN
-        propertysubtype pst 
-    ON 
-        t.property_sub_type_id = pst.property_sub_type_id
-    WHERE area_id = {area_id} AND instance_year >=2013;
-    """
+    try:
+        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+        area_id = request.args.get('area_id')
+        if not area_id:
+            return jsonify({'error': 'Area ID is required'}), 400
+        #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
+        #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
+        connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+        if not connection_url:
+            return jsonify({'error': 'Database connection URL not found'}), 500
 
-    #start_time = time.time()
-    df = pd.read_sql_query(sql_query, engine)
-    #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
+        engine = create_engine(connection_url)
+        
+        sql_query = f"""
+        SELECT 
+            pst.property_sub_type_en, 
+            grouped_project, 
+            rooms_en, 
+            property_usage_en,
+            instance_year,
+            meter_sale_price,
+            roi
+        FROM 
+            base_table t
+        LEFT JOIN
+            propertysubtype pst 
+        ON 
+            t.property_sub_type_id = pst.property_sub_type_id
+        WHERE area_id = {area_id} AND instance_year >=2013;
+        """
 
-    nested_dicts = {}
-    groupings = create_groupings(hierarchy_keys)
-    
-    for group_index,group in enumerate(groupings):
-        grouping_start_time = time.time()
-        #print("grouping by : "+str(group))
+        #start_time = time.time()
+        df = pd.read_sql_query(sql_query, engine)
+        #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
 
-        # # Apply the custom aggregation function for each year of interest
-        avg_meter_price_2013 = conditional_avg(df,group ,2013).rename('AVG_meter_price_2013')
-        avg_meter_price_2014 = conditional_avg(df,group ,2014).rename('AVG_meter_price_2014')
-        avg_meter_price_2015 = conditional_avg(df,group ,2015).rename('AVG_meter_price_2015')
-        avg_meter_price_2016 = conditional_avg(df,group ,2016).rename('AVG_meter_price_2016')
-        avg_meter_price_2017 = conditional_avg(df,group ,2017).rename('AVG_meter_price_2017')
-        avg_meter_price_2018 = conditional_avg(df,group ,2018).rename('AVG_meter_price_2018')
-        avg_meter_price_2019 = conditional_avg(df,group ,2019).rename('AVG_meter_price_2019')
-        avg_meter_price_2020 = conditional_avg(df,group ,2020).rename('AVG_meter_price_2020')
-        avg_meter_price_2021 = conditional_avg(df,group ,2021).rename('AVG_meter_price_2021')
-        avg_meter_price_2022 = conditional_avg(df,group ,2022).rename('AVG_meter_price_2022')
-        avg_meter_price_2023 = conditional_avg(df, group,2023).rename('AVG_meter_price_2023')
+        nested_dicts = {}
+        groupings = create_groupings(hierarchy_keys)
+        
+        for group_index,group in enumerate(groupings):
+            grouping_start_time = time.time()
+            #print("grouping by : "+str(group))
 
-        avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
+            # # Apply the custom aggregation function for each year of interest
+            avg_meter_price_2013 = conditional_avg(df,group ,2013).rename('AVG_meter_price_2013')
+            avg_meter_price_2014 = conditional_avg(df,group ,2014).rename('AVG_meter_price_2014')
+            avg_meter_price_2015 = conditional_avg(df,group ,2015).rename('AVG_meter_price_2015')
+            avg_meter_price_2016 = conditional_avg(df,group ,2016).rename('AVG_meter_price_2016')
+            avg_meter_price_2017 = conditional_avg(df,group ,2017).rename('AVG_meter_price_2017')
+            avg_meter_price_2018 = conditional_avg(df,group ,2018).rename('AVG_meter_price_2018')
+            avg_meter_price_2019 = conditional_avg(df,group ,2019).rename('AVG_meter_price_2019')
+            avg_meter_price_2020 = conditional_avg(df,group ,2020).rename('AVG_meter_price_2020')
+            avg_meter_price_2021 = conditional_avg(df,group ,2021).rename('AVG_meter_price_2021')
+            avg_meter_price_2022 = conditional_avg(df,group ,2022).rename('AVG_meter_price_2022')
+            avg_meter_price_2023 = conditional_avg(df, group,2023).rename('AVG_meter_price_2023')
 
-        final_df = pd.concat([avg_meter_price_2013,avg_meter_price_2014,avg_meter_price_2015,avg_meter_price_2016, avg_meter_price_2017,avg_meter_price_2018,avg_meter_price_2019, avg_meter_price_2020,avg_meter_price_2021,avg_meter_price_2022,avg_meter_price_2023, avg_roi], axis=1).reset_index()
+            avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
 
-        final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in ['AVG_meter_price_2013','AVG_meter_price_2014','AVG_meter_price_2015','AVG_meter_price_2016', 'AVG_meter_price_2017','AVG_meter_price_2018','AVG_meter_price_2019', 'AVG_meter_price_2020','AVG_meter_price_2021','AVG_meter_price_2022','AVG_meter_price_2023']], axis=1)
+            final_df = pd.concat([avg_meter_price_2013,avg_meter_price_2014,avg_meter_price_2015,avg_meter_price_2016, avg_meter_price_2017,avg_meter_price_2018,avg_meter_price_2019, avg_meter_price_2020,avg_meter_price_2021,avg_meter_price_2022,avg_meter_price_2023, avg_roi], axis=1).reset_index()
 
-        #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
-        #avergae capital apperication calculation for that group:
+            final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in ['AVG_meter_price_2013','AVG_meter_price_2014','AVG_meter_price_2015','AVG_meter_price_2016', 'AVG_meter_price_2017','AVG_meter_price_2018','AVG_meter_price_2019', 'AVG_meter_price_2020','AVG_meter_price_2021','AVG_meter_price_2022','AVG_meter_price_2023']], axis=1)
 
-        final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
-        final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
+            #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
+            #avergae capital apperication calculation for that group:
 
-        # Identify all columns starting with 'avg'
+            final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
+            final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
 
-        columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
-        # Combine the columns : columns of the group + avg_cap_appreciation_columns
-        combined_columns = group + list(set(columns_containing_means) - set(group))
-        # Reorder and filter the DataFrame according to the combined list of columns
-        final_df = final_df[combined_columns]
-        # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
-        final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
-        update_nested_dict(final_df, nested_dicts, group)
+            # Identify all columns starting with 'avg'
 
-    # Close the connection
-    engine.dispose()
-    
+            columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
+            # Combine the columns : columns of the group + avg_cap_appreciation_columns
+            combined_columns = group + list(set(columns_containing_means) - set(group))
+            # Reorder and filter the DataFrame according to the combined list of columns
+            final_df = final_df[combined_columns]
+            # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
+            final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
+            update_nested_dict(final_df, nested_dicts, group)
 
-    if(nested_dicts):
-        fetched_rows= remove_lonely_dash(nested_dicts)
-        json_response = jsonify(fetched_rows)
-        return json_response
-    else:
-        return jsonify({'message': 'No data found'}), 404
-    
+        if(nested_dicts):
+            fetched_rows= remove_lonely_dash(nested_dicts)
+            json_response = jsonify(fetched_rows)
+            return json_response
+        else:
+            return jsonify({'message': 'No data found'}), 404
+    except Exception as e:
+        app.logger.error(f'An unexpected error occurred: {str(e)}')
+        return jsonify({'error': 'An error occurred', 'message': str(e)}), 500
+    finally:
+        # Always ensure the connection is closed even if an error occurs
+        if 'engine' in locals():
+            engine.dispose()
+
 @app.route('/get-demand-per-project')
 def get_demand_per_project():
     area_id = request.args.get('area_id')
