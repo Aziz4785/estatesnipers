@@ -3,6 +3,7 @@ from flask_cors import CORS
 import pymysql
 import mysql.connector
 import json
+import logging
 from flask import session
 import time
 import os
@@ -20,6 +21,11 @@ pd.set_option('display.max_colwidth', None)
 app = Flask(__name__)
 CORS(app)
 app.secret_key = 'some_secret_key'
+if not app.debug:
+    # Set up logging to stdout which Heroku can capture
+    app.logger.addHandler(logging.StreamHandler())
+    app.logger.setLevel(logging.INFO)
+
 # db_config = {
 #     'host': 'localhost',
 #     'user': 'root',
@@ -346,6 +352,7 @@ def dubai_areas():
         return jsonify([legends, geojson])
     except Exception as e:
         # Log the exception to the server's error log
+        #app.logger.error('Failed to fetch or process data', exc_info=True) 
         app.logger.error(f'Error: {str(e)}')
         return jsonify({'error': 'Internal Server Error'}), 500
     
