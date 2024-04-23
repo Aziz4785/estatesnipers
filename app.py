@@ -209,141 +209,145 @@ def get_list_order():
     
 @app.route('/dubai-areas')
 def dubai_areas():
-    connection = get_db_connection()
-    #cursor = connection.cursor(dictionary=True) mysql
-    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
-    fetched_rows = cursor.fetchall() 
+    try:
+        connection = get_db_connection()
+        #cursor = connection.cursor(dictionary=True) mysql
+        cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+        cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
+        fetched_rows = cursor.fetchall() 
 
-    # Data processing functions for each key
-    # Each function is responsible for converting the row entry to the desired type
-    process_funcs = {
-        'average_sale_price': float,
-        'avg_ca_5': float,
-        'avg_ca_10': float,  
-        'avg_roi': float,
-        'supply_finished_pro': int,
-        'supply_offplan_pro': int,
-        'supply_lands': int,
-        'aquisitiondemand_2023' : float,
-        'rentaldemand_2023' : float
-    }
+        # Data processing functions for each key
+        # Each function is responsible for converting the row entry to the desired type
+        process_funcs = {
+            'average_sale_price': float,
+            'avg_ca_5': float,
+            'avg_ca_10': float,  
+            'avg_roi': float,
+            'supply_finished_pro': int,
+            'supply_offplan_pro': int,
+            'supply_lands': int,
+            'aquisitiondemand_2023' : float,
+            'rentaldemand_2023' : float
+        }
 
-    # Data storage dictionaries, keyed by type
-    data_stores = {
-        'average_sale_price': {},
-        'avg_ca_5': {},
-        'avg_ca_10': {},
-        'avg_roi': {},
-        'supply_finished_pro': {},
-        'supply_offplan_pro': {},
-        'supply_lands': {},
-        'aquisitiondemand_2023' : {},
-        'rentaldemand_2023' : {}
-    }
+        # Data storage dictionaries, keyed by type
+        data_stores = {
+            'average_sale_price': {},
+            'avg_ca_5': {},
+            'avg_ca_10': {},
+            'avg_roi': {},
+            'supply_finished_pro': {},
+            'supply_offplan_pro': {},
+            'supply_lands': {},
+            'aquisitiondemand_2023' : {},
+            'rentaldemand_2023' : {}
+        }
 
-    # Process all rows in one loop
-    for row in fetched_rows:
-        area_id = row['area_id']
-        for column, changetype in process_funcs.items():
-            if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
-                data_stores[column][area_id] = changetype(row[column])
+        # Process all rows in one loop
+        for row in fetched_rows:
+            area_id = row['area_id']
+            for column, changetype in process_funcs.items():
+                if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
+                    data_stores[column][area_id] = changetype(row[column])
 
-    valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
-    valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
-    valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
-    valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
-    valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
-    min_price, med_price, max_price = get_min_median_max(valid_prices)
-    min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
-    min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
-    min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
-    min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
+        valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
+        valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
+        valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
+        valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
+        valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
+        min_price, med_price, max_price = get_min_median_max(valid_prices)
+        min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
+        min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
+        min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
+        min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
 
-    legends = {
-        "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
-        "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
-        "avg_roi": [round(med_roi*100/2), round(med_roi*100), round((med_roi+(max_roi-med_roi)/2.0)*100)],
-        "aquisitiondemand_2023" : [
-        round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
-        round(med_aqDemand*100) if med_aqDemand is not None else 0,
-        round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
-    ]
-    }
+        legends = {
+            "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
+            "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
+            "avg_roi": [round(med_roi*100/2), round(med_roi*100), round((med_roi+(max_roi-med_roi)/2.0)*100)],
+            "aquisitiondemand_2023" : [
+            round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
+            round(med_aqDemand*100) if med_aqDemand is not None else 0,
+            round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
+        ]
+        }
+        
+        # Load the GeoJSON file
+        with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
+            geojson = json.load(file)
     
-    # Load the GeoJSON file
-    with open('areas_coordinates/DubaiAreas.geojson', 'r') as file:
-        geojson = json.load(file)
-   
-    # Enrich GeoJSON with price data and calculate fill colors
-    for feature in geojson:
-        area_id = int(feature['area_id'])
-        if area_id in data_stores['average_sale_price']:
-            price = data_stores['average_sale_price'][area_id]
-            feature["averageSalePrice"] = price
-            feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
-        else:
-            # Default color if no price data is available
-            feature['fillColorPrice'] = 'rgb(95,95,95)'  #  grey
+        # Enrich GeoJSON with price data and calculate fill colors
+        for feature in geojson:
+            area_id = int(feature['area_id'])
+            if area_id in data_stores['average_sale_price']:
+                price = data_stores['average_sale_price'][area_id]
+                feature["averageSalePrice"] = price
+                feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
+            else:
+                # Default color if no price data is available
+                feature['fillColorPrice'] = 'rgb(95,95,95)'  #  grey
 
-        if area_id in data_stores['avg_ca_5']:
-            ca = data_stores['avg_ca_5'][area_id]
-            feature["avgCA_5Y"] = data_stores['avg_ca_5'][area_id]
-            feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
-        else:
-            feature["avgCA_5Y"] = None
-            feature['fillColorCA5'] = 'rgb(95,95,95)'  #  grey
+            if area_id in data_stores['avg_ca_5']:
+                ca = data_stores['avg_ca_5'][area_id]
+                feature["avgCA_5Y"] = data_stores['avg_ca_5'][area_id]
+                feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
+            else:
+                feature["avgCA_5Y"] = None
+                feature['fillColorCA5'] = 'rgb(95,95,95)'  #  grey
 
-        if area_id in data_stores['avg_ca_10']:
-            feature["avgCA_10Y"] = data_stores['avg_ca_10'][area_id]
-        else:
-            feature["avgCA_10Y"] = None
-        
-        if area_id in data_stores['avg_roi']:
-            roi = data_stores['avg_roi'][area_id]
-            feature["avg_roi"] = data_stores['avg_roi'][area_id]
-            feature['fillColorRoi'] = get_color(roi, min_roi,med_roi, max_roi)
-        else:
-            feature["avg_roi"] = None
-            feature['fillColorRoi'] = 'rgb(95,95,95)'
-        
-        if area_id in data_stores['supply_finished_pro']:
-            feature["supply_finished_pro"] = data_stores['supply_finished_pro'][area_id]
-        else:
-            feature["supply_finished_pro"] = None
-        
-        if area_id in data_stores['supply_offplan_pro']:
-            feature["supply_offplan_pro"] = data_stores['supply_offplan_pro'][area_id]
-        else:
-            feature["supply_offplan_pro"] = None
-
-        if area_id in data_stores['supply_lands']:
-            feature["supply_lands"] = data_stores['supply_lands'][area_id]
-        else:
-            feature["supply_lands"] = None
-
-        if area_id in data_stores['aquisitiondemand_2023']:
-            feature["aquisitiondemand_2023"] = data_stores['aquisitiondemand_2023'][area_id]
-            feature['fillColorAquDemand'] = get_color(feature["aquisitiondemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
-            #print(f"{area_id} is  in data_stores['aquisitiondemand_2023'] so fill color = {feature['fillColorAquDemand']}")
-        else:
-            #print(f"{area_id} is not in data_stores['aquisitiondemand_2023']")
-            feature['fillColorAquDemand'] = 'rgb(95,95,95)'
-            feature["aquisitiondemand_2023"] = None
+            if area_id in data_stores['avg_ca_10']:
+                feature["avgCA_10Y"] = data_stores['avg_ca_10'][area_id]
+            else:
+                feature["avgCA_10Y"] = None
             
-        if area_id in data_stores['rentaldemand_2023']:
-            feature["rentaldemand_2023"] = data_stores['rentaldemand_2023'][area_id]
-            feature['fillColorrentDemand'] = get_color(feature["rentaldemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
-        else:
-            feature['fillColorrentDemand'] = 'rgb(95,95,95)'
-            feature["rentaldemand_2023"] = None
- 
+            if area_id in data_stores['avg_roi']:
+                roi = data_stores['avg_roi'][area_id]
+                feature["avg_roi"] = data_stores['avg_roi'][area_id]
+                feature['fillColorRoi'] = get_color(roi, min_roi,med_roi, max_roi)
+            else:
+                feature["avg_roi"] = None
+                feature['fillColorRoi'] = 'rgb(95,95,95)'
+            
+            if area_id in data_stores['supply_finished_pro']:
+                feature["supply_finished_pro"] = data_stores['supply_finished_pro'][area_id]
+            else:
+                feature["supply_finished_pro"] = None
+            
+            if area_id in data_stores['supply_offplan_pro']:
+                feature["supply_offplan_pro"] = data_stores['supply_offplan_pro'][area_id]
+            else:
+                feature["supply_offplan_pro"] = None
 
-    cursor.close()
-    connection.close()
-    #print("data beofre sending : ")
-    #print([legends, geojson])
-    return jsonify([legends, geojson])
+            if area_id in data_stores['supply_lands']:
+                feature["supply_lands"] = data_stores['supply_lands'][area_id]
+            else:
+                feature["supply_lands"] = None
 
+            if area_id in data_stores['aquisitiondemand_2023']:
+                feature["aquisitiondemand_2023"] = data_stores['aquisitiondemand_2023'][area_id]
+                feature['fillColorAquDemand'] = get_color(feature["aquisitiondemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
+                #print(f"{area_id} is  in data_stores['aquisitiondemand_2023'] so fill color = {feature['fillColorAquDemand']}")
+            else:
+                #print(f"{area_id} is not in data_stores['aquisitiondemand_2023']")
+                feature['fillColorAquDemand'] = 'rgb(95,95,95)'
+                feature["aquisitiondemand_2023"] = None
+                
+            if area_id in data_stores['rentaldemand_2023']:
+                feature["rentaldemand_2023"] = data_stores['rentaldemand_2023'][area_id]
+                feature['fillColorrentDemand'] = get_color(feature["rentaldemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
+            else:
+                feature['fillColorrentDemand'] = 'rgb(95,95,95)'
+                feature["rentaldemand_2023"] = None
+    
+
+        cursor.close()
+        connection.close()
+
+        return jsonify([legends, geojson])
+    except Exception as e:
+        # Log the exception to the server's error log
+        app.logger.error(f'Error: {str(e)}')
+        return jsonify({'error': 'Internal Server Error'}), 500
+    
 if __name__ == '__main__':
     app.run(debug=True)

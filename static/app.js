@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
 function applyGeoJSONLayer(currentLegend) {
+    console.log("calling :applyGeoJSONLayer() ")
     fetch('https://estatesnipers-1a1823af05ea.herokuapp.com/dubai-areas')
     .then(response => response.json())
     .then(data => {
@@ -159,7 +160,7 @@ function createSvgLineChart(dataPoints,chartId,startyear) {
         }
     });
 
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear},2023)" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear},2023)" width="${width}" height="${height}" xmlns="https://www.w3.org/2000/svg">
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
             </svg>`
 }
