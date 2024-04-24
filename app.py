@@ -187,7 +187,7 @@ GROUP BY
     # Fetch and format the results
     fetched_rows = cursor.fetchall()
     fetched_rows = group_external_demand_in_array(fetched_rows)
-    print(fetched_rows)
+    #print(fetched_rows)
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 

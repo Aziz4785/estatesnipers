@@ -64,7 +64,7 @@ function applyGeoJSONLayer(currentLegend) {
     .then(data => {
         //data[0] contains legends of map and data[1] contains the areas
         const legends = data[0];
-        console.log("received data : ",data[1])
+        //console.log("received data : ",data[1])
         const features = data[1].map(item => ({
             type: 'Feature',
             properties: item, // Store all item properties directly
@@ -314,7 +314,7 @@ function areaStyle(feature, fillColorProperty) {
 function openTab(evt, tabName) {
     // Declare all variables
     var i, tabcontent, tablinks;
-    console.log("we call open tab")
+    //console.log("we call open tab")
     // Get all elements with class="tabcontent" and hide them
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) {
@@ -342,7 +342,7 @@ function updateProjectsDemand() {
 
             .then(response => response.json())
             .then(data => {
-                console.log("project data : ",data)
+                //console.log("project data : ",data)
                 var div = document.getElementById('ProjectsTableContainer'); // Get the div by its ID
                 // Check if a table already exists and remove it
                 var existingTable = div.querySelector('table');
@@ -359,7 +359,7 @@ function updateProjectsDemand() {
 function onEachFeature(feature, layer) {
     layer.on({
         click: function(e) {
-            console.log("we call on each feature")
+            //console.log("we call on each feature")
             // Clear the <tbody> of <table id="nestedTable"> at the beginning
             const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = ''; // Clear existing rows
