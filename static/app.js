@@ -11,7 +11,10 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
 }).addTo(map);
 
-
+document.getElementById('toggle-fullscreen').addEventListener('click', function() {
+    var panel = document.getElementById('info-panel');
+    panel.classList.toggle('fullscreen'); // This toggles the fullscreen class on and off
+});
 
 let currentAreaId = null; 
 document.addEventListener('DOMContentLoaded', function () {

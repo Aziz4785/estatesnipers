@@ -23,9 +23,21 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     width: 550px; /* Adjust the width as needed */
     /*overflow-y: auto;  Allows scrolling if the content is taller than the panel */
-    border-radius: 15px; 
+    border-radius: 13px; 
     overflow: hidden;
     font-family: 'Roboto', sans-serif;
+}
+#info-panel.fullscreen {
+  top: 10px;
+  right: 10px; /* Matching left to ensure equal spacing */
+  bottom: 20px;
+  left: 10px; /* Ensure left and right are the same for horizontal centering */
+  width: calc(100% - 20px); /* 100% width minus the sum of left and right margins */
+  height: calc(100% - 30px); /* Height adjusted to keep 10px top and 20px bottom margin */
+  margin: auto; /* Auto margin for center alignment if necessary */
+  position: fixed; /* Ensuring it's positioned relative to the viewport */
+  display: block; /* Making sure the display is block to enable margin auto to work */
+  box-sizing: border-box; /* Includes padding and border in the width and height */
 }
 #panel-content {
   height: 100%; /* Make sure it spans the full height of the outer container */
@@ -53,6 +65,20 @@
   cursor: pointer; 
   font-weight: bold;
 }
+
+
+#toggle-fullscreen {
+  position: absolute; 
+  top: 5px;
+  right: 45px; 
+  color: #aaaaaa;
+  background: transparent;
+  font-size: 24px;
+  border: none; 
+  cursor: pointer;
+  font-weight: bold;
+}
+
 #stats-container {
   display: flex;
   gap: 10px; /* Space between cards */

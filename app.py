@@ -9,22 +9,31 @@ import time
 import os
 from server_utils import * 
 from sqlalchemy import create_engine
+from flask_httpauth import HTTPBasicAuth
 import psycopg2
 from flask import jsonify
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
 
-pd.set_option('display.max_rows', None) 
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', 1000)
-pd.set_option('display.max_colwidth', None)
+# Load environment variables from .env file
+load_dotenv()
+# pd.set_option('display.max_rows', None) 
+# pd.set_option('display.max_columns', None)
+# pd.set_option('display.width', 1000)
+# pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
 CORS(app)
 app.secret_key = 'some_secret_key'
-if not app.debug:
-    # Set up logging to stdout which Heroku can capture
-    app.logger.addHandler(logging.StreamHandler())
-    app.logger.setLevel(logging.INFO)
+auth = HTTPBasicAuth()
+users = {
+    os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and users[username] == password:
+        return username
 
 # db_config = {
 #     'host': 'localhost',
@@ -39,10 +48,11 @@ db_config = {
     'password': r'DubaiAnalytics_123',
     'port': '5432'  # Default PostgreSQL port
 }
-db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
+#db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
 #db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
 @app.route('/')
+@auth.login_required
 def index():
     return render_template('index.html') 
 
@@ -59,6 +69,7 @@ def get_db_connection():
 list_order_in_memory = []
 
 @app.route('/get-area-details')
+@auth.login_required
 def get_area_details():
     try:
         hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
@@ -70,7 +81,7 @@ def get_area_details():
         connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
         if connection_url.startswith("postgres://"):
            connection_url = connection_url.replace("postgres://", "postgresql://", 1)
-        #connection_url = db_url
+
         if not connection_url:
             return jsonify({'error': 'Database connection URL not found'}), 500
 
@@ -156,6 +167,7 @@ def get_area_details():
             engine.dispose()
 
 @app.route('/get-demand-per-project')
+@auth.login_required
 def get_demand_per_project():
     area_id = request.args.get('area_id')
     connection = get_db_connection()
@@ -192,6 +204,7 @@ GROUP BY
     return fetched_rows_json
 
 @app.route('/get-lands-stats')
+@auth.login_required
 def get_lands_stats():
     area_id = request.args.get('area_id')
     connection = get_db_connection()
@@ -211,7 +224,9 @@ def get_lands_stats():
     fetched_rows = cursor.fetchall()
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
+
 @app.route('/save-list-order', methods=['POST'])
+@auth.login_required
 def save_list_order():
     # todo
     global list_order_in_memory  # Reference the global variable
@@ -222,11 +237,13 @@ def save_list_order():
     return jsonify({'message': 'List order saved successfully!'})
 
 @app.route('/get-list-order', methods=['GET'])
+@auth.login_required
 def get_list_order():
     return jsonify({'listOrder': list_order_in_memory})
 
     
 @app.route('/dubai-areas')
+@auth.login_required
 def dubai_areas():
     try:
         connection = get_db_connection()
