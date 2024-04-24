@@ -50,6 +50,7 @@ def get_db_connection():
     #connection = mysql.connector.connect(**db_config)
     #connection = psycopg2.connect(**db_config)
     #connection = psycopg2.connect(db_url) #here we use an url
+    #DATABASE_URL = db_url #local database
     DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')  # Fetch the correct environment variable
     connection = psycopg2.connect(DATABASE_URL)
     return connection
@@ -68,8 +69,8 @@ def get_area_details():
         #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
         connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
         if connection_url.startswith("postgres://"):
-            connection_url = connection_url.replace("postgres://", "postgresql://", 1)
-
+           connection_url = connection_url.replace("postgres://", "postgresql://", 1)
+        #connection_url = db_url
         if not connection_url:
             return jsonify({'error': 'Database connection URL not found'}), 500
 
@@ -163,14 +164,14 @@ def get_demand_per_project():
     
     query = """
        SELECT 
-    p.project_name_en,
-    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END) / p.no_of_units AS internalDemand2023,
-    (SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) AS externalDemand2023,
-    (SUM(CASE WHEN t.instance_year = 2022 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022))  AS externalDemand2022,
-    (SUM(CASE WHEN t.instance_year = 2021 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021))  AS externalDemand2021,
-    (SUM(CASE WHEN t.instance_year = 2020 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020))  AS externalDemand2020,
-    (SUM(CASE WHEN t.instance_year = 2019 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019))  AS externalDemand2019,
-    (SUM(CASE WHEN t.instance_year = 2018 THEN t.total ELSE 0 END) / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018))  AS externalDemand2018
+    MAX(p.project_name_en) AS project_name_en,
+    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / p.no_of_units AS internaldemand2023,
+    (SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) AS externaldemand2023,
+    (SUM(CASE WHEN t.instance_year = 2022 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022))  AS externalDemand2022,
+    (SUM(CASE WHEN t.instance_year = 2021 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021))  AS externalDemand2021,
+    (SUM(CASE WHEN t.instance_year = 2020 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020))  AS externalDemand2020,
+    (SUM(CASE WHEN t.instance_year = 2019 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019))  AS externalDemand2019,
+    (SUM(CASE WHEN t.instance_year = 2018 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018))  AS externalDemand2018
 FROM 
     transactions_per_year t
 JOIN 
@@ -179,14 +180,14 @@ WHERE
     t.area_id = %s
     AND p.no_of_units > 80
 GROUP BY 
-    t.project_number, p.no_of_units;
+    t.project_number, p.no_of_units, p.project_name_en;
     """
     cursor.execute(query, (area_id,))
     
     # Fetch and format the results
     fetched_rows = cursor.fetchall()
     fetched_rows = group_external_demand_in_array(fetched_rows)
-
+    print(fetched_rows)
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 
@@ -282,11 +283,11 @@ def dubai_areas():
         legends = {
             "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
             "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
-            "avg_roi": [round(med_roi*100/2), round(med_roi*100), round((med_roi+(max_roi-med_roi)/2.0)*100)],
+            "avg_roi": [custom_round(med_roi*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
             "aquisitiondemand_2023" : [
-            round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
-            round(med_aqDemand*100) if med_aqDemand is not None else 0,
-            round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
+            custom_round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
+            custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
+            custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
         ]
         }
         

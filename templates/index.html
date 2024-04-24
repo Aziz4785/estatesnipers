@@ -12,7 +12,7 @@
 </head>
 <body>
     <div id="dubaiMap"></div>
-    <div id="legend" style="position: fixed; bottom: 10px; border-radius: 2px; right: 10px; background: rgba(183, 183, 183, 0.557); padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.5);  font-family: 'Roboto', sans-serif;">
+    <div id="legend" style="position: fixed; bottom: 10px; border-radius: 2px; right: 10px; background: rgba(200, 200, 200, 0.596); padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.5);  font-family: 'Roboto', sans-serif;">
         <div id="legendContent"></div>
     </div>
     <div id="settingsModal" class="modal">
@@ -62,6 +62,7 @@
 
     <button id="settingsBtn" class="floating-btn">⚙️</button>
     <div id="info-panel" style="display:none; position: fixed; top: 20px; right: 20px; background: white; z-index: 1000;">
+        
         <div id="panel-content">
             <button id="close-panel">x</button>
             <div id = "area_info"></div>
@@ -86,7 +87,11 @@
                             <!-- Rows will be inserted here using JavaScript -->
                         </tbody>
                     </table>
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                    </div>
                 </div>
+                
             </div>
 
             <div id="ProjectsDemand" class="tabcontent">

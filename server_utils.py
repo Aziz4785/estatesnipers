@@ -13,6 +13,12 @@ def get_min_median_max(valid_prices):
     else:
         return None, None, None
 
+def custom_round(x):
+    if abs(x) < 10:
+        return round(x, 2)
+    else:
+        return round(x)
+    
 def get_color(price, min_price,med_price, max_price):
     # Normalize price to a 0-1 scale
     normalized_price = (price - min_price) / (max_price - min_price)
@@ -241,15 +247,15 @@ def group_external_demand_in_array(sql_result):
     for item in sql_result:
         project_data = {
             "project_name_en": item["project_name_en"],
-            "internalDemand2023" : float(item["internalDemand2023"]),
-            "externalDemand2023" : float(item["externalDemand2023"]),
+            "internaldemand2023" : float(item["internaldemand2023"]),
+            "externaldemand2023" : float(item["externaldemand2023"]),
             "externalDemandYears": []
         }
         
         # Assuming the years go from 2018 to 2023 for each project
         # Also assuming there's no data for years before 2018, so they will be filled with 0.0
         for year in range(2018, 2024):
-            key = f"externalDemand{year}"
+            key = f"externaldemand{year}"
             project_data["externalDemandYears"].append(float(item.get(key, 0.0)))
             
         transformed_data.append(project_data)

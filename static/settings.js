@@ -113,7 +113,7 @@ document.getElementById("saveSettings").onclick = function() {
     
     const listOrder = getListOrder();
     document.getElementById("settingsModal").style.display = "none";
-    fetch('https://estatesnipers-1a1823af05ea.herokuapp.com/save-list-order', {
+    fetch('/save-list-order', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
