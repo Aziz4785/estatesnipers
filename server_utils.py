@@ -166,10 +166,20 @@ def aggregate_yearly(df):
 
 def conditional_avg(df, group,year, threshold=5):
     """Compute conditional average based on the year and a threshold for counts."""
-    # Filter rows for the specified year with valid meter_sale_price values
     filtered_df = df[(df['instance_year'] == year) & df['meter_sale_price'].notnull()]
     
     result = filtered_df.groupby(group, dropna=False)['meter_sale_price'].agg(lambda x: x.mean() if len(x) > threshold else np.nan)
+    
+    return result
+
+def weighted_avg(df, group, year):
+    # Filter the DataFrame
+    filtered_df = df[(df['instance_year'] == year) & df['meter_sale_price'].notnull()]
+    
+    # Calculate the weighted average of 'meter_sale_price' using 'total_rows' as weights
+    result = filtered_df.groupby(group, dropna=False).apply(
+        lambda x: (x['meter_sale_price'] * x['total_rows']).sum() / x['total_rows'].sum()
+    )
     
     return result
 

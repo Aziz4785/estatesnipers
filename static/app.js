@@ -135,38 +135,259 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     return rowId;
 }
 
-function createSvgLineChart(dataPoints,chartId,startyear) {
+// function createSvgLineChart(dataPoints,chartId,startyear,endyear) {
+//     if (!dataPoints || !dataPoints.length) return '';
+
+//     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
+//     const minVal = Math.min(...dataPoints.filter(point => point !== null));
+//     const height = 50; // SVG height
+//     const width = 100; // SVG width
+//     const pointWidth = width / (dataPoints.length - 1);
+
+//     let pathD = '';
+//     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
+
+//     dataPoints.forEach((point, index) => {
+//         if (point !== null) {
+//             const x = pointWidth * index;
+//             const y = height - ((point - minVal) / (maxVal - minVal) * height);
+//             if (moveToNext) {
+//                 pathD += `M ${x},${y} `; // Move to this point without drawing
+//                 moveToNext = false; // Reset the flag as we now have a valid point
+//             } else {
+//                 pathD += `L ${x},${y} `; // Draw line to this point
+//             }
+//         } else {
+//             moveToNext = true; // No point here, next valid point should move without drawing
+//         }
+//     });
+
+//     return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear},${endyear},${chart_title})" width="${width}" height="${height}" xmlns="https://www.w3.org/2000/svg">
+//             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+//             </svg>`
+// }
+// function createSvgLineChart(dataPoints, chartId, startYear, endYear) {
+//     if (!dataPoints || !dataPoints.length) return '';
+
+//     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
+//     const minVal = Math.min(Math.min(...dataPoints.filter(point => point !== null)),0);
+//     const height = 50; // SVG height
+//     const width = 100; // SVG width
+//     const padding = 5; // Padding around the chart to ensure the path doesn't touch the edges
+//     const chartWidth = width - 2 * padding;
+//     const chartHeight = height - 2 * padding;
+//     const pointWidth = chartWidth / (dataPoints.length - 1);
+
+//     let pathD = ''; // Path for the main line chart
+//     let redPathD = ''; // Path for the last 5 points
+//     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
+
+//     dataPoints.forEach((point, index) => {
+//         if (point !== null) {
+//             const x = padding + pointWidth * index;
+//             const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+//             if (index >= dataPoints.length - 5) {
+//                 if (redPathD === '' || moveToNext) {
+//                     redPathD += `M ${x},${y} `;
+//                 } else {
+//                     redPathD += `L ${x},${y} `;
+//                 }
+//             } else {
+//                 if (moveToNext) {
+//                     pathD += `M ${x},${y} `;
+//                     moveToNext = false;
+//                 } else {
+//                     pathD += `L ${x},${y} `;
+//                 }
+//             }
+//         } else {
+//             moveToNext = true;
+//         }
+//     });
+
+//     // Create the axis lines
+//     const xAxisY = padding + chartHeight;
+//     const yAxisX = padding;
+
+//     return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+//             <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
+//             <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
+//             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+//             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
+//             </svg>`;
+// }
+function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
+    if (!dataPoints || !dataPoints.length) return '';
+
+    const maxVal = Math.max(...dataPoints.filter(point => point !== null));
+    const minVal = Math.min(Math.min(...dataPoints.filter(point => point !== null)), 0);
+    const height = 50; // SVG height
+    const width = 100; // SVG width
+    const padding = 5; // Padding around the chart to ensure the path doesn't touch the edges
+    const chartWidth = width - 2 * padding;
+    const chartHeight = height - 2 * padding;
+    const pointWidth = chartWidth / (dataPoints.length - 1);
+
+    let pathD = ''; // Path for the main line chart
+    let redPathD = ''; // Path for the last 5 points
+    let moveToNext = true; // Flag to indicate when to move to the next point without drawing
+    let lastBluePointX, lastBluePointY; // Keep track of the last non-null point in the blue line
+
+    dataPoints.forEach((point, index) => {
+        if (point !== null) {
+            const x = padding + pointWidth * index;
+            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+
+            if (index < dataPoints.length - Math.max(0,(endYear-2024))) {
+                if (moveToNext) {
+                    pathD += `M ${x},${y} `;
+                    moveToNext = false;
+                } else {
+                    pathD += `L ${x},${y} `;
+                }
+                lastBluePointX = x;
+                lastBluePointY = y;
+            } else {
+                if (redPathD === '') {
+                    redPathD += `M ${lastBluePointX},${lastBluePointY} L ${x},${y} `; // Connect the last blue point to the first red point
+                } else {
+                    redPathD += `L ${x},${y} `;
+                }
+            }
+        } else {
+            moveToNext = true;
+        }
+    });
+
+    // Create the axis lines
+    const xAxisY = padding + chartHeight;
+    const yAxisX = padding;
+
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
+            <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
+            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+            <path d="${redPathD.trim()}" stroke="red" fill="none"/>
+            </svg>`;
+}
+
+function createSvgLineChart3(dataPoints, chartId, startYear, endYear,chart_title) {
+    if (!dataPoints || !dataPoints.length) return '';
+
+    const maxVal = Math.max(...dataPoints.filter(point => point !== null));
+    const minVal = Math.min(Math.min(...dataPoints.filter(point => point !== null)), 0);
+    const height = 50; // SVG height
+    const width = 100; // SVG width
+    const padding = 5; // Padding around the chart to ensure the path doesn't touch the edges
+    const chartWidth = width - 2 * padding;
+    const chartHeight = height - 2 * padding;
+    const pointWidth = chartWidth / (dataPoints.length - 1);
+
+    let pathD = ''; // Path for the main line chart (blue)
+    let redPathD = ''; // Path for the last 5 points (red)
+    let moveToNext = true; // Flag to indicate when to move to the next point without drawing
+
+    dataPoints.forEach((point, index) => {
+        if (point !== null) {
+            const x = padding + pointWidth * index;
+            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+            if (index >= dataPoints.length - 5) {
+                // Connect the blue and red paths seamlessly
+                if (redPathD === '') {
+                    if (pathD) {
+                        redPathD = pathD.trim() + ` L ${x},${y}`;
+                    } else {
+                        redPathD = `M ${x},${y}`;
+                    }
+                } else {
+                    redPathD += ` L ${x},${y}`;
+                }
+            } else {
+                if (moveToNext) {
+                    pathD += `M ${x},${y} `;
+                    moveToNext = false;
+                } else {
+                    pathD += `L ${x},${y} `;
+                }
+            }
+        } else {
+            moveToNext = true;
+        }
+    });
+
+    // Create the axis lines
+    const xAxisY = padding + chartHeight;
+    const yAxisX = padding;
+
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},${chart_title})" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
+            <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
+            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+            <path d="${redPathD.trim()}" stroke="red" fill="none"/>
+            </svg>`;
+}
+
+function createSvgLineChart2(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
     const minVal = Math.min(...dataPoints.filter(point => point !== null));
     const height = 50; // SVG height
     const width = 100; // SVG width
-    const pointWidth = width / (dataPoints.length - 1);
+    const padding = 10; // Padding around the chart to ensure the path doesn't touch the edges
+    const chartWidth = width - 2 * padding;
+    const chartHeight = height - 2 * padding;
+    const pointWidth = chartWidth / (dataPoints.length - 1);
 
-    let pathD = '';
+    let pathD = ''; // Path for the line chart
     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
 
+    // Generate the complete path
     dataPoints.forEach((point, index) => {
         if (point !== null) {
-            const x = pointWidth * index;
-            const y = height - ((point - minVal) / (maxVal - minVal) * height);
+            const x = padding + pointWidth * index;
+            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
             if (moveToNext) {
-                pathD += `M ${x},${y} `; // Move to this point without drawing
-                moveToNext = false; // Reset the flag as we now have a valid point
+                pathD += `M ${x},${y} `;
+                moveToNext = false;
             } else {
-                pathD += `L ${x},${y} `; // Draw line to this point
+                pathD += `L ${x},${y} `;
             }
         } else {
-            moveToNext = true; // No point here, next valid point should move without drawing
+            moveToNext = true; // Move to the next point without drawing a line for null values
         }
     });
 
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear},2023)" width="${width}" height="${height}" xmlns="https://www.w3.org/2000/svg">
-            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
-            </svg>`
-}
+    // Determine where to start the red path
+    const redStartIndex = Math.max(dataPoints.length - 5, 0);
+    let redPathD = '';
+    let redMoveToNext = true;
 
+    for (let i = redStartIndex; i < dataPoints.length; i++) {
+        const point = dataPoints[i];
+        if (point !== null) {
+            const x = padding + pointWidth * i;
+            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+            if (redMoveToNext) {
+                redPathD += `M ${x},${y} `;
+                redMoveToNext = false;
+            } else {
+                redPathD += `L ${x},${y} `;
+            }
+        }
+    }
+
+    // Create the axis lines
+    const xAxisY = padding + chartHeight;
+    const yAxisX = padding;
+
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},${chart_title})" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
+            <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
+            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+            <path d="${redPathD.trim()}" stroke="red" fill="none"/>
+            </svg>`;
+}
 // Close modal functionality
 document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('chartModal').style.display = 'none';
@@ -213,7 +434,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013);
+                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -231,7 +452,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013);
+                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
         }

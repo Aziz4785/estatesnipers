@@ -456,7 +456,6 @@ tbody td {
   background-color: #003d82; /* Slightly darker background on hover for button */
 }
 
-
 .modal_chart {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
@@ -469,7 +468,6 @@ tbody td {
   background-color: rgb(0,0,0); /* Fallback color */
   background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
 }
-
 /* Style for the modal content - make it smaller and centered */
 .modal-content_chart {
   position: relative;
@@ -479,10 +477,9 @@ tbody td {
   border: 1px solid #888;
   width: 80%; 
   border-radius: 20px;
-  max-width: 400px; /* Reduced max width */
+  max-width: 500px; /* Reduced max width */
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
 }
-
 /* The Close Button (x) */
 .close {
   color: #aaa;

@@ -16,7 +16,7 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 # pd.set_option('display.max_rows', None) 
 # pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -109,6 +109,35 @@ def get_area_details():
         df = pd.read_sql_query(sql_query, engine)
         #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
 
+        prediction_query = f"""SELECT
+                        pst.property_sub_type_en, 
+                        proj.project_name_en AS grouped_project, 
+                        rooms_en, 
+                        property_usage_en,
+                        instance_year,
+                        SUM(avg_price * total_rows) / SUM(total_rows) AS meter_sale_price,
+                        SUM(total_rows) AS total_rows
+                    FROM
+                        predictions
+                    LEFT JOIN
+                        propertysubtype pst 
+                    ON 
+                        predictions.property_sub_type_id = pst.property_sub_type_id
+                    LEFT JOIN
+                        projects proj
+                    ON
+                        predictions.project_number = proj.project_number
+                    WHERE
+                        predictions.area_id = {area_id}
+                    GROUP BY
+                        pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;"""
+        
+        df_prediction = pd.read_sql_query(prediction_query, engine)
+        df_prediction_filtered = df_prediction[df_prediction['instance_year'] == 2024]
+        df_2024 = df[df['instance_year'] == 2024].copy()
+        df_2024['total_rows'] = 1
+        df_combined_2024 = pd.concat([df_2024, df_prediction_filtered], ignore_index=True)
+
         nested_dicts = {}
         groupings = create_groupings(hierarchy_keys)
         
@@ -117,31 +146,27 @@ def get_area_details():
             #print("grouping by : "+str(group))
 
             # # Apply the custom aggregation function for each year of interest
-            avg_meter_price_2013 = conditional_avg(df,group ,2013).rename('AVG_meter_price_2013')
-            avg_meter_price_2014 = conditional_avg(df,group ,2014).rename('AVG_meter_price_2014')
-            avg_meter_price_2015 = conditional_avg(df,group ,2015).rename('AVG_meter_price_2015')
-            avg_meter_price_2016 = conditional_avg(df,group ,2016).rename('AVG_meter_price_2016')
-            avg_meter_price_2017 = conditional_avg(df,group ,2017).rename('AVG_meter_price_2017')
-            avg_meter_price_2018 = conditional_avg(df,group ,2018).rename('AVG_meter_price_2018')
-            avg_meter_price_2019 = conditional_avg(df,group ,2019).rename('AVG_meter_price_2019')
-            avg_meter_price_2020 = conditional_avg(df,group ,2020).rename('AVG_meter_price_2020')
-            avg_meter_price_2021 = conditional_avg(df,group ,2021).rename('AVG_meter_price_2021')
-            avg_meter_price_2022 = conditional_avg(df,group ,2022).rename('AVG_meter_price_2022')
-            avg_meter_price_2023 = conditional_avg(df, group,2023).rename('AVG_meter_price_2023')
+            avg_meter_prices = {}
+            for year in range(2013, 2024):
+                avg_meter_prices[f'AVG_meter_price_{year}'] = conditional_avg(df, group, year).rename(f'AVG_meter_price_{year}')
 
+            
+            avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
+
+            for year in range(2025, 2030):
+                avg_meter_prices[f'AVG_meter_price_{year}'] = weighted_avg(df_prediction, group, year).rename(f'AVG_meter_price_{year}')
+            
             avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
 
-            final_df = pd.concat([avg_meter_price_2013,avg_meter_price_2014,avg_meter_price_2015,avg_meter_price_2016, avg_meter_price_2017,avg_meter_price_2018,avg_meter_price_2019, avg_meter_price_2020,avg_meter_price_2021,avg_meter_price_2022,avg_meter_price_2023, avg_roi], axis=1).reset_index()
-
-            final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in ['AVG_meter_price_2013','AVG_meter_price_2014','AVG_meter_price_2015','AVG_meter_price_2016', 'AVG_meter_price_2017','AVG_meter_price_2018','AVG_meter_price_2019', 'AVG_meter_price_2020','AVG_meter_price_2021','AVG_meter_price_2022','AVG_meter_price_2023']], axis=1)
+            final_df = pd.concat([*avg_meter_prices.values(), avg_roi], axis=1).reset_index()
+            #concat the columns into an array : 
+            final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in avg_meter_prices.keys()], axis=1)
 
             #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
             #avergae capital apperication calculation for that group:
 
             final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
             final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
-
-            # Identify all columns starting with 'avg'
 
             columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
             # Combine the columns : columns of the group + avg_cap_appreciation_columns
@@ -154,6 +179,7 @@ def get_area_details():
 
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
+            
             json_response = jsonify(fetched_rows)
             return json_response
         else:
