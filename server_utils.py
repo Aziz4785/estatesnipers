@@ -2,6 +2,43 @@ import math
 from decimal import Decimal
 import pandas as pd
 import numpy as np
+from scipy import interpolate
+from scipy.interpolate import interp1d
+from scipy.interpolate import PchipInterpolator
+
+# Function to safely convert string to float or None
+def safe_float(x):
+    try:
+        return float(x)
+    except:
+        return None
+    
+# Function to perform polynomial interpolation
+def interpolate_price_list(lst):
+    # Ensure we're working with the price list, not the column names
+    if isinstance(lst[0], str):
+        return lst  # Return column names as is
+    
+    # Convert to float, replacing 'None' strings with None
+    values = [None if (x is None or (isinstance(x, str) and x.lower() == 'none')) 
+              else float(x) for x in lst]
+    
+    # Find indices and values of non-None elements
+    valid_indices = [i for i, x in enumerate(values) if x is not None]
+    valid_values = [values[i] for i in valid_indices]
+    
+    if len(valid_indices) < 2:
+        return values  # Not enough points for interpolation
+    
+    # Perform interpolation
+    interpolator = PchipInterpolator(valid_indices, valid_values)
+    
+    # Interpolate only for None values between the first and last valid values
+    for i in range(valid_indices[0], valid_indices[-1] + 1):
+        if values[i] is None:
+            values[i] = float(interpolator(i))
+    
+    return values
 
 def get_min_median_max(valid_prices):
     if valid_prices:

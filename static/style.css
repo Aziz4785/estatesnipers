@@ -64,12 +64,13 @@
   border: none; /* Removes the border */
   cursor: pointer; 
   font-weight: bold;
+  line-height: 1;
+  padding: 0;
 }
 
 
 #toggle-fullscreen {
   position: absolute; 
-  top: 5px;
   right: 45px; 
   color: #aaaaaa;
   background: transparent;
@@ -77,6 +78,8 @@
   border: none; 
   cursor: pointer;
   font-weight: bold;
+  line-height: 1;
+  padding: 0;
 }
 
 #stats-container {

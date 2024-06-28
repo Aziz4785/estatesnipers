@@ -65,8 +65,9 @@ function applyGeoJSONLayer(currentLegend) {
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
-        //data[0] contains legends of map and data[1] contains the areas
+        //data[0] contains legends of map and data[1] contains the areas and data[2] to contain units
         const legends = data[0];
+        const units = data[2];
         //console.log("received data : ",data[1])
         const features = data[1].map(item => ({
             type: 'Feature',
@@ -89,7 +90,7 @@ function applyGeoJSONLayer(currentLegend) {
             onEachFeature: onEachFeature
         }).addTo(map);
 
-        updateLegend(legends[currentLegend]);
+        updateLegend(legends[currentLegend],units[currentLegend]);
     })
     .catch(error => console.log('Error:', error));
 }

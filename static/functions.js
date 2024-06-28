@@ -41,14 +41,14 @@ function generateTable(data) {
     return table;
 }
 
-function updateLegend(averageSalePrice) {
+function updateLegend(averageSalePrice, unit) {
     const legendContent = document.getElementById('legendContent');
     legendContent.innerHTML = ''; // Clear previous contents
     const colors = [
-        { color: 'rgb(192, 0, 0)', label: `> ${averageSalePrice[2]}` },
-        { color: 'rgb(223, 82, 82)', label: `${averageSalePrice[2]} > > ${averageSalePrice[1]}` },
-        { color: 'rgb(82, 82, 223)', label: `${averageSalePrice[1]} > > ${averageSalePrice[0]}` },
-        { color: 'rgb(0, 0, 192)', label: `< ${averageSalePrice[0]}` }
+        { color: 'rgb(192, 0, 0)', label: `> ${averageSalePrice[2]} ${unit}` },
+        { color: 'rgb(223, 82, 82)', label: `${averageSalePrice[2]} ${unit} - ${averageSalePrice[1]} ${unit}` },
+        { color: 'rgb(82, 82, 223)', label: `${averageSalePrice[1]} ${unit} - ${averageSalePrice[0]} ${unit}` },
+        { color: 'rgb(0, 0, 192)', label: `< ${averageSalePrice[0]} ${unit}` }
     ];
 
     colors.forEach(col => {
@@ -68,7 +68,7 @@ function updateLegend(averageSalePrice) {
         // Create the label text
         const labelText = document.createElement('span');
         labelText.textContent = col.label;
-        labelText.style.fontSize = '10px';
+        labelText.style.fontSize = '16px';
         labelText.style.fontWeight = 'bold';
         
         // Append the color square and label text to the container
@@ -79,49 +79,6 @@ function updateLegend(averageSalePrice) {
         legendContent.appendChild(legendItem);
     });
 }
-
-// function openChartModal(chartId,start_year,end_year) {
-//     // Fetch the dataset based on the chartId or directly pass the dataset
-//     const dataset = chartDataMappings[chartId];
-//     if (!dataset) {
-//         console.error('Dataset not found for chartId:', chartId);
-//         return;
-//     }
-//     // Labels for the x-axis
-//     const labels = Array.from({ length: end_year-start_year+1 }, (v, i) => i + start_year);
-
-//     // Ensure the canvas context is clear before drawing a new chart
-//     const ctx = document.getElementById('landStatsChart').getContext('2d');
-//     // If there's an existing chart instance, destroy it to avoid overlay issues
-//     if (window.myChartInstance) {
-//         window.myChartInstance.destroy();
-//     }
-
-//     // Create a new chart instance
-//     window.myChartInstance = new Chart(ctx, {
-//         type: 'line', // Define the type of chart you want
-//         data: {
-//             labels: labels, // Years from 2013 to 2023
-//             datasets: [{
-//                 label: 'avg meter sale price', // Chart label
-//                 data: dataset, // The dataset array from the mapping
-//                 fill: false, // Determines whether the chart should be filled
-//                 borderColor: 'rgb(36, 22, 235)', // Line color
-//                 tension: 0.2 // Line smoothness
-//             }]
-//         },
-//         options: {
-//             scales: {
-//                 y: {
-//                     beginAtZero: true // Ensures the y-axis starts at 0
-//                 }
-//             }
-//         }
-//     });
-
-//     // Show the modal
-//     document.getElementById('chartModal').style.display = 'block';
-// }
 
 function openChartModal(chartId, start_year, end_year,title) {
     // Fetch the dataset based on the chartId or directly pass the dataset

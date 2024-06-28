@@ -15,12 +15,13 @@ from flask import jsonify
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
+
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
-# pd.set_option('display.max_rows', None) 
-# pd.set_option('display.max_columns', None)
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+pd.set_option('display.max_rows', None) 
+pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
-# pd.set_option('display.max_colwidth', None)
+pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
 CORS(app)
@@ -142,15 +143,13 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
-            grouping_start_time = time.time()
-            #print("grouping by : "+str(group))
-
+            print("--------------")
+            print("group : ")
+            print(str(group))
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
                 avg_meter_prices[f'AVG_meter_price_{year}'] = conditional_avg(df, group, year).rename(f'AVG_meter_price_{year}')
-
-            
             avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
 
             for year in range(2025, 2030):
@@ -175,6 +174,14 @@ def get_area_details():
             final_df = final_df[combined_columns]
             # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
             final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
+            print(final_df['avg_meter_price_2013_2023'].iloc[0])
+            print("****")
+            final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
+
+            # print("final df : ")
+            # print(final_df.info())
+            # print(final_df)
+            
             update_nested_dict(final_df, nested_dicts, group)
 
         if(nested_dicts):
@@ -333,6 +340,13 @@ def dubai_areas():
             custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
         ]
         }
+
+        units = {
+            "averageSalePrice": "AED",
+            "avgCA_5Y": "%",
+            "avg_roi": "%",
+            "aquisitiondemand_2023" : "%"
+        }
         
         # Load the GeoJSON file
         with open('areas_coordinates/dubaiAreas.geojson', 'r') as file:
@@ -405,7 +419,7 @@ def dubai_areas():
         cursor.close()
         connection.close()
 
-        return jsonify([legends, geojson])
+        return jsonify([legends, geojson, units])
     except FileNotFoundError:
         return jsonify({'error': 'File not found'}), 404
     except Exception as e:
