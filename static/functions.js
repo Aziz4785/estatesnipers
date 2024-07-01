@@ -118,6 +118,20 @@ function changeLegendTitle(title) {
     applyGeoJSONLayer(currentLegend);
 }
 
+function clearData() {
+    // Clear the <tbody> of <table id="nestedTable">
+    const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = '';
+
+    // Clear the panel content
+    const panelContent = document.getElementById('panel-content');
+    panelContent.innerHTML = '';
+
+    // Clear area information
+    const areaInfo = document.getElementById('area_info');
+    areaInfo.innerHTML = '';
+}
+
 function openChartModal(chartId, start_year, end_year,title) {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];

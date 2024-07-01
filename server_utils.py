@@ -261,6 +261,16 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
 
     return result_series
 
+def key_to_id(list):
+    mapping = {
+        "grouped_project" : "2",
+        "property_sub_type_en" : "1",
+        "property_usage_en" : "3",
+        "rooms_en" : "4"
+    }
+
+    output_list = [mapping[item] for item in list]
+    return output_list
 
 def map_text_to_field(input_list):
     #transform the hierarchy defined by the user in settings to a list

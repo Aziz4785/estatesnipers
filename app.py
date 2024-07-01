@@ -263,14 +263,18 @@ def save_list_order():
     global list_order_in_memory  # Reference the global variable
     data = request.json
     list_order_in_memory = data.get('listOrder', [])
+    print("list_order_in_memory :")
+    print(list_order_in_memory)
     session['hierarchy_keys'] = map_text_to_field(list_order_in_memory)
 
     return jsonify({'message': 'List order saved successfully!'})
 
+
 @app.route('/get-list-order', methods=['GET'])
 @auth.login_required
 def get_list_order():
-    return jsonify({'listOrder': list_order_in_memory})
+    hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+    return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
     
 @app.route('/dubai-areas')

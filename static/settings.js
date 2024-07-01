@@ -1,6 +1,7 @@
 
 document.getElementById("settingsBtn").onclick = function() {
     document.getElementById("settingsModal").style.display = "block";
+    retrieveListOrder();
 };
 
 document.querySelector(".close-button").onclick = function() {
@@ -12,6 +13,61 @@ window.onclick = function(event) {
         document.getElementById("settingsModal").style.display = "none";
     }
 };
+
+
+// Function to retrieve and display the saved list order
+function retrieveListOrder() {
+    console.log("retrieveListOrder")
+    fetch('/get-list-order')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const orderArray = data.listOrder;
+        rearrangeList(orderArray);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+ // Function to rearrange the list based on the order
+ function rearrangeList(order) {
+    console.log("rearrangeList : ",order)
+    const listItems = Array.from(hierarchyList.children);
+    const sortedItems = order.map(id => listItems.find(item => item.dataset.id === id.toString()));
+    
+    // Clear the current list
+    hierarchyList.innerHTML = '';
+    
+    // Append the sorted items
+    sortedItems.forEach(item => {
+        if (item) {
+            hierarchyList.appendChild(item);
+        }
+    });
+}
+
+// Function to update the UI with the retrieved list order
+function updateUIWithListOrder(listOrder) {
+    console.log("updateUIWithListOrder")
+    const hierarchyList = document.getElementById("hierarchyList");
+    hierarchyList.innerHTML = '';
+    console.log("listOrder : ")
+    console.log(listOrder)
+    listOrder.forEach(item => {
+        console.log("item : ",item)
+        const li = document.createElement('li');
+        li.draggable = true;
+        li.dataset.id = item.id;
+        li.innerHTML = `<span class="drag-handle">■</span> ${item.text}`;
+        hierarchyList.appendChild(li);
+    });
+}
+
 
 // Drag and drop functionality for hierarchy list
 const listItems = document.querySelectorAll('#hierarchyList li');
@@ -83,36 +139,9 @@ listItems.forEach(addDnDEvents);
 let currentFillColor = 'fillColorPrice'; // Default value
 // Save settings button functionality
 document.getElementById("saveSettings").onclick = function() {
-
-    /*const selectedColorMapping = document.querySelector('input[name="colorMapping"]:checked').value;
-    currentFillColor = selectedColorMapping; 
-    let currentLegend = "averageSalePrice"
-    if(selectedColorMapping == 0)
-    {
-        currentFillColor = "fillColorPrice"
-        currentLegend = "averageSalePrice"
-    }
-    else if (selectedColorMapping==1)
-    {
-        currentFillColor ="fillColorCA5"
-        currentLegend = "avgCA_5Y"
-    }
-    else if (selectedColorMapping==2)
-    {
-        currentFillColor="fillColorRoi"
-        currentLegend = "avg_roi"
-    }
-    else if (selectedColorMapping== 3)
-    {
-        currentFillColor ="fillColorAquDemand"
-        currentLegend = "aquisitiondemand_2023"
-    }
-    
-    applyGeoJSONLayer(currentLegend); // Reapply the GeoJSON layer with the new fill color
-
-    */
-    const listOrder = getListOrder();
+    const listOrder = getListOrderFromUI();
     document.getElementById("settingsModal").style.display = "none";
+    
     fetch('/save-list-order', {
         method: 'POST',
         headers: {
@@ -127,6 +156,10 @@ document.getElementById("saveSettings").onclick = function() {
         return response.json();
     })
     .then(data => {
+        // After successfully saving the settings, refetch the area details
+        if (currentAreaId) {
+            fetchAreaDetails(currentAreaId);
+        }
     })
     .catch(error => {
         console.error('Error:', error);

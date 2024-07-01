@@ -136,87 +136,6 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     return rowId;
 }
 
-// function createSvgLineChart(dataPoints,chartId,startyear,endyear) {
-//     if (!dataPoints || !dataPoints.length) return '';
-
-//     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
-//     const minVal = Math.min(...dataPoints.filter(point => point !== null));
-//     const height = 50; // SVG height
-//     const width = 100; // SVG width
-//     const pointWidth = width / (dataPoints.length - 1);
-
-//     let pathD = '';
-//     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
-
-//     dataPoints.forEach((point, index) => {
-//         if (point !== null) {
-//             const x = pointWidth * index;
-//             const y = height - ((point - minVal) / (maxVal - minVal) * height);
-//             if (moveToNext) {
-//                 pathD += `M ${x},${y} `; // Move to this point without drawing
-//                 moveToNext = false; // Reset the flag as we now have a valid point
-//             } else {
-//                 pathD += `L ${x},${y} `; // Draw line to this point
-//             }
-//         } else {
-//             moveToNext = true; // No point here, next valid point should move without drawing
-//         }
-//     });
-
-//     return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startyear},${endyear},${chart_title})" width="${width}" height="${height}" xmlns="https://www.w3.org/2000/svg">
-//             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
-//             </svg>`
-// }
-// function createSvgLineChart(dataPoints, chartId, startYear, endYear) {
-//     if (!dataPoints || !dataPoints.length) return '';
-
-//     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
-//     const minVal = Math.min(Math.min(...dataPoints.filter(point => point !== null)),0);
-//     const height = 50; // SVG height
-//     const width = 100; // SVG width
-//     const padding = 5; // Padding around the chart to ensure the path doesn't touch the edges
-//     const chartWidth = width - 2 * padding;
-//     const chartHeight = height - 2 * padding;
-//     const pointWidth = chartWidth / (dataPoints.length - 1);
-
-//     let pathD = ''; // Path for the main line chart
-//     let redPathD = ''; // Path for the last 5 points
-//     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
-
-//     dataPoints.forEach((point, index) => {
-//         if (point !== null) {
-//             const x = padding + pointWidth * index;
-//             const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
-//             if (index >= dataPoints.length - 5) {
-//                 if (redPathD === '' || moveToNext) {
-//                     redPathD += `M ${x},${y} `;
-//                 } else {
-//                     redPathD += `L ${x},${y} `;
-//                 }
-//             } else {
-//                 if (moveToNext) {
-//                     pathD += `M ${x},${y} `;
-//                     moveToNext = false;
-//                 } else {
-//                     pathD += `L ${x},${y} `;
-//                 }
-//             }
-//         } else {
-//             moveToNext = true;
-//         }
-//     });
-
-//     // Create the axis lines
-//     const xAxisY = padding + chartHeight;
-//     const yAxisX = padding;
-
-//     return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-//             <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
-//             <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
-//             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
-//             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
-//             </svg>`;
-// }
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
@@ -490,7 +409,7 @@ function hideIndirectChildren(parentRowId) {
     });
 }
 
-function getListOrder() {
+function getListOrderFromUI() {
     //reads the current order of the list items and returns an array representing this order
     const listItems = document.querySelectorAll('#hierarchyList li');
     const order = Array.from(listItems).map((item, index) => ({
@@ -588,7 +507,8 @@ function onEachFeature(feature, layer) {
             // Clear the <tbody> of <table id="nestedTable"> at the beginning
             const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = ''; // Clear existing rows
-
+            currentAreaId = feature.properties.area_id;
+            
             currentAreaId = feature.properties.area_id;
             const areaName = feature.properties.name;
             const avgMeterSale  = feature.properties.averageSalePrice;
@@ -670,37 +590,11 @@ function onEachFeature(feature, layer) {
             if (existingErrorMessage) {
                 existingErrorMessage.remove();
             }
+            
+            // Use the new fetchAreaDetails function
+            fetchAreaDetails(currentAreaId);
 
-            const loader = document.querySelector('.loader');
-            loader.style.display = 'grid'; // Display loader    
-            fetch(`/get-area-details?area_id=${currentAreaId}`)
-            .then(response => {
-                if (!response.ok) { // Check if the response status is not OK (200-299)
-                   if (response.status === 404) {
-                    // Create a new error message
-                    const errorElement = document.createElement('p');
-                    errorElement.id = 'error-message'; // Assign an ID to the error element
-                    errorElement.textContent = 'There is no data to display';
-                    panelContent.appendChild(errorElement);
-                  }
-                  throw new Error('Network response was not ok.'); // Throw an error for other statuses or to stop processing
-                }
-                return response.json(); // Proceed with processing the response as JSON
-              })
-            .then(data => {
-                const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
-                tableBody.innerHTML = ''; // Clear existing rows
-                processDictionary(data); // Process and display the fetched data
-            })
-            .catch(error => {
-                
-                console.log('Error fetching area details:', error);
-            })
-            .finally(() => {
-                loader.style.display = 'none'; // Hide loader
-            });
-
-            // If ProjectsDemand tab is active, refetch data with new area_id
+             // If ProjectsDemand tab is active, refetch data with new area_id
 
             // Simulate a click on the "Details" button
             var evt = new MouseEvent("click", {
@@ -733,6 +627,39 @@ function onEachFeature(feature, layer) {
 
         }
     });
+}
+
+function fetchAreaDetails(areaId) {
+    const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = ''; // Clear existing rows
+
+    const loader = document.querySelector('.loader');
+    loader.style.display = 'grid'; // Display loader
+    
+    fetch(`/get-area-details?area_id=${areaId}`)
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 404) {
+                    const errorElement = document.createElement('p');
+                    errorElement.id = 'error-message';
+                    errorElement.textContent = 'There is no data to display';
+                    document.getElementById('panel-content').appendChild(errorElement);
+                }
+                throw new Error('Network response was not ok.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+            tableBody.innerHTML = ''; // Clear existing rows
+            processDictionary(data); // Process and display the fetched data
+        })
+        .catch(error => {
+            console.log('Error fetching area details:', error);
+        })
+        .finally(() => {
+            loader.style.display = 'none'; // Hide loader
+        });
 }
 
 // Declare a variable outside of the function to hold the chart instance
