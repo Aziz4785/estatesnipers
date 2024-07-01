@@ -4,9 +4,13 @@ function generateTable(data) {
     // Create the table header
     var thead = document.createElement('thead');
     var headerRow = document.createElement('tr');
-    ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach(headerText => {
+    ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach((headerText, index) => {
         var header = document.createElement('th');
-        header.textContent = headerText;
+        if (index === 2) { // For 'External Demand 2023 %'
+            header.innerHTML = headerText + ' <span class="info-icon">i</span>';
+        } else {
+            header.textContent = headerText;
+        }
         headerRow.appendChild(header);
     });
     thead.appendChild(headerRow);
@@ -78,6 +82,40 @@ function updateLegend(averageSalePrice, unit) {
         // Append the container to the legend content
         legendContent.appendChild(legendItem);
     });
+}
+document.getElementById('legendTitle').addEventListener('click', function() {
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
+    const arrow = document.getElementById('arrow');
+    arrow.style.transform = dropdownMenu.style.display === 'block' ? 'rotate(180deg)' : 'rotate(0deg)';
+});
+
+function changeLegendTitle(title) {
+    document.getElementById('legendTitle').children[0].textContent = title;
+    document.getElementById('dropdownMenu').style.display = 'none';
+    document.getElementById('arrow').style.transform = 'rotate(0deg)';
+    // Handle the change of legend content based on the selected title
+    // You can call updateLegend with different data here if needed
+    // Update the legend content and color based on the selected title
+    currentFillColor = "fillColorPrice";
+    currentLegend = "averageSalePrice";
+    if (title === 'Average meter price') {
+        currentFillColor = "fillColorPrice";
+        currentLegend = "averageSalePrice";
+    } else if (title === 'Capital Appreciation') {
+        currentFillColor = "fillColorCA5";
+        currentLegend = "avgCA_5Y";
+    } else if (title === 'Gross Rental ROI') {
+        currentFillColor = "fillColorRoi";
+        currentLegend = "avg_roi";
+    }
+    else if(title == 'Acquisition Demand') {
+        currentFillColor ="fillColorAquDemand"
+        currentLegend = "aquisitiondemand_2023"
+    }
+
+    // Apply the GeoJSON layer with the new legend
+    applyGeoJSONLayer(currentLegend);
 }
 
 function openChartModal(chartId, start_year, end_year,title) {

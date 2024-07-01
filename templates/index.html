@@ -12,14 +12,26 @@
 </head>
 <body>
     <div id="dubaiMap"></div>
-    <div id="legend" style="position: fixed; bottom: 10px; border-radius: 2px; right: 10px; background: rgba(200, 200, 200, 0.792); padding: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.5);  font-family: 'Roboto', sans-serif;">
-        <div id="legendContent"></div>
+    <div id="legendContainer">
+        <div id="legendTitle">
+            <span>Average meter price</span>
+            <span id="arrow">▼</span>
+        </div>
+        <div id="dropdownMenu">
+            <div onclick="changeLegendTitle('Average meter price')">Average meter price</div>
+            <div onclick="changeLegendTitle('Capital Appreciation')">Capital appreciation</div>
+            <div onclick="changeLegendTitle('Gross Rental ROI')">Gross Rental ROI</div>
+            <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
+        </div>
+        <div id="legend">
+            <div id="legendContent"></div>
+        </div>
     </div>
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-button">×</span>
             <h2>Settings</h2>
-            <div class="settings-section">
+            <!--<div class="settings-section">
                 <h3>Color Mapping</h3>
                 <form id="colorMapping">
                     <div class="form-check">
@@ -39,7 +51,7 @@
                         <label for="acqDemand" class="form-check-label">By Acquisition Demand</label>
                     </div>
                 </form>
-            </div>
+            </div>-->
             <div class="settings-section">
                 <h3>Default Hierarchy</h3>
                 <p>Drag and drop to rearrange the hierarchy:</p>
@@ -60,10 +72,11 @@
         </div>
     </div>
 
-    <button id="settingsBtn" class="floating-btn">⚙️</button>
+    <!--<button id="settingsBtn" class="floating-btn">⚙️</button>-->
     <div id="info-panel" style="display:none; position: fixed; top: 20px; right: 20px; background: white; z-index: 1000;">
         
         <div id="panel-content">
+            <button id="settingsBtn">⚙</button>
             <button id="toggle-fullscreen">⤢</button>
             <button id="close-panel">x</button>
             <div id = "area_info"></div>

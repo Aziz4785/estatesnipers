@@ -84,7 +84,7 @@ let currentFillColor = 'fillColorPrice'; // Default value
 // Save settings button functionality
 document.getElementById("saveSettings").onclick = function() {
 
-    const selectedColorMapping = document.querySelector('input[name="colorMapping"]:checked').value;
+    /*const selectedColorMapping = document.querySelector('input[name="colorMapping"]:checked').value;
     currentFillColor = selectedColorMapping; 
     let currentLegend = "averageSalePrice"
     if(selectedColorMapping == 0)
@@ -110,7 +110,7 @@ document.getElementById("saveSettings").onclick = function() {
     
     applyGeoJSONLayer(currentLegend); // Reapply the GeoJSON layer with the new fill color
 
-    
+    */
     const listOrder = getListOrder();
     document.getElementById("settingsModal").style.display = "none";
     fetch('/save-list-order', {

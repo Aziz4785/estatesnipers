@@ -19,7 +19,7 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
 let currentAreaId = null; 
 document.addEventListener('DOMContentLoaded', function () {
     // Set the default checked radio button (in settings)
-    document.getElementById('avgMeterPrice').checked = true;
+    //document.getElementById('avgMeterPrice').checked = true;
     const elements = document.querySelectorAll('.scrollable-container');
     //initialisation of scrollable-containers
     elements.forEach(function(ele) {

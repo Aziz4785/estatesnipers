@@ -174,8 +174,6 @@ def get_area_details():
             final_df = final_df[combined_columns]
             # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
             final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
-            print(final_df['avg_meter_price_2013_2023'].iloc[0])
-            print("****")
             final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
 
             # print("final df : ")

@@ -52,6 +52,8 @@
   text-align: center; /* Centers the text */
   text-transform: capitalize; 
 }
+
+
 /* Style for the close button inside the panel */
 #close-panel {
   position: absolute; /* Position the button absolutely within the panel */
@@ -81,6 +83,20 @@
   line-height: 1;
   padding: 0;
 }
+/* Style for the settings button inside the panel */
+#settingsBtn {
+  position: absolute; 
+  right: 80px; 
+  color: #aaaaaa;
+  background: transparent;
+  font-size: 24px;
+  border: none; 
+  cursor: pointer;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+}
+
 
 #stats-container {
   display: flex;
@@ -127,12 +143,6 @@
   margin-bottom: 15px;
   transition: all 0.3s ease;
   text-align: center; /* Ensures text within children is centered, though flexbox alignment takes precedence for positioning */
-}
-
-
-.info-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 .info-card .title, .info-card.supply-projects .title {
@@ -237,6 +247,8 @@
   overflow-x: auto; /* Enables horizontal scrolling if table exceeds container width */
   margin: 0 auto; /* Center align the container if needed */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on touch devices */
+  white-space: nowrap; /* Prevents wrapping of table content */
+  cursor: grab; /* Add grab cursor */
 }
 
 table {
@@ -300,37 +312,6 @@ tbody td {
   padding-left: 40px;
 }
 
-.floating-btn {
-  position: fixed;
-  right: 20px;
-  top: 20px;
-  z-index: 1000;
-  background-color: #ffffff49;
-  color: rgb(12, 12, 12);
-  border: none;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-.floating-btn {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: rgba(255, 255, 255, 0.288);
-  padding: 5px; /* Reduced padding */
-  font-size: 26px;
-  cursor: pointer;
-  border-radius: 100%; /* Ensure the button is always a circle */
-  width: 40px; /* Specify a fixed width */
-  height: 40px; /* Specify a fixed height */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #cccccc00; /* Explicitly define a border */
-}
 .modal {
   display: none;
   position: fixed;
@@ -545,4 +526,148 @@ tbody td {
 }
 @keyframes l15 { 
   100% { transform: rotate(1turn) }
+}
+
+
+.info-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: #e0e0e0;
+  color: #333;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 5px;
+  position: relative;
+}
+
+.info-icon::after {
+  content: "Représente la durée du contrat. Le remboursement peut intervenir de manière anticipée. Au plus tard au terme du contrat, le capital investi sera remboursé.";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: white;
+  color: #333;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  width: max-content;
+  max-width: 300px;
+}
+
+.info-icon::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  border: 5px solid transparent;
+  border-top-color: white;
+  transform: translateX(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+
+.info-icon:hover::after,
+.info-icon:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+
+
+
+/*LEGEND*/
+#legendContainer {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  font-family: 'Roboto', sans-serif;
+}
+
+#legendTitle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  padding: 10px 15px;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+#legendTitle:hover {
+  background: #f0f0f0;
+}
+
+#arrow {
+  margin-left: 8px;
+  transition: transform 0.3s;
+}
+
+#dropdownMenu {
+  display: none;
+  position: absolute;
+  top: 38px;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+#dropdownMenu div {
+  padding: 10px 15px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+#dropdownMenu div:hover {
+  background: #f0f0f0;
+}
+
+#legend {
+  background: rgba(255, 255, 255, 0.831);
+  padding: 10px 15px;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+}
+
+#legendContent div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+#legendContent div:last-child {
+  margin-bottom: 0;
+}
+
+.colorSquare {
+  width: 15px;
+  height: 15px;
+  margin-right: 8px;
+  border-radius: 3px;
+}
+
+.labelText {
+  font-size: 14px;
+  font-weight: 400;
 }
