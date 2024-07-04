@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template,request
+from flask import Flask, jsonify, render_template,request,send_file
 from flask_cors import CORS
 import pymysql
 import mysql.connector
@@ -7,13 +7,28 @@ import logging
 from flask import session
 import time
 import os
+from collections import defaultdict
+from reportlab.lib import colors
+from reportlab.lib.colors import HexColor
+from pdfHelper import PDFHelper
 from server_utils import * 
+from reportlab.lib.utils import ImageReader
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from sqlalchemy import create_engine
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
 from flask import jsonify
+from reportlab.lib.colors import blue,black
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import io
+from io import BytesIO
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+import matplotlib.backends.backend_agg as agg
 
 
 # Load environment variables from .env file
@@ -143,9 +158,6 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
-            print("--------------")
-            print("group : ")
-            print(str(group))
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
@@ -197,10 +209,45 @@ def get_area_details():
         if 'engine' in locals():
             engine.dispose()
 
-@app.route('/get-demand-per-project')
-@auth.login_required
-def get_demand_per_project():
-    area_id = request.args.get('area_id')
+
+def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=None, rooms=None):
+    connection = get_db_connection()
+    cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
+
+    base_query = """
+       SELECT instance_date, meter_sale_price
+       FROM transactions t
+       WHERE t.area_id = %s AND t.instance_year >= 2013
+    """
+    
+    conditions = []
+    params = [area_id]
+
+    if Usage is not None:
+        conditions.append("t.property_usage_en = %s")
+        params.append(Usage)
+    if subtype is not None:
+        conditions.append("t.property_sub_type_en = %s")
+        params.append(subtype)
+    if rooms is not None:
+        conditions.append("t.rooms_en = %s")
+        params.append(rooms)
+    if project is not None:
+        conditions.append("t.grouped_project = %s")
+        params.append(project)
+
+    if conditions:
+        query = base_query + " AND " + " AND ".join(conditions)
+    else:
+        query = base_query
+
+    cursor.execute(query, tuple(params))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    return fetched_rows
+
+def execute_project_demand_query(area_id):
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
@@ -230,19 +277,21 @@ GROUP BY
     # Fetch and format the results
     fetched_rows = cursor.fetchall()
     fetched_rows = group_external_demand_in_array(fetched_rows)
-    #print(fetched_rows)
+    return fetched_rows
+
+@app.route('/get-demand-per-project')
+@auth.login_required
+def get_demand_per_project():
+    area_id = request.args.get('area_id')
+    fetched_rows = execute_project_demand_query(area_id)
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 
-@app.route('/get-lands-stats')
-@auth.login_required
-def get_lands_stats():
-    area_id = request.args.get('area_id')
+def execute_land_query(area_id):
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-    
-    # Use a parameterized query to safely include user input
+
     query = """
     SELECT land_type_en, COUNT(*) AS count
     FROM lands
@@ -253,6 +302,13 @@ def get_lands_stats():
     
     # Fetch and format the results
     fetched_rows = cursor.fetchall()
+    return fetched_rows
+
+@app.route('/get-lands-stats')
+@auth.login_required
+def get_lands_stats():
+    area_id = request.args.get('area_id')
+    fetched_rows = execute_land_query(area_id)
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 
@@ -263,8 +319,6 @@ def save_list_order():
     global list_order_in_memory  # Reference the global variable
     data = request.json
     list_order_in_memory = data.get('listOrder', [])
-    print("list_order_in_memory :")
-    print(list_order_in_memory)
     session['hierarchy_keys'] = map_text_to_field(list_order_in_memory)
 
     return jsonify({'message': 'List order saved successfully!'})
@@ -406,7 +460,6 @@ def dubai_areas():
                 feature['fillColorAquDemand'] = get_color(feature["aquisitiondemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
                 #print(f"{area_id} is  in data_stores['aquisitiondemand_2023'] so fill color = {feature['fillColorAquDemand']}")
             else:
-                #print(f"{area_id} is not in data_stores['aquisitiondemand_2023']")
                 feature['fillColorAquDemand'] = 'rgb(95,95,95)'
                 feature["aquisitiondemand_2023"] = None
                 
@@ -427,5 +480,286 @@ def dubai_areas():
     except Exception as e:
         return jsonify({'error': 'An error occurred', 'message': str(e)}), 500
     
+def create_land_type_pie_chart(data):
+    # Extract land types and counts
+    land_types = [row['land_type_en'] if row['land_type_en'] else 'Unknown' for row in data]
+    counts = [row['count'] for row in data]
+    
+    # Calculate percentages
+    total = sum(counts)
+    percentages = [(count / total) * 100 for count in counts]
+    
+    # Create the pie chart
+    fig, ax = plt.subplots(figsize=(10, 6))  # Increased figure size to accommodate legend
+    
+    wedges, _, _ = ax.pie(counts, startangle=90, autopct='')
+    
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+    ax.set_title('Land Type Distribution')
+    
+    # Create legend labels with percentages and counts
+    legend_labels = [f'{land_type} - {percentage:.1f}% ({count})' 
+                     for land_type, percentage, count in zip(land_types, percentages, counts)]
+    
+    # Add a legend
+    ax.legend(wedges, legend_labels,
+              title="Land Types",
+              loc="center left",
+              bbox_to_anchor=(1, 0, 0.5, 1))
+    
+    # Adjust the layout to prevent the legend from being cut off
+    plt.tight_layout()
+    
+    # Save the chart to a buffer
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+    plt.close(fig)  # Close the figure to free up memory
+    
+    return img_buffer
+
+def create_land_type_donut_chart(data):
+    # Extract land types and counts
+    land_types = [row['land_type_en'] if row['land_type_en'] else 'Unknown' for row in data]
+    counts = [row['count'] for row in data]
+
+    # Create the donut chart
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Colors for the chart
+    colors = plt.cm.Set3(np.linspace(0, 1, len(land_types)))
+    
+    # Create donut chart
+    wedges, texts, autotexts = ax.pie(counts, autopct='%1.1f%%', pctdistance=0.85,
+                                      wedgeprops=dict(width=0.5), startangle=-40, colors=colors)
+    
+    # Equal aspect ratio ensures that pie is drawn as a circle
+    ax.axis('equal')
+    
+    # Set title
+    plt.title('Land Type Distribution', fontsize=16, pad=20)
+
+    # Add legend
+    legend_labels = [f'{lt} ({count})' for lt, count in zip(land_types, counts)]
+    ax.legend(wedges, legend_labels, title="Land Types", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
+
+    # Adjust layout
+    plt.tight_layout()
+
+    # Save the chart to a buffer
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+    plt.close(fig)  # Close the figure to free up memory
+
+    return img_buffer
+
+def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sale Price 2013-2023',y_axis='Average Meter Price',contain_pred=True):
+    years = list(range(start_year, start_year + len(avg_meter_price)))
+    
+    fig, ax = plt.subplots()
+    
+    if contain_pred:
+        # Plot the first part of the line with blue
+        ax.plot(years[:-5], avg_meter_price[:-5], color='blue', marker='o')
+        # Plot the last 6 lines and 5 points with red
+        ax.plot(years[-6:], avg_meter_price[-6:], color='red', marker='o')
+    else:
+        ax.plot(years, avg_meter_price, color='blue', marker='o')
+    
+    ax.set_title(title)
+    ax.set_xlabel('Year')
+    ax.set_ylabel(y_axis)
+    ax.grid(True)
+
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+
+    plt.close(fig)  # Close the figure to free up memory
+
+    return img_buffer
+
+def create_scatterplot(data):
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+
+    # Plotting
+    plt.figure(figsize=(14, 7))
+    fig, ax = plt.subplots()
+    plt.scatter(df['instance_date'], df['meter_sale_price'], alpha=0.6)
+    plt.title('Meter Sale Price Over Time')
+    plt.xlabel('Instance Date')
+    plt.ylabel('Meter Sale Price')
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+
+    plt.close(fig)  # Close the figure to free up memory
+
+    return img_buffer
+
+@app.route('/generate-pdf', methods=['POST'])
+def generate_pdf():
+    request_data = request.get_json()
+    section = request_data['section']
+    data = request_data['data']
+    area_data = request_data['area_data']
+    means_data = request_data['data'].get('means', [{}])[0]
+    avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
+    avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
+    avg_roi = means_data.get('avg_roi', 'N/A')
+    avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
+    project_demand_data = execute_project_demand_query(area_data['area_id'])
+    firstkeys = list(data.keys())
+    dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+    # Loop through the project_demand_data to find the matching project
+    project_internaldemand2023 = project_externaldemand2023 = None
+    externalDemand_5Y = []
+    for item in project_demand_data:
+        print("item : ")
+        print(item)
+        if item['project_name_en'] == section:
+            project_internaldemand2023 = item['internaldemand2023']
+            project_externaldemand2023 = item['externaldemand2023']
+            externalDemand_5Y = item['externalDemandYears']
+            break
+
+    # Create a PDF
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+
+    helper = PDFHelper(p, 720, 750, 100)
+
+    helper.draw_Main_title(section,font_size=30)
+    # Print means data
+    # Data for the table
+    general_means = [
+        ["Description", "Value"],
+        ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
+        ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+        ["Average ROI:",str(round_and_percentage(avg_roi,2))+" %"],
+        ["Internal Demand:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
+        ["External Demand:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
+    ]
+
+    # Draw the table
+    helper.draw_table(general_means)
+    
+    img_buffer = create_price_chart(avg_meter_price)
+    # Insert the image into the PDF from the BytesIO object
+    helper.y=350
+    p.drawImage(ImageReader(img_buffer), 35, helper.y, width=270, height=200)
+    # Update y position after the image
+    #helper.y -= 160
+
+    img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
+    p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
+
+    img_buffer_scatter = create_scatterplot(dateprice_paires)
+    helper.y-=220
+    p.drawImage(ImageReader(img_buffer_scatter), 35, helper.y, width=270, height=200)
+
+    for k in firstkeys:
+        if k !="means":
+            parent_name = section
+            render_pdf({k: data[k]},parent_name,helper,p)
+
+    helper.new_page()
+    #AREA SECTION 
+    # Set the font and size for the title
+    p.setFont("Helvetica-Bold", 24)
+    p.setFillColor(blue)
+    area_name = area_data["name"]
+    title = f"Area : {area_name}"
+    title_width = p.stringWidth(title, "Helvetica-Bold", 24)
+    page_width = letter[0]
+    title_x = (page_width - title_width) / 2
+
+    # Draw the title
+    #p.drawString(title_x, 750, title)
+    helper.draw_Main_title(title,font_size=30)
+    # Move to next line for the table
+    p.setFont("Helvetica", 12)
+    p.setFillColor(colors.black)
+
+    # Data for the table
+    table_data = [
+        ['Metric', 'Value'],
+        ['Acquisition Demand 2023', area_data['aquisitiondemand_2023']],
+        ['Average Sale Price', f"{area_data['averageSalePrice']:,.2f} AED"],
+        ['Average CA 10Y', area_data['avgCA_10Y']],
+        ['Average CA 5Y', area_data['avgCA_5Y']],
+        ['Average ROI', round_and_percentage(area_data['avg_roi'],2)],
+        ['Rental Demand 2023', round_and_percentage(area_data['rentaldemand_2023'])],
+        ['Supply Finished Properties', area_data['supply_finished_pro']],
+        ['Supply Lands', area_data['supply_lands']],
+        ['Supply Off-Plan Properties', area_data['supply_offplan_pro']],
+    ]
+
+    # Create a table
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+
+    # Build the table on canvas
+    table.wrapOn(p, 170, 500)
+    table.drawOn(p, 170, 500)
+
+    helper.y -= 100
+    land_data=execute_land_query(area_data['area_id'])
+    img_buffer = create_land_type_pie_chart(land_data)
+    p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    
+    
+    return send_file(buffer, as_attachment=True, download_name=f"{section}_report.pdf", mimetype='application/pdf')
+
+def render_pdf(node,parent_name,helper,p):
+    helper.new_page()
+    key, data = next(iter(node.items()))
+    node_name = str(key)+" / "+parent_name
+    #helper.draw_centered_string(node_name, 30)
+    helper.draw_Main_title(node_name,font_size=26)
+    means_data2 = data.get('means', [{}])[0]
+    avg_capital_appreciation_2013 = means_data2.get('avgCapitalAppreciation2013', 'N/A')
+    avg_capital_appreciation_2018 = means_data2.get('avgCapitalAppreciation2018', 'N/A')
+    avg_roi = means_data2.get('avg_roi', 'N/A')
+    avg_meter_price = means_data2.get('avg_meter_price_2013_2023', [])
+    # helper.draw_info_line("Average Capital Appreciation 10Y:", round(avg_capital_appreciation_2013 * 100, 2)if avg_capital_appreciation_2013 is not None else None)
+    # helper.draw_info_line("Average Capital Appreciation 5Y :", round(avg_capital_appreciation_2018 * 100, 2)if avg_capital_appreciation_2018 is not None else None)
+    # helper.draw_info_line("Average ROI:", round(avg_roi * 100,2)if avg_roi is not None else None, extra_space=20)
+    general_means = [
+        ["Description", "Value"],
+        ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
+        ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+        ["Average ROI:",str(round_and_percentage(avg_roi,2))+" %"]
+    ]
+    helper.draw_table(general_means)
+    img_buffer = create_price_chart(avg_meter_price)
+    p.drawImage(ImageReader(img_buffer), 95, 290, width=400, height=300)
+    # Update y position after the image
+    helper.y -= 440
+    firstkeys = list(data.keys())
+    for key in firstkeys:
+        if key !="means":
+            render_pdf({key: data[key]},node_name,helper,p)
+
 if __name__ == '__main__':
     app.run(debug=True)

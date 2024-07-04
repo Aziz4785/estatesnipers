@@ -16,7 +16,10 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
     panel.classList.toggle('fullscreen'); // This toggles the fullscreen class on and off
 });
 
+let currentJsonData = null;
+let currentAreaData = null;
 let currentAreaId = null; 
+
 document.addEventListener('DOMContentLoaded', function () {
     // Set the default checked radio button (in settings)
     //document.getElementById('avgMeterPrice').checked = true;
@@ -62,9 +65,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
 function applyGeoJSONLayer(currentLegend) {
+    console.log("applyGeoJSONLayer(), currentlegend  = ",currentLegend);
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
+        console.log("data : ",data)
         //data[0] contains legends of map and data[1] contains the areas and data[2] to contain units
         const legends = data[0];
         const units = data[2];
@@ -121,19 +126,94 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     let contentCellHtml = isParent ? `${indent}<span class="expand-arrow">▶&nbsp;</span>` : `${indent}`;
     contentCellHtml += `${name || "-"}`;
 
+    // Add PDF icon if the row is a root row (i.e., it has no parent)
+    if (!parentRowId) {
+        contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
+       // addPdfDownloadListener(rowId, name || "-");
+    }
+    
     if (isParent) {
         row.classList.add('expandable');
     }
     const contentCell = row.insertCell();
     contentCell.innerHTML = contentCellHtml;
-    
+    if (!parentRowId) {
+        contentCell.classList.add('content-cell');
+    }
+    //contentCell.classList.add('content-cell'); // Add a class for additional styling if needed
     // Creating placeholders for the other values
     row.insertCell(); // Capital Appreciation 2018
     row.insertCell(); // Capital Appreciation 2013
     row.insertCell(); // ROI
     
     row.insertCell();// Placeholder for avg_meter_price_2013_2023
+
+     // Add event listener for PDF icon if it's a root row
+     if (!parentRowId) {
+        const pdfIcon = contentCell.querySelector('.pdf-icon');
+        if (pdfIcon) {
+            pdfIcon.addEventListener('click', function(event) {
+                event.preventDefault();
+                // Get the current JSON data
+                const currentData = getCurrentJsonData(); 
+                const currentAreaData = getCurrentAreaData(); 
+                console.log("currentdata : ",currentData)
+                console.log("Keys of currentData: ", Object.keys(currentData));
+                fetch('/generate-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        section: name || "-",
+                        data: currentData[name || "-"],
+                        area_data: currentAreaData
+                    })
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${name || "-"}_report.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        }
+    }
     return rowId;
+}
+function addPdfDownloadListener(rowId, sectionName) {
+    console.log("addpdf download listener on rowID : ",rowId)
+    console.log("and section name = ",sectionName)
+    const pdfIcon = document.querySelector(`[data-row-id="${rowId}"] .pdf-icon`);
+    pdfIcon.addEventListener('click', function(event) {
+        event.preventDefault();
+        fetch(`/generate-pdf?section=${sectionName}`, {
+            method: 'GET'
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${sectionName}_report.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => console.error('Error:', error));
+    });
+}
+
+function fetchAreaData(areaName) {
+    // Implement logic to fetch the data for the given area name
+    // This function should return the data in the required format
 }
 
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
@@ -509,6 +589,10 @@ function onEachFeature(feature, layer) {
             tableBody.innerHTML = ''; // Clear existing rows
             currentAreaId = feature.properties.area_id;
             
+            // Create a copy of feature.properties without the "geometry" property
+            const { geometry, ...propertiesWithoutGeometry } = feature.properties;
+            currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
+            
             currentAreaId = feature.properties.area_id;
             const areaName = feature.properties.name;
             const avgMeterSale  = feature.properties.averageSalePrice;
@@ -650,6 +734,7 @@ function fetchAreaDetails(areaId) {
             return response.json();
         })
         .then(data => {
+            currentJsonData = data; // Save the fetched data
             const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = ''; // Clear existing rows
             processDictionary(data); // Process and display the fetched data
@@ -662,6 +747,12 @@ function fetchAreaDetails(areaId) {
         });
 }
 
+function getCurrentJsonData() {
+    return currentJsonData;
+}
+function getCurrentAreaData() {
+    return currentAreaData;
+}
 // Declare a variable outside of the function to hold the chart instance
 function renderLandStatsChart(data) {
     const ctx = document.getElementById('landStatsChart').getContext('2d');

@@ -546,9 +546,8 @@ tbody td {
 }
 
 .info-icon::after {
-  content: "Représente la durée du contrat. Le remboursement peut intervenir de manière anticipée. Au plus tard au terme du contrat, le capital investi sera remboursé.";
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   left: 50%;
   transform: translateX(-50%);
   background-color: white;
@@ -556,37 +555,32 @@ tbody td {
   padding: 10px;
   border-radius: 4px;
   font-size: 14px;
-  white-space: nowrap;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 1;
+  z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s, visibility 0.3s;
-  width: max-content;
-  max-width: 300px;
+  width: 200px;
+  max-width: 200px;
+  word-wrap: break-word;
+  white-space: normal;
+  height: auto;
+  min-height: 20px;
+  max-height: none;
 }
 
-.info-icon::before {
-  content: '';
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  border: 5px solid transparent;
-  border-top-color: white;
-  transform: translateX(-50%);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+.info-icon-internal::after {
+  content: "This is the tooltip text for Internal Demand 2023 %";
 }
 
-.info-icon:hover::after,
-.info-icon:hover::before {
+.info-icon-external::after {
+  content: "Représente la durée du contrat. Le remboursement peut intervenir de manière anticipée. Au plus tard au terme du contrat, le capital investi sera remboursé.";
+}
+
+.info-icon:hover::after {
   opacity: 1;
   visibility: visible;
 }
-
-
-
 
 /*LEGEND*/
 #legendContainer {
@@ -618,27 +612,28 @@ tbody td {
   transition: transform 0.3s;
 }
 
-#dropdownMenu {
+#dropupMenu {
   display: none;
   position: absolute;
-  top: 38px;
+  bottom: 100%;
+  left: 0;
   right: 0;
   background: #ffffff;
   border: 1px solid #ccc;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 0 0 8px 8px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px 8px 0 0;
   z-index: 1000;
   overflow: hidden;
 }
 
-#dropdownMenu div {
+#dropupMenu div {
   padding: 10px 15px;
   cursor: pointer;
   font-size: 16px;
   transition: background 0.3s;
 }
 
-#dropdownMenu div:hover {
+#dropupMenu div:hover {
   background: #f0f0f0;
 }
 
@@ -670,4 +665,23 @@ tbody td {
 .labelText {
   font-size: 14px;
   font-weight: 400;
+}
+
+
+
+
+.content-cell {
+  position: relative;
+  padding-right: 25px;
+}
+.pdf-icon-img {
+  width: 16px;  /* Set the desired width */
+  height: auto; /* Adjust the height proportionally */
+  vertical-align: middle;
+}
+.pdf-icon {
+  position: absolute;
+  right: 5px; /* Adjust as needed */
+  top: 50%;
+  transform: translateY(-50%);
 }

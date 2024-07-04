@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from scipy import interpolate
 from scipy.interpolate import interp1d
+from datetime import datetime
 from scipy.interpolate import PchipInterpolator
 
 # Function to safely convert string to float or None
@@ -260,6 +261,9 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
     ).rename('avg_meter_price_2013_2023')
 
     return result_series
+
+def round_and_percentage(number,decimals=2):
+    return round(number * 100, decimals)if number is not None else "N/A"
 
 def key_to_id(list):
     mapping = {
