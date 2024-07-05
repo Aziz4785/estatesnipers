@@ -98,6 +98,28 @@
 }
 
 
+/* Style for the login button */
+#loginButton {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  color: #032c58;
+  cursor: pointer;
+  z-index: 1000; /* Ensure it stays above other elements */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#loginButton:hover {
+  background-color: #f0f0f0;
+}
+
 #stats-container {
   display: flex;
   gap: 10px; /* Space between cards */
@@ -528,47 +550,52 @@ tbody td {
   100% { transform: rotate(1turn) }
 }
 
-
 .info-icon {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  background-color: #e0e0e0;
-  color: #333;
-  border-radius: 50%;
-  text-align: center;
-  line-height: 16px;
-  font-size: 12px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 5px;
-  position: relative;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 16px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-left: 5px;
+    position: relative;
 }
 
 .info-icon::after {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: white;
-  color: #333;
-  padding: 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  z-index: 9999;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
-  width: 200px;
-  max-width: 200px;
-  word-wrap: break-word;
-  white-space: normal;
-  height: auto;
-  min-height: 20px;
-  max-height: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    color: #333;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    width: 300px;
+    max-width: 300px;
+    word-wrap: break-word;
+    white-space: normal;
+    height: auto;
+    min-height: 20px;
+    max-height: none;
 }
 
+.info-icon:hover::after {
+  opacity: 1;
+  visibility: visible;
+  content: attr(data-tooltip);
+}
+/*
 .info-icon-internal::after {
   content: "This is the tooltip text for Internal Demand 2023 %";
 }
@@ -580,7 +607,7 @@ tbody td {
 .info-icon:hover::after {
   opacity: 1;
   visibility: visible;
-}
+}*/
 
 /*LEGEND*/
 #legendContainer {

@@ -7,9 +7,10 @@ function generateTable(data) {
     ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach((headerText, index) => {
         var header = document.createElement('th');
         if (index === 1) { // For 'Internal Demand 2023 %'
-            header.innerHTML = headerText + ' <span class="info-icon info-icon-internal" tabindex="0">i</span>';
+            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in project Y in year
+X ) / (Number of units in project Y)*100">i</span>`;
         } else if (index === 2) { // For 'External Demand 2023 %'
-            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0">i</span>';
+            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in project Y in yearX) /(Total number of transactions in year X)*100">i</span>';
         } else {
             header.textContent = headerText;
         }

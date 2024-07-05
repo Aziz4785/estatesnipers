@@ -621,8 +621,6 @@ def generate_pdf():
     project_internaldemand2023 = project_externaldemand2023 = None
     externalDemand_5Y = []
     for item in project_demand_data:
-        print("item : ")
-        print(item)
         if item['project_name_en'] == section:
             project_internaldemand2023 = item['internaldemand2023']
             project_externaldemand2023 = item['externaldemand2023']
@@ -642,13 +640,21 @@ def generate_pdf():
         ["Description", "Value"],
         ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
         ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
-        ["Average ROI:",str(round_and_percentage(avg_roi,2))+" %"],
-        ["Internal Demand:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
-        ["External Demand:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
+        ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
+        ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
+        ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
     ]
 
     # Draw the table
     helper.draw_table(general_means)
+    
+    footnotes = [
+    "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
+    "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
+    ]
+
+    # Draw the footnotes
+    helper.draw_footnotes(footnotes)
     
     img_buffer = create_price_chart(avg_meter_price)
     # Insert the image into the PDF from the BytesIO object
@@ -690,15 +696,15 @@ def generate_pdf():
     # Data for the table
     table_data = [
         ['Metric', 'Value'],
-        ['Acquisition Demand 2023', area_data['aquisitiondemand_2023']],
+        ['Acquisition Demand 2023', f"{round_and_percentage(area_data['aquisitiondemand_2023'])} %"],
+        ['Rental Demand 2023', str(round_and_percentage(area_data['rentaldemand_2023']))+" %"],
         ['Average Sale Price', f"{area_data['averageSalePrice']:,.2f} AED"],
-        ['Average CA 10Y', area_data['avgCA_10Y']],
-        ['Average CA 5Y', area_data['avgCA_5Y']],
-        ['Average ROI', round_and_percentage(area_data['avg_roi'],2)],
-        ['Rental Demand 2023', round_and_percentage(area_data['rentaldemand_2023'])],
+        ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['avgCA_10Y']))+" %"],
+        ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['avgCA_5Y']))+" %"],
+        ['Average Gross Rental Yield', str(round_and_percentage(area_data['avg_roi'],2))+" %"],
         ['Supply Finished Properties', area_data['supply_finished_pro']],
-        ['Supply Lands', area_data['supply_lands']],
         ['Supply Off-Plan Properties', area_data['supply_offplan_pro']],
+        ['Supply Lands', area_data['supply_lands']],
     ]
 
     # Create a table
@@ -715,8 +721,8 @@ def generate_pdf():
     ]))
 
     # Build the table on canvas
-    table.wrapOn(p, 170, 500)
-    table.drawOn(p, 170, 500)
+    table.wrapOn(p, 175, 500)
+    table.drawOn(p, 175, 500)
 
     helper.y -= 100
     land_data=execute_land_query(area_data['area_id'])
@@ -749,7 +755,7 @@ def render_pdf(node,parent_name,helper,p):
         ["Description", "Value"],
         ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
         ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
-        ["Average ROI:",str(round_and_percentage(avg_roi,2))+" %"]
+        ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"]
     ]
     helper.draw_table(general_means)
     img_buffer = create_price_chart(avg_meter_price)
