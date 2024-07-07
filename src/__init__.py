@@ -4,18 +4,20 @@ import pymysql
 import mysql.connector
 import json
 import logging
-from flask import session
+from flask import session,current_app
 import time
 import os
 from collections import defaultdict
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
-from pdfHelper import PDFHelper
-from server_utils import * 
+from .pdfHelper import PDFHelper
+from .server_utils import * 
 from reportlab.lib.utils import ImageReader
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from sqlalchemy import create_engine
+from flask_login import LoginManager
+
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
 from flask import jsonify
@@ -28,19 +30,40 @@ import io
 from io import BytesIO
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+from flask_wtf.csrf import CSRFProtect
 import matplotlib.backends.backend_agg as agg
+from decouple import config
+from flask_bcrypt import Bcrypt
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 
 
 # Load environment variables from .env file
-load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
-pd.set_option('display.max_rows', None) 
-pd.set_option('display.max_columns', None)
+#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+#pd.set_option('display.max_rows', None) 
+#pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
-pd.set_option('display.max_colwidth', None)
+#pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
+app.config.from_object(config("APP_SETTINGS"))
+csrf = CSRFProtect(app)
+login_manager = LoginManager() # create and init the login manager
+login_manager.init_app(app) 
+
+bcrypt = Bcrypt(app)
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 CORS(app)
-app.secret_key = 'some_secret_key'
+
+# Registering blueprints
+from src.accounts.views import accounts_bp
+from src.core.views import core_bp
+from src.accounts.forms import LoginForm ,RegisterForm
+app.register_blueprint(accounts_bp)
+app.register_blueprint(core_bp)
+
+#app.secret_key = 'some_secret_key'
 auth = HTTPBasicAuth()
 users = {
     os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
@@ -51,26 +74,39 @@ def verify_password(username, password):
     if username in users and users[username] == password:
         return username
 
+
+from src.accounts.models import User
+
+@login_manager.user_loader
+def load_user(user_id):
+    #It should take the ID of a user, and return the corresponding user object.
+    return User.query.filter(User.id == int(user_id)).first()
+
+login_manager.login_view = "accounts.login" #name of the login view
+login_manager.login_message_category = "danger"
+
 # db_config = {
 #     'host': 'localhost',
 #     'user': 'root',
 #     'password': 'DubaiBelgiumAnalytics_123',
 #     'database': 'sniperdb'
 # }
-db_config = {
-    'host': 'localhost',
-    'dbname': 'SNIPERDB',  # 'database' in MySQL is 'dbname' in PostgreSQL
-    'user': 'postgres',
-    'password': r'DubaiAnalytics_123',
-    'port': '5432'  # Default PostgreSQL port
-}
+# db_config = {
+#     'host': 'localhost',
+#     'dbname': 'SNIPERDB',  # 'database' in MySQL is 'dbname' in PostgreSQL
+#     'user': 'postgres',
+#     'password': r'DubaiAnalytics_123',
+#     'port': '5432'  # Default PostgreSQL port
+# }
 #db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
 #db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
 @app.route('/')
 @auth.login_required
 def index():
-    return render_template('index.html') 
+    login_form = LoginForm()  # Create an instance of the LoginForm
+    register_form = RegisterForm()
+    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=False,message='',form_to_show="login")
 
 def get_db_connection():
     #connection = mysql.connector.connect(**db_config)

@@ -747,6 +747,109 @@ function fetchAreaDetails(areaId) {
         });
 }
 
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    var profileButton = document.getElementById('profileButton');
+    if (profileButton) {
+        profileButton.addEventListener('click', function() {
+            var dropdown = document.getElementById('dropdown');
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+});
+// Close the dropdown if the user clicks outside of it
+window.onclick = function(event) {
+    if (!event.target.matches('.profile-button')) {
+        var dropdowns = document.getElementsByClassName("dropdown-content");
+        for (var i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.style.display === 'block') {
+                openDropdown.style.display = 'none';
+            }
+        }
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById("loginModal");
+    var btn = document.getElementById("loginButton");
+    var span = document.getElementsByClassName("close")[0];
+    var registerForm = document.getElementById("registerForm");
+    var loginForm = document.getElementById("loginForm");
+    var showRegisterFormLink = document.getElementById("showRegisterForm");
+    var modalTitle = document.getElementById("modalTitle");
+    var toggleFormText = document.getElementById("toggleFormText");
+    var messageDiv = document.getElementById("messageInfo");
+
+    btn.onclick = function() {
+        modal.style.display = "block";
+        loginForm.style.display = "block";
+        registerForm.style.display = "none";
+        modalTitle.textContent = "Login";
+        toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+    }
+
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id == 'showRegisterForm') {
+            event.preventDefault();
+            loginForm.style.display = "none";
+            registerForm.style.display = "block";
+            modalTitle.textContent = "Register";
+            toggleFormText.innerHTML = 'Already have an account? <a href="#" id="showLoginForm">Login</a>';
+        } else if (event.target && event.target.id == 'showLoginForm') {
+            event.preventDefault();
+            registerForm.style.display = "none";
+            loginForm.style.display = "block";
+            modalTitle.textContent = "Login";
+            toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+        }
+    });
+    // Show the modal if the show_modal parameter is true
+    var showModal = document.body.getAttribute('data-show-modal') === 'True';
+    if (showModal) {
+        modal.style.display = "block";
+    }
+
+    // Display the message if there is one
+    var message = document.body.getAttribute('data-message');
+    if (message) {
+        messageDiv.textContent = message;
+        messageDiv.style.display = "block";
+    }
+
+    // Show the appropriate form based on the form parameter
+    var formToShow = document.body.getAttribute('data-form');
+    if (formToShow === 'register') {
+        loginForm.style.display = "none";
+        registerForm.style.display = "block";
+        modalTitle.textContent = "Register";
+        toggleFormText.innerHTML = 'Already have an account? <a href="#" id="showLoginForm">Login</a>';
+    } else {
+        loginForm.style.display = "block";
+        registerForm.style.display = "none";
+        modalTitle.textContent = "Login";
+        toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+    }
+
+});
+
 function getCurrentJsonData() {
     return currentJsonData;
 }

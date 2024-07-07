@@ -9,9 +9,79 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../static/style.css" />
 </head>
-<body>
+<body data-show-modal="{{ show_modal }}" data-message="{{ message }}" data-form="{{ form_to_show }}">
     <div id="dubaiMap"></div>
-    <button id="loginButton">Login/Sign in</button>
+    
+{% if current_user.is_authenticated %}
+    <p>Hello, {{ current_user.email }}!</p>
+    <div class="dropdown-container">
+        <button id="profileButton" class="profile-button"></button>
+        <div id="dropdown" class="dropdown-content">
+            <a href="#">Manage Subscription</a>
+            <a href="{{ url_for('accounts.logout') }}">Log Out</a>
+        </div>
+    </div>
+    {% else %}
+<button id="loginButton">Login/Sign up</button>
+{% endif %}
+<div id="loginModal" class="modal" {% if show_modal %}style="display:block;"{% endif %}>
+<div class="modal-content">
+    <span class="close">&times;</span>
+    <h2 id="modalTitle">Login</h2>
+    <div id="messageInfo"></div>
+    <form id="loginForm" method="POST" action="{{ url_for('accounts.login') }}">
+        {{ login_form.csrf_token }}
+        <div class="form-group">
+            {{ login_form.email.label }}
+            {{ login_form.email(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ login_form.password.label }}
+            {{ login_form.password(class="form-control") }}
+        </div>
+        <button type="submit" class="form-btn">Login</button>
+    </form>
+    <form id="registerForm" method="POST" action="{{ url_for('accounts.register') }}" style="display:none;">
+        {{ register_form.csrf_token }}
+        <div class="form-group">
+            {{ register_form.email.label }}
+            {{ register_form.email(class="form-control") }}
+            {% if register_form.email.errors %}
+                {% for error in register_form.email.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ register_form.password.label }}
+            {{ register_form.password(class="form-control") }}
+            {% if register_form.password.errors %}
+                {% for error in register_form.password.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+        </div>
+        <div class="form-group">
+            {{ register_form.confirm.label }}
+            {{ register_form.confirm(class="form-control") }}
+            {% if register_form.confirm.errors %}
+                {% for error in register_form.confirm.errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <button type="submit" class="form-btn">Register</button>
+    </form>
+    <p id="toggleFormText">Don't have an account? <a href="#" id="showRegisterForm">Register</a></p>
+</div>
+</div>
     <div id="legendContainer">
         <div id="legendTitle">
           <span>Average meter price</span>
