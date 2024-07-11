@@ -1,4 +1,22 @@
 1)uncomment load_dotenv() in app.py
 2).\venv\Scripts\activate
-3)py app.py
+3)py app.py   ou PS C:\Users\aziz8\Documents\dubai_data\Flask_server> python manage.py run
 4)http://localhost:5000/
+5) TO activate stripe webhook , in cmd do :  stripe login  
+6)stripe listen --forward-to localhost:5000/webhook
+
+you can first migrate the database, and then run the app.
+
+flask db init #To initialize the database (create a migration repository)
+flask db migrate #To migrate the database changes, use the command:
+To apply the migrations, use the command:
+flask db upgrade
+Since this is the first time we're running our app, you'll need to run all the above commands. Later, whenever you make changes to the database, you'll just need to run the last two commands.
+
+After that, you can run your application using the command:
+
+python manage.py run
+
+
+TO RUN THE TESTS :
+python manage.py test

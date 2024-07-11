@@ -11,6 +11,104 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
 }).addTo(map);
 
+const mainTableBody = document.querySelector('#mainTableBody');
+const unlockTableBody = document.querySelector('#unlockTableBody');
+/*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
+We'll then use this key to create a new instance of Stripe.js.*/
+/*fetch("/config")
+.then((result) => { return result.json(); })
+.then((data) => {
+  // Initialize Stripe.js
+  const stripe = Stripe(data.publicKey);
+  document.querySelector("#goPremium").addEventListener("click", (event) => {
+    // Prevent the default action of the anchor tag
+    event.preventDefault();
+    
+    // Get Checkout Session ID
+    fetch("/create-checkout-session")
+      .then((result) => { return result.json(); })
+      .then((data) => {
+        console.log(data);
+        // Redirect to Stripe Checkout
+        return stripe.redirectToCheckout({ sessionId: data.sessionId });
+      })
+      .then((res) => {
+        console.log(res);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+      });
+  });
+});*/
+
+
+/*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
+We'll then use this key to create a new instance of Stripe.js.*/
+document.addEventListener('DOMContentLoaded', function() {
+    const upgradeButton = document.getElementById('upgradeButton');
+    const goPremiumButton = document.querySelector("#goPremium");
+    console.log('Upgrade Button:', upgradeButton);
+    console.log('Go Premium Button:', goPremiumButton);
+
+    fetch("/config")
+        .then((result) => result.json())
+        .then((data) => {
+            const stripe = Stripe(data.publicKey);
+
+            // Function to handle Stripe checkout
+            async function handleStripeCheckout() {
+                try {
+                    const sessionResponse = await fetch("/create-checkout-session");
+                    const sessionData = await sessionResponse.json();
+                    
+                    if (sessionData.error) {
+                        console.error('Error:', sessionData.error);
+                        return;
+                    }
+                    
+                    const result = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
+                    
+                    if (result.error) {
+                        console.error(result.error.message);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            // Upgrade button (requires login check)
+            upgradeButton.addEventListener('click', async function(event) {
+                event.preventDefault();
+                
+                try {
+                    const authResponse = await fetch('/check-auth');
+                    const authData = await authResponse.json();
+                    
+                    if (authData.isAuthenticated) {
+                        // User is logged in, proceed to Stripe checkout
+                        await handleStripeCheckout();
+                    } else {
+                        // User is not logged in, show login modal
+                        document.getElementById("premiumModal").style.display = 'none';
+                        openLoginModal("Login to Upgrade", "login");
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            });
+
+            // Go Premium button (directly to checkout)
+            goPremiumButton.addEventListener('click', async function(event) {
+                event.preventDefault();
+                await handleStripeCheckout();
+            });
+        })
+        .catch((error) => {
+            console.error("Error fetching Stripe config:", error);
+        });
+});
+
+
 document.getElementById('toggle-fullscreen').addEventListener('click', function() {
     var panel = document.getElementById('info-panel');
     panel.classList.toggle('fullscreen'); // This toggles the fullscreen class on and off
@@ -63,14 +161,13 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+
 // load the .geojson file to display the areas
 function applyGeoJSONLayer(currentLegend) {
-    console.log("applyGeoJSONLayer(), currentlegend  = ",currentLegend);
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
-        console.log("data : ",data)
-        //data[0] contains legends of map and data[1] contains the areas and data[2] to contain units
+        //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
         const legends = data[0];
         const units = data[2];
         //console.log("received data : ",data[1])
@@ -83,7 +180,7 @@ function applyGeoJSONLayer(currentLegend) {
             type: 'FeatureCollection',
             features: features
         };
-        
+        console.log("features after prcessing : ",features)
         // Clear existing GeoJSON layer
         if (window.geoJSONLayer) {
             window.geoJSONLayer.remove();
@@ -107,12 +204,19 @@ document.getElementById('close-panel').addEventListener('click', function() {
 
 
 let rowIdCounter = 0; // Counter to assign a unique row ID
-
-function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = null) {
+let fakeLineAdded = 0;
+function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = null,fake_line = false) {
     //parent rows are rows that are expandable
 
     const rowId = `row-${rowIdCounter++}`;
-    const row = tableBody.insertRow();
+    let row;
+
+    if (fake_line && fakeLineAdded >= 2) {
+        row = unlockTableBody.insertRow();
+    } else {
+        row = mainTableBody.insertRow();
+    }
+        
     row.setAttribute('data-row-id', rowId);
     row.setAttribute('data-level', level);
 
@@ -127,12 +231,15 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     contentCellHtml += `${name || "-"}`;
 
     // Add PDF icon if the row is a root row (i.e., it has no parent)
-    if (!parentRowId) {
+    if (!parentRowId && fake_line==false ) {
         contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
        // addPdfDownloadListener(rowId, name || "-");
     }
-    
-    if (isParent) {
+    if (fake_line) {
+        row.classList.add('blurry-row');
+        fakeLineAdded++;
+    }
+    if (isParent || fake_line) {
         row.classList.add('expandable');
     }
     const contentCell = row.insertCell();
@@ -170,7 +277,15 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                         area_data: currentAreaData
                     })
                 })
-                .then(response => response.blob())
+                .then(response => {
+                    if (response.ok) {
+                        response.blob(); //maybe remove the return
+                    } else if (response.status === 403) {
+                        openModal("Download as PDF is a premium feature");
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                })
                 .then(blob => {
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -422,7 +537,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             // Leaf node, add price values
             if(key == "means")
             {
-                const row = tableBody.querySelector(`[data-row-id="${parentRowId}"]`);
+                const row = mainTableBody.querySelector(`[data-row-id="${parentRowId}"]`);
                 if(value == null)
                 {
                     value = "-";
@@ -440,7 +555,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             else if(value.hasOwnProperty('means'))
             {
                 const currentRowId = addRow(key, level, hasChildren, parentRowId);
-                const row = tableBody.querySelector(`[data-row-id="${currentRowId}"]`);
+                const row = mainTableBody.querySelector(`[data-row-id="${currentRowId}"]`);
                 if(value == null)
                 {
                     value = "-";
@@ -454,6 +569,20 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
                 row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
+            }
+            else if(key.includes("locked project"))
+            {
+                
+                const currentRowId = addRow(key, level, hasChildren, parentRowId,null,true);
+                let row = unlockTableBody .querySelector(`[data-row-id="${currentRowId}"]`);
+                
+                if (!row) {
+                    row = mainTableBody.querySelector(`[data-row-id="${currentRowId}"]`);
+                }
+                row.cells[1].innerText = '99';
+                row.cells[2].innerText = '99';
+                row.cells[3].innerText = '99'; 
+                row.cells[4].innerHTML = '<img src="static/chartlocked.svg" alt="Locked Chart" width="40" height="40">';
             }
         }
     });
@@ -482,7 +611,7 @@ function openChartJsModal(dataArray) {
 }
 
 function hideIndirectChildren(parentRowId) {
-    const childRows = tableBody.querySelectorAll(`tr[data-parent-id="${parentRowId}"]`);
+    const childRows = mainTableBody.querySelectorAll(`tr[data-parent-id="${parentRowId}"]`);
     childRows.forEach(row => {
         row.style.display = 'none'; // Hide child
         hideIndirectChildren(row.getAttribute('data-row-id')); // Recurse to hide its children
@@ -499,7 +628,7 @@ function getListOrderFromUI() {
     return order;
 }
 
-const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+//const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
 
 
 document.addEventListener('click', function(e) {
@@ -507,7 +636,7 @@ document.addEventListener('click', function(e) {
         const clickedRow = e.target.closest('tr');
         if (clickedRow && clickedRow.classList.contains('expandable')) {
             const currentRowId = clickedRow.getAttribute('data-row-id');
-            const childRows = tableBody.querySelectorAll(`tr[data-parent-id="${currentRowId}"]`);
+            const childRows = mainTableBody.querySelectorAll(`tr[data-parent-id="${currentRowId}"]`);
   
             childRows.forEach(row => {
                 if (row.style.display === 'none') {
@@ -583,89 +712,131 @@ function updateProjectsDemand() {
 function onEachFeature(feature, layer) {
     layer.on({
         click: function(e) {
-            //console.log("we call on each feature")
+            console.log("we call on each feature")
             // Clear the <tbody> of <table id="nestedTable"> at the beginning
-            const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
-            tableBody.innerHTML = ''; // Clear existing rows
+            //const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+            mainTableBody.innerHTML = ''; // Clear existing rows
             currentAreaId = feature.properties.area_id;
-            
+            console.log("feature : ",feature)
             // Create a copy of feature.properties without the "geometry" property
             const { geometry, ...propertiesWithoutGeometry } = feature.properties;
             currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
             
             currentAreaId = feature.properties.area_id;
             const areaName = feature.properties.name;
-            const avgMeterSale  = feature.properties.averageSalePrice;
-            const avgCA_5Y = feature.properties.avgCA_5Y ?(feature.properties.avgCA_5Y * 100).toFixed(2) : "-";
-            const avgCA_10Y = feature.properties.avgCA_10Y ? (feature.properties.avgCA_10Y * 100).toFixed(2): "-";
-            const avgROI = feature.properties.avg_roi ?(feature.properties.avg_roi* 100).toFixed(2) : "-";
-            const supply_Finished_Pro = feature.properties.supply_finished_pro ? feature.properties.supply_finished_pro: "-";
-            const supply_OffPlan_Pro = feature.properties.supply_offplan_pro ? feature.properties.supply_offplan_pro: "-";
-            const supply_lands = feature.properties.supply_lands? feature.properties.supply_lands: "-";
-            const aquisitionDemand_2023 = feature.properties.aquisitiondemand_2023 ? (feature.properties.aquisitiondemand_2023* 100).toFixed(2): "-";
-            const rentalDemand_2023 = feature.properties.rentaldemand_2023 ? (feature.properties.rentaldemand_2023 * 100).toFixed(2): "-";
-            // Set the initial content of the panel to show the area name and a loading message
-            const panelContent = document.getElementById('panel-content');
             const areaInfo = document.getElementById('area_info');
-            
+            const areaTitleH2 = document.getElementById('area-title');
             // Clear previous content and set up the areaName as a separate heading on top
-            areaInfo.innerHTML = `<h2 class="area-title">${areaName}</h2>`;// areaName as a separate top element
+            areaTitleH2.innerHTML = areaName;// areaName as a separate top element
 
             // Prepare the container for cards with statistical data
             const statsContainer = document.createElement('div');
             statsContainer.id = 'stats-container';
             statsContainer.style.display = 'flex';
             statsContainer.style.overflowX = 'auto'; // Enables horizontal scrolling for cards
+            /*const cardData = [
+                { title: "Avg. Meter Sale Price:", value: `${feature.properties.averageSalePrice} AED` },
+                { title: "Avg. Capital Appr. 5Y:", value: `${(feature.properties.avgCA_5Y * 100).toFixed(2)}%` },
+                { title: "Avg. Capital Appr. 10Y:", value: ${(feature.properties.avgCA_10Y * 100).toFixed(2)}% },
+                { title: "Avg. ROI:", value: `${(feature.properties.avg_roi * 100).toFixed(2)}%` },
+                { title: "Acquisition Demand 2023:", value: `${(feature.properties.aquisitiondemand_2023 * 100).toFixed(2)}%` }, //if it is not in properties, put it as hidden
+                { title: "Rental Demand 2023:", value: `${(feature.properties.rentaldemand_2023 * 100).toFixed(2)}%` }
+            ];*/
+            const variableNames = feature.properties.variableNames;
+            const variableValues = feature.properties.variableValues;
+            const variableunits = feature.properties.variableUnits;
+            const variableSpecial= feature.properties.variableSpecial;
+            const cards = document.querySelectorAll('.info-card');
+            let array_index = 0;
+            // Loop through each card and populate with the corresponding variable name and value
+            cards.forEach((card) => {
+                // Ensure we have a corresponding variable name and value
+                
 
-            // Inserting individual cards for each piece of information
-            statsContainer.innerHTML = `
-            <div class="info-card">
-  <div class="title">Avg. Meter Sale Price:</div>
-  <div class="value">${avgMeterSale} AED</div>
-</div>
-            <div class="info-card">
-  <div class="title">Avg. Capital Appr. 5Y:</div>
-  <div class="value">${avgCA_5Y} %</div>
-</div>
-<div class="info-card">
-  <div class="title">Avg. Capital Appr. 10Y:</div>
-  <div class="value">${avgCA_10Y} %</div>
-</div>
-<div class="info-card">
-  <div class="title">Avg. ROI:</div>
-  <div class="value">${avgROI} %</div>
-</div>
-<div class="info-card supply-projects">
-  <div class="title">Supply of Projects:</div>
-  <div class="supply-details">
-    <div class="supply-column">
-      <div class="sub-title">Finished</div>
-      <div class="value">${supply_Finished_Pro}</div>
-    </div>
-    <div class="supply-column">
-      <div class="sub-title">Off Plan</div>
-      <div class="value">${supply_OffPlan_Pro}</div>
-    </div>
-  </div>
-</div>
-<div class="info-card">
-  <div class="title">Supply of Lands:</div>
-  <div class="value">${supply_lands}</div>
-  <button class="stats-button"><i class="fas fa-chart-pie"></i></button>
-</div>
-<div class="info-card">
-  <div class="title">Acquisition Demand 2023:</div>
-  <div class="value">${aquisitionDemand_2023} %</div>
-</div>
-<div class="info-card">
-  <div class="title">Rental Demand 2023:</div>
-  <div class="value">${rentalDemand_2023} %</div>
-</div>
-            `;
+                if(card.id=='card5' && variableNames.length >5)
+                {
+                    console.log("we process : ",card.id)
+                    console.log("index : ",array_index)
+                    const supplyCard = document.getElementById('card5');
+                    if (supplyCard) {
+                        console.log("this is card5 so we fill it with project");
+                        supplyCard.querySelector('.title').textContent ='Supply of Projects:';
+                        const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[4] : "-";
+                        const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[5] : "-";
+                        supplyCard.querySelector('.finished-value').textContent = finishedValue;
+                        supplyCard.querySelector('.offplan-value').textContent = offplanValue;
+                        supplyCard.classList.remove('locked-card');  // Remove locked-card class
+                        array_index+=2;
+                    }
+                }
+                else if(card.id=='card6' && variableNames.length >5)
+                {
+                    console.log("we process : ",card.id)
+                    console.log("index : ",array_index)
+                    const landsCard = document.getElementById('card6');
+                    if (landsCard) {
+                        const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
+                        landsCard.querySelector('.value').textContent = landsValue;
+                        landsCard.classList.remove('locked-card');  // Remove locked-card class
+                        array_index++;
+                    }
+                    
+                }
+                else if(variableSpecial[array_index]==0)
+                {
+                    console.log("we process : ",card.id)
+                    console.log("index : ",array_index)
+                    const title = variableNames[array_index];
+                    let value = variableValues[array_index];
+                    card.querySelector('.title').textContent = title;
+                    if(variableunits[array_index]=="%")
+                    {
+                        card.querySelector('.value').textContent= `${(value * 100).toFixed(2)} %`;
+                    }
+                    else if(variableunits[array_index]=="AED")
+                    {
+                        card.querySelector('.value').textContent= `${value} AED`;
+                    }
+                    else{
+                        card.querySelector('.value').textContent = value;
+                    }
+                    
+                    card.classList.remove('locked-card');  // Remove locked-card class
+                    const wrapper = card.closest('.info-card-wrapper');
+                    // Remove the lock icon
+                    if(wrapper){
+                        const lockIcon = wrapper.querySelector('.lock-icon-card');
+                        if (lockIcon) {
+                            lockIcon.remove();
+                        }
+                        // Move the card outside of the wrapper
+                        wrapper.parentNode.insertBefore(card, wrapper);
+                        // Remove the empty wrapper
+                        wrapper.remove();
+                    }
+                    
+                    
+                    
 
+                    array_index++;
+                }
+        });
+           /* cardData.forEach(data => {
+                const card = createInfoCard(data.title, data.value);
+                statsContainer.appendChild(card);
+            });
+
+            const supplyCard = createSupplyCard(
+                feature.properties.supply_finished_pro || "-",
+                feature.properties.supply_offplan_pro || "-"
+            );
+            statsContainer.appendChild(supplyCard);
+
+            const landsCard = createLandsCard(feature.properties.supply_lands || "-");
+            statsContainer.appendChild(landsCard);*/
             // Append the container of cards to the panel content
             areaInfo.appendChild(statsContainer);
-  
+
             const panel = document.getElementById('info-panel');
             panel.style.display = 'block';
             
@@ -713,9 +884,10 @@ function onEachFeature(feature, layer) {
     });
 }
 
+
 function fetchAreaDetails(areaId) {
-    const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
-    tableBody.innerHTML = ''; // Clear existing rows
+   // const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+    mainTableBody.innerHTML = ''; // Clear existing rows
 
     const loader = document.querySelector('.loader');
     loader.style.display = 'grid'; // Display loader
@@ -738,6 +910,8 @@ function fetchAreaDetails(areaId) {
             const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
             tableBody.innerHTML = ''; // Clear existing rows
             processDictionary(data); // Process and display the fetched data
+            positionOverlay();
+            window.addEventListener('resize', positionOverlay);
         })
         .catch(error => {
             console.log('Error fetching area details:', error);
@@ -778,53 +952,46 @@ window.onclick = function(event) {
     }
 }
 document.addEventListener('DOMContentLoaded', function() {
-    var modal = document.getElementById("loginModal");
+    var loginmodal = document.getElementById("loginModal");
     var btn = document.getElementById("loginButton");
     var span = document.getElementsByClassName("close")[0];
-    var registerForm = document.getElementById("registerForm");
-    var loginForm = document.getElementById("loginForm");
-    var showRegisterFormLink = document.getElementById("showRegisterForm");
-    var modalTitle = document.getElementById("modalTitle");
-    var toggleFormText = document.getElementById("toggleFormText");
     var messageDiv = document.getElementById("messageInfo");
 
     btn.onclick = function() {
-        modal.style.display = "block";
-        loginForm.style.display = "block";
-        registerForm.style.display = "none";
-        modalTitle.textContent = "Login";
-        toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+        openLoginModal('Login', 'login');
     }
 
     span.onclick = function() {
-        modal.style.display = "none";
+        loginmodal.style.display = "none";
     }
 
     window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = "none";
+        if (event.target == loginmodal) {
+            loginmodal.style.display = "none";
         }
     }
 
     document.addEventListener('click', function(event) {
         if (event.target && event.target.id == 'showRegisterForm') {
             event.preventDefault();
-            loginForm.style.display = "none";
-            registerForm.style.display = "block";
-            modalTitle.textContent = "Register";
-            toggleFormText.innerHTML = 'Already have an account? <a href="#" id="showLoginForm">Login</a>';
+            openLoginModal('Register', 'register');
         } else if (event.target && event.target.id == 'showLoginForm') {
             event.preventDefault();
-            registerForm.style.display = "none";
-            loginForm.style.display = "block";
-            modalTitle.textContent = "Login";
-            toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+            openLoginModal('Login', 'login');
         }
     });
     // Show the modal if the show_modal parameter is true
     var showModal = document.body.getAttribute('data-show-modal') === 'True';
     if (showModal) {
-        modal.style.display = "block";
+        //loginmodal.style.display = "block";
+        // Show the appropriate form based on the form parameter
+        var formToShow = document.body.getAttribute('data-form');
+        if (formToShow === 'register') {
+            openLoginModal('Register', 'register');
+        } else {
+            console.log("form to show is not register")
+            openLoginModal('Login', 'login');
+        }
     }
 
     // Display the message if there is one
@@ -834,19 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.style.display = "block";
     }
 
-    // Show the appropriate form based on the form parameter
-    var formToShow = document.body.getAttribute('data-form');
-    if (formToShow === 'register') {
-        loginForm.style.display = "none";
-        registerForm.style.display = "block";
-        modalTitle.textContent = "Register";
-        toggleFormText.innerHTML = 'Already have an account? <a href="#" id="showLoginForm">Login</a>';
-    } else {
-        loginForm.style.display = "block";
-        registerForm.style.display = "none";
-        modalTitle.textContent = "Login";
-        toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
-    }
+    
 
 });
 

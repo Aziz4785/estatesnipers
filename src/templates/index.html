@@ -17,13 +17,16 @@
     <div class="dropdown-container">
         <button id="profileButton" class="profile-button"></button>
         <div id="dropdown" class="dropdown-content">
-            <a href="#">Manage Subscription</a>
+            <a href="{{ url_for('manage_subscription') }}">Manage Subscription</a>
+            {% if not is_premium_user %}
+              <a href="#" id="goPremium">Go Premium <span  style="font-size: 24px; color: rgb(255, 173, 9);">&#9733;</span ></a>
+            {% endif %}
             <a href="{{ url_for('accounts.logout') }}">Log Out</a>
         </div>
     </div>
     {% else %}
 <button id="loginButton">Login/Sign up</button>
-{% endif %}
+
 <div id="loginModal" class="modal" {% if show_modal %}style="display:block;"{% endif %}>
 <div class="modal-content">
     <span class="close">&times;</span>
@@ -80,8 +83,9 @@
         <button type="submit" class="form-btn">Register</button>
     </form>
     <p id="toggleFormText">Don't have an account? <a href="#" id="showRegisterForm">Register</a></p>
+    </div>
 </div>
-</div>
+{% endif %}
     <div id="legendContainer">
         <div id="legendTitle">
           <span>Average meter price</span>
@@ -91,20 +95,36 @@
           <div onclick="changeLegendTitle('Average meter price')">Average meter price</div>
           <div onclick="changeLegendTitle('Capital Appreciation')">Capital appreciation</div>
           <div onclick="changeLegendTitle('Gross Rental ROI')">Gross Rental ROI</div>
-          <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
+          {% if is_premium_user %}
+            <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
+            {% else %}
+                <div class="locked-legend" onclick="showPremiumMessage()">Acquisition Demand <span id="lockIcon">🔒</span></div>
+            {% endif %}
         </div>
         <div id="legend">
           <div id="legendContent"></div>
         </div>
     </div>
+    {% if not is_premium_user %}
+    <div id="premiumMessage" class="modal">
+        <div class="modal-content">
+            <p>You need to buy a premium subscription to unlock all the features.</p>
+        </div>
+    </div>
+    {% endif %}  
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <span class="close-button">×</span>
             <h2>Settings</h2>
             <div class="settings-section">
                 <h3>Default Hierarchy</h3>
-                <p>Drag and drop to rearrange the hierarchy:</p>
-                <ul id="hierarchyList" class="hierarchy-list">
+                {% if is_premium_user %}
+                  <p>Drag and drop to rearrange the hierarchy:</p>
+                {% else %}
+                <p>Drag and drop to rearrange the hierarchy<span id="lockIcon">🔒 <span class="premium-text">(premium)</span></span>:</p>
+                {% endif %}
+
+                <ul id="hierarchyList" class="hierarchy-list {% if not is_premium_user %} locked-ul{% endif %}">
                     <li draggable="true" data-id = "2"><span class="drag-handle">■</span> Project</li>
                     <li draggable="true" data-id = "1"><span class="drag-handle">■</span> Type (flat, villa ,shop ...)</li>
                     <li draggable="true" data-id = "3"><span class="drag-handle">■</span> Usage (residential, commercial ...)</li>
@@ -128,11 +148,75 @@
             <button id="settingsBtn">⚙</button>
             <button id="toggle-fullscreen">⤢</button>
             <button id="close-panel">x</button>
-            <div id = "area_info"></div>
-            <div class="tab">
-                <button class="tablinks active" onclick="openTab(event, 'Details')">Details</button>
-                <button class="tablinks" onclick="openTab(event, 'ProjectsDemand')">Projects Demand</button>
+            <div id = "area_info">
+                <h2 id="area-title"></h2>
+                <div id="last-updated">Last updated: 2024-07-08</div>
+                <div id="stats-container" style="display: flex; overflow-x: auto;">
+                <div class="info-card locked-card" id="card1">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+                  <div class="info-card locked-card" id="card2">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+                  <div class="info-card locked-card" id="card3">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+                  <div class="info-card locked-card" id="card4">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+
+                  <div class="info-card-wrapper">
+                      <div class="info-card supply-projects locked-card" id="card5">
+                        <div class="title">Locked</div>
+                        <div class="supply-details">
+                          <div class="supply-column">
+                            <div class="sub-title">Finished</div>
+                            <div class="value finished-value"></div>
+                          </div>
+                          <div class="supply-column">
+                            <div class="sub-title">Off Plan</div>
+                            <div class="value offplan-value"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="lock-icon-card">🔒</div>
+                  </div>
+                    <div class="info-card-wrapper">
+                      <div class="info-card locked-card" id="card6">
+                        <div class="title">Supply of Lands:</div>
+                        <div class="value"></div>
+                        <button class="stats-button"><i class="fas fa-chart-pie"></i></button>
+                      </div>
+                      <div class="lock-icon-card">🔒</div>
+                  </div>
+                  <div class="info-card-wrapper">
+                    <div class="info-card locked-card" id="card7">
+                      <div class="title">Locked</div>
+                      <div class="value">99</div>
+                    </div>
+                    <div class="lock-icon-card">🔒</div>
+                  </div>
+                  <div class="info-card-wrapper">
+                    <div class="info-card locked-card" id="card8">
+                      <div class="title">Locked</div>
+                      <div class="value">99</div>
+                    </div>
+                    <div class="lock-icon-card">🔒</div>
+                </div>
+                </div>
             </div>
+            <div class="tab">
+              <button class="tablinks active" onclick="openTab(event, 'Details')">Details</button>
+              {% if is_premium_user %}
+                  <button class="tablinks" onclick="openTab(event, 'ProjectsDemand')">Projects Demand</button>
+              {% else %}
+                  <button class="tablinks locked" onclick="showPremiumMessage()">Projects Demand <span id="lockIcon">🔒</span></button>
+              {% endif %}
+          </div>
             <!-- Tab content -->
             <div id="Details" class="tabcontent">
                 <div class="scrollable-container">
@@ -146,10 +230,22 @@
                                 <th>Meter Sale Price</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="mainTableBody">
                             <!-- Rows will be inserted here using JavaScript -->
                         </tbody>
                     </table>
+                    {% if not is_premium_user %}
+                    <div id="unlock-Overlay">
+                      <img id="locked-icon" src="static/unlock.svg" alt="Locked Icon">
+                        <p>Unlock all projects for 9.99€</p>
+                        <button id="unlock-button-table">Unlock</button>
+                    </div>
+                      <table id="nestedTable">
+                        <tbody id="unlockTableBody">
+                            <!-- Last 3 rows will be inserted here -->
+                        </tbody>
+                      </table>
+                      {% endif %}
                     <div class="loader-container">
                         <div class="loader"></div>
                     </div>
@@ -163,12 +259,33 @@
             </div>
         </div>
     </div>
-
+    
+      <div id="premiumModal" class="modal">
+        <div class="modal-content">
+          <span class="close-button premium-close">&times;</span>
+          <h2 class="modal-title">Upgrade to Premium $9.99</h2>
+          <div class="premium-box-container">
+            <div class="premium-box">
+              <div class="premium-header">PREMIUM</div>
+              <ul class="prem-ul">
+                <li>Unlimited Project Details</li>
+                <li>Unlimited Report Downloads</li>
+                <li>Dedicated Customer Support</li>
+                <li>Estate Snipers Community Membership</li>
+                <li>Feedback Loops & Inquiry Management</li>
+              </ul>
+            </div>
+          </div>
+          <button id = "upgradeButton" class="upgrade-button">Upgrade Now</button>
+        </div>
+      </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
+    <script src="https://js.stripe.com/v3/"></script> 
     <script>console.log('Leaflet loaded:', typeof L !== 'undefined');</script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../static/premium_modal.js"></script>
     <script src="../static/functions.js"></script>
     <script src="../static/app.js"></script>
     <script src="../static/settings.js"></script>

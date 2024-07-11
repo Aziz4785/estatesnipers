@@ -45,7 +45,7 @@
   /* If necessary, adjust padding here or keep it on the #info-panel */
 }
 
-.area-title {
+#area-title {
   color: #032c58;
   font-size: 2em;
   font-weight: 600;
@@ -150,6 +150,9 @@
   background-color: #f9f9f9;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1001;
+  white-space: nowrap; /* Prevent text from breaking into new lines */
+  min-width: 190px; /* Optional: set a minimum width */
+  border-radius: 8px;
 }
 
 .dropdown-content a {
@@ -157,9 +160,12 @@
   padding: 12px 16px;
   text-decoration: none;
   display: block;
+  align-items: center; /* Center items vertically */
 }
 
-.dropdown-content a:hover {background-color: #f1f1f1}
+.dropdown-content a:hover {
+  background-color: #f1f1f1;
+  border-radius: 8px;}
 
 .dropdown-container {
   position: absolute;
@@ -185,7 +191,7 @@
   color: #555;
 }
 .form-group input {
-  width: 100%;
+  width: 60%; /* Change this value to adjust the width of the input fields */
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -209,12 +215,17 @@
 }
 
 
-
+#last-updated {
+  text-align: right;
+  font-size: 0.9em; /* Optional: adjust the font size */
+  color: #666; /* Optional: adjust the color */
+  padding: 2px;
+}
 #stats-container {
   display: flex;
   gap: 10px; /* Space between cards */
   overflow-x: auto; /* Enable horizontal scrolling */
-  padding-bottom: 5px;
+  padding-bottom: 20px;
 }
 
 /* Styles the scrollbar track */
@@ -252,9 +263,10 @@
   font-family: 'Helvetica Neue', Arial, sans-serif;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 15px;
   transition: all 0.3s ease;
+  position: relative;
   text-align: center; /* Ensures text within children is centered, though flexbox alignment takes precedence for positioning */
+  z-index: 0;
 }
 
 .info-card .title, .info-card.supply-projects .title {
@@ -315,6 +327,39 @@
   color: #68696b; /* Color of the icon */
   font-size: 24px; /* Size of the icon */
 }
+/*.info-card-wrapper{
+  position: relative;
+  display: flex;
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  flex: 0 0 auto;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  text-align: center; 
+
+}*/
+.info-card-wrapper{
+  /*display: contents;*/
+  position: relative;
+  flex: 0 0 auto; 
+}
+.locked-card {
+  background: rgba(0, 0, 0, 0.1);
+  filter: blur(6px);
+  
+  position: relative;
+}
+.lock-icon-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px; /* Adjust size as needed */
+  z-index: 1;
+}
+
+
 .tab {
   overflow: hidden;
   background-color: #f1f1f1;
@@ -394,7 +439,10 @@ th, td {
 tr:hover {
   background-color: #f1f1f1;
 }
-
+.blurry-row {
+  filter: blur(3px);
+  -webkit-filter: blur(3px); /* For Safari */
+}
 th:first-child, td:first-child {
   padding-left: 25px; /* Increase padding for a more modern feel */
 }
@@ -407,6 +455,7 @@ th:last-child, td:last-child {
 tbody td {
   font-size: 0.75em;
 }
+
 
 .expand-arrow, .collapsible {
   cursor: pointer;
@@ -423,6 +472,71 @@ tbody td {
 .indent-2 {
   padding-left: 40px;
 }
+#unlockOverlay {
+  position: sticky;
+  bottom: calc(100% / 2); /* Approximates the height of one row */
+  right: 20px; /* Adjust this value to position from the right edge */
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+  width: 200px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  margin-left: auto; /* Aligns to the right instead of center */
+  height: calc(100% / 8 * 7); /* Covers approximately 7 rows */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#unlockOverlay p {
+  margin-bottom: 10px;
+}
+
+#unlockOverlay button {
+  padding: 5px 15px;
+  background-color: #032c58;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+
+#unlock-Overlay {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px 40px;
+  text-align: center;
+  position: relative;
+}
+
+#unlock-Overlay #locked-icon {
+  display: block;
+  margin: 0 auto 20px auto;
+  width: 64px;  /* Adjust the size as needed */
+  height: 64px; /* Adjust the size as needed */
+}
+
+#unlock-Overlay p {
+  font-size: 1.2em;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+#unlock-Overlay button {
+  background-color: #007bff;
+  border: none;
+  border-radius: 30px; /* Oblong shape */
+  color: white;
+  padding: 10px 40px; /* Adjusted for oblong shape */
+  font-size: 1em;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+
+
 
 .modal {
   display: none;
@@ -474,25 +588,6 @@ tbody td {
   color: #000; /* Optional: Makes the heading text darker for more contrast */
   padding-bottom: 10px; /* Adds space below the heading */
 }
-
-
-.form-check {
-  display: flex;
-  align-items: center; /* Aligns checkbox and label */
-  margin-bottom: 10px;
-}
-
-.form-check-input {
-  margin-right: 10px;
-  cursor: pointer;
-}
-
-.form-check-label {
-  margin-bottom: 0;
-  cursor: pointer;
-  font-size: 14px;
-}
-
 .hierarchy-list {
   list-style: none;
   padding-left: 0;
@@ -535,6 +630,25 @@ tbody td {
 .hierarchy-list li:nth-child(3) { padding-left: 40px; }
 .hierarchy-list li:nth-child(4) { padding-left: 60px; }
 
+.locked-ul li {
+  cursor: not-allowed; /* Indicates that the item is not draggable */
+  color: #999; /* Optional: Makes the text color lighter to indicate a locked state */
+}
+
+.locked-ul li .drag-handle {
+  cursor: not-allowed; /* Indicates that the handle is not draggable */
+  color: #999; /* Optional: Makes the handle color lighter to indicate a locked state */
+}
+
+.locked-ul li:hover {
+  background-color: transparent; /* Prevents hover effect on locked items */
+}
+.premium-text {
+  font-size: 0.8em; /* Smaller font size */
+  color: grey; /* Grey color */
+}
+
+
 .save-btn {
   display: block; /* Full width */
   width: 100%;
@@ -551,6 +665,30 @@ tbody td {
 .save-btn:hover {
   background-color: #003d82; /* Slightly darker background on hover for button */
 }
+
+
+
+
+
+
+.form-check {
+  display: flex;
+  align-items: center; /* Aligns checkbox and label */
+  margin-bottom: 10px;
+}
+
+.form-check-input {
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.form-check-label {
+  margin-bottom: 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+
 
 .modal_chart {
   display: none; /* Hidden by default */
@@ -754,6 +892,10 @@ tbody td {
   background: #f0f0f0;
 }
 
+#dropupMenu .locked-legend:hover {
+  background: #e0e0e0; /* Ensure the background stays the same on hover */
+}
+
 #legend {
   background: rgba(255, 255, 255, 0.831);
   padding: 10px 15px;
@@ -801,4 +943,55 @@ tbody td {
   right: 5px; /* Adjust as needed */
   top: 50%;
   transform: translateY(-50%);
+}
+
+
+/*  UPDRAGE PANEL */
+
+
+.premium-box-container {
+  display: flex;
+  justify-content: center; /* Center the premium box container */
+}
+
+.premium-box {
+  border: 2px solid #032c58;
+  padding: 20px;
+  border-radius: 10px;
+  position: relative;
+  display: inline-block; /* Wrap the text */
+  text-align: left; /* Align the list text to the left */
+}
+
+.premium-header {
+  font-weight: bold;
+  background-color: #fff;
+  color: #032c58;
+  padding: 0 10px;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap; /* Ensure the text doesn't wrap */
+}
+
+.prem-ul {
+  list-style-type: disc; /* Display bullet points */
+  padding: 0;
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 20px 0 0 20px; /* Indent the list to show bullets */
+}
+
+.upgrade-button {
+  display: block;
+  width: 100%;
+  background-color: #032c58;
+  color: white;
+  border: none;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
 }

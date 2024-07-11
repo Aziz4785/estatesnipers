@@ -21,3 +21,18 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<email {self.email}>"
+    
+
+class StripeCustomer(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    stripeCustomerId = db.Column(db.String(255), nullable=False)
+    stripeSubscriptionId = db.Column(db.String(255), nullable=False)
+
+    def __init__(self, user_id, stripeCustomerId, stripeSubscriptionId):
+        self.user_id = user_id
+        self.stripeCustomerId = stripeCustomerId
+        self.stripeSubscriptionId = stripeSubscriptionId
+
+    def __repr__(self):
+        return f"<StripeCustomer user_id={self.user_id}, stripeCustomerId={self.stripeCustomerId}>"

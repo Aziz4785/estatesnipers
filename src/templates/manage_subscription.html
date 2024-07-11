@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Subscription</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 600px;
+        }
+
+        .card {
+            margin-top: 20px;
+        }
+
+        .btn-subscribe {
+            background-color: #007bff;
+            border-color: #007bff;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .btn-subscribe:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .header {
+            margin-top: 50px;
+            margin-bottom: 30px;
+        }
+
+        .header h2 {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .status-text {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .no-subscription-text {
+            font-weight: bold;
+            color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header text-center">
+            <h2>Manage Subscription</h2>
+        </div>
+        {% if subscription and subscription.status == "active" %}
+        <h4 class="text-center">Your subscription:</h4>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ product.name }}</h5>
+                <p class="card-text">{{ product.description }}</p>
+                <p class="status-text">Status: {{ subscription.status }}</p>
+                <p>Next billing date: {{ subscription.current_period_end | datetime }}</p>
+                <div class="text-center">
+                    <form action="{{ url_for('cancel_subscription') }}" method="POST">
+                        <button type="submit" class="btn btn-danger btn-lg" id="cancelBtn">Cancel Subscription</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-center no-subscription-text">You don't have an active subscription.</p>
+        <div class="text-center">
+            <button type="submit" class="btn btn-subscribe btn-lg" id="submitBtn">Subscribe</button>
+        </div>
+        {% endif %}
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+
+</html>

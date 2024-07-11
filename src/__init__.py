@@ -17,7 +17,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from sqlalchemy import create_engine
 from flask_login import LoginManager
-
+from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
 from flask import jsonify
@@ -25,6 +25,7 @@ from reportlab.lib.colors import blue,black
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter
+from flask_login import login_required,current_user
 from reportlab.pdfgen import canvas
 import io
 from io import BytesIO
@@ -36,10 +37,10 @@ from decouple import config
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
-
+import stripe
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -55,6 +56,11 @@ bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
+
+#with app.app_context(): 
+    #This will create model classes for all tables in your database. 
+    # You can then access them via db.metadata.tables['table_name'].
+    #db.reflect()
 
 # Registering blueprints
 from src.accounts.views import accounts_bp
@@ -75,7 +81,7 @@ def verify_password(username, password):
         return username
 
 
-from src.accounts.models import User
+from src.accounts.models import User,StripeCustomer
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -84,6 +90,16 @@ def load_user(user_id):
 
 login_manager.login_view = "accounts.login" #name of the login view
 login_manager.login_message_category = "danger"
+
+stripe_keys = {
+    "secret_key": os.environ["STRIPE_SECRET_KEY"],
+    "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
+    "price_id": os.environ["STRIPE_PRICE_ID"],
+    "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"], #Stripe will now forward events to our endpoint
+}
+
+stripe.api_key = stripe_keys["secret_key"]
+
 
 # db_config = {
 #     'host': 'localhost',
@@ -101,12 +117,207 @@ login_manager.login_message_category = "danger"
 #db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
 #db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
+
+
+
 @app.route('/')
 @auth.login_required
 def index():
     login_form = LoginForm()  # Create an instance of the LoginForm
     register_form = RegisterForm()
-    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=False,message='',form_to_show="login")
+    
+    is_premium_user = False
+    if current_user.is_authenticated:
+        # Query the StripeCustomer table to check subscription status
+        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+        if stripe_customer:
+            # Fetch the subscription details from Stripe
+            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+            if subscription and subscription.status == "active":
+                is_premium_user = True
+    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=False,message='',form_to_show="login",is_premium_user=is_premium_user)
+
+@app.route("/config")
+def get_publishable_key():
+    stripe_config = {"publicKey": stripe_keys["publishable_key"]}
+    return jsonify(stripe_config)
+
+@app.route('/check-auth')
+def check_auth():
+    return jsonify({
+        'isAuthenticated': current_user.is_authenticated
+    })
+
+@app.route("/create-checkout-session")
+def create_checkout_session():
+    domain_url = "http://localhost:5000/"
+    stripe.api_key = stripe_keys["secret_key"]
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            # you should get the user id here and pass it along as 'client_reference_id'
+            #
+            # this will allow you to associate the Stripe session with
+            # the user saved in your database
+            #
+            # example: client_reference_id=user.id,
+            success_url=domain_url + "success?session_id={CHECKOUT_SESSION_ID}",
+            cancel_url=domain_url + "cancel",
+            payment_method_types=["card"],
+            mode="subscription",
+            line_items=[
+                {
+                    "price": stripe_keys["price_id"],
+                    "quantity": 1,
+                }
+            ]
+        )
+        return jsonify({"sessionId": checkout_session["id"]})
+    except Exception as e:
+        return jsonify(error=str(e)), 403
+    
+@app.route("/success")
+def success():
+    is_premium_user = False
+    if current_user.is_authenticated:
+        # Query the StripeCustomer table to check subscription status
+        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+        if stripe_customer:
+            # Fetch the subscription details from Stripe
+            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+            if subscription and subscription.status == "active":
+                is_premium_user = True
+    return render_template("index.html",is_premium_user=is_premium_user)
+
+
+@app.route("/cancel")
+def cancelled():
+    return render_template("index.html")
+
+
+@app.route("/webhook", methods=["POST"])
+def stripe_webhook():
+    """
+    There are two types of events in Stripe and programming in general. Synchronous events, 
+    which have an immediate effect and results (e.g., creating a customer), and asynchronous events, 
+    which don't have an immediate result (e.g., confirming payments).
+      Because payment confirmation is done asynchronously, we cannot set the premium to active right after the payment is made..
+      so we need to wait for stripe response , and so we will receive the stripe response on this webhook
+
+      "One of the easiest ways to get notified when the payment goes through is to use a callback 
+      or so-called Stripe webhook. We'll need to create a simple endpoint in our application, which Stripe will call whenever an event occurs (e.g., when a user subscribes). 
+      By using webhooks, we can be absolutely sure that the payment went through successfully."
+    """
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get("Stripe-Signature")
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, stripe_keys["endpoint_secret"]
+        )
+
+    except ValueError as e:
+        # Invalid payload
+        return "Invalid payload", 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        return "Invalid signature", 400
+
+    # Handle the checkout.session.completed event
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+
+        # Fulfill the purchase...
+        handle_checkout_session(session)
+
+    return "Success", 200
+
+@app.route("/cancel-subscription", methods=["POST"])
+@login_required
+def cancel_subscription():
+    customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+    
+    if not customer:
+        flash("No active subscription found.", "error")
+        return redirect(url_for('manage_subscription'))
+    
+    try:
+        subscription = stripe.Subscription.retrieve(customer.stripeSubscriptionId)
+        stripe.Subscription.delete(customer.stripeSubscriptionId)
+        
+        # Update the database
+        db.session.delete(customer)
+        db.session.commit()
+        
+        flash("Your subscription has been cancelled successfully.", "success")
+    except stripe.error.StripeError as e:
+        flash(f"An error occurred while cancelling your subscription: {str(e)}", "error")
+    
+    return redirect(url_for('manage_subscription'))
+
+def handle_checkout_session(session):
+    # here you should fetch the details from the session and save the relevant information
+    # to the database (e.g. associate the user with their subscription)
+    # Extract relevant information from the session
+    customer_email = session['customer_details']['email']
+    stripe_customer_id = session['customer']
+    stripe_subscription_id = session['subscription']
+
+    # Find the user by email
+    user = User.query.filter_by(email=customer_email).first()
+
+    if user:
+        # Check if the user already has a StripeCustomer record
+        existing_stripe_customer = StripeCustomer.query.filter_by(user_id=user.id).first()
+
+        if existing_stripe_customer:
+            # Update existing StripeCustomer record
+            existing_stripe_customer.stripeCustomerId = stripe_customer_id
+            existing_stripe_customer.stripeSubscriptionId = stripe_subscription_id
+        else:
+            # Create new StripeCustomer record
+            new_stripe_customer = StripeCustomer(
+                user_id=user.id,
+                stripeCustomerId=stripe_customer_id,
+                stripeSubscriptionId=stripe_subscription_id
+            )
+            db.session.add(new_stripe_customer)
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        current_app.logger.info(f"Subscription successful for user {user.email}")
+    else:
+        current_app.logger.warning(f"User with email {customer_email} not found in database")
+
+    print("Subscription was successful.")
+    print("Subscription was successful.")
+
+
+@app.route("/manage-subscription")
+@login_required
+def manage_subscription():
+    customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+    
+    if customer:
+        subscription = stripe.Subscription.retrieve(customer.stripeSubscriptionId)
+        product = stripe.Product.retrieve(subscription.plan.product)
+        context = {
+            "subscription": subscription,
+            "product": product,
+        }
+        return render_template("manage_subscription.html", **context)
+    
+    return render_template("manage_subscription.html")
+
+
+@app.template_filter('datetime')
+def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+    if value is None:
+        return ""
+    return datetime.utcfromtimestamp(value).strftime(format)
 
 def get_db_connection():
     #connection = mysql.connector.connect(**db_config)
@@ -124,7 +335,20 @@ list_order_in_memory = []
 @auth.login_required
 def get_area_details():
     try:
-        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+        is_premium_user = False 
+        if current_user.is_authenticated:
+            #Query the StripeCustomer table to check subscription status
+            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+            if stripe_customer:
+                # Fetch the subscription details from Stripe
+                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+                if subscription and subscription.status == "active":
+                    is_premium_user = True
+
+        hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
+        if is_premium_user:   
+            hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
         area_id = request.args.get('area_id')
         if not area_id:
             return jsonify({'error': 'Area ID is required'}), 400
@@ -230,9 +454,33 @@ def get_area_details():
             
             update_nested_dict(final_df, nested_dicts, group)
 
+        is_premium_user = False 
+        if current_user.is_authenticated:
+            #Query the StripeCustomer table to check subscription status
+            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+            if stripe_customer:
+                # Fetch the subscription details from Stripe
+                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+                if subscription and subscription.status == "active":
+                    is_premium_user = True
+
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
-            
+
+            if(not is_premium_user):
+                # Get the first two (key, value) pairs
+                first_two_pairs = list(fetched_rows.items())[:2]
+                # Initialize the new dictionary with the first two pairs
+                new_dict = dict(first_two_pairs)
+                # Replace all other keys with "locked project X:" and value 99
+                count = 1
+                while count<7:
+                    new_key = f"locked project {count}:"
+                    new_dict[new_key] = 99
+                    count += 1
+                fetched_rows = new_dict
+
             json_response = jsonify(fetched_rows)
             return json_response
         else:
@@ -371,6 +619,17 @@ def get_list_order():
 @auth.login_required
 def dubai_areas():
     try:
+        is_premium_user = False 
+        if current_user.is_authenticated:
+            #Query the StripeCustomer table to check subscription status
+            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+            if stripe_customer:
+                # Fetch the subscription details from Stripe
+                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+                if subscription and subscription.status == "active":
+                    is_premium_user = True
+
         connection = get_db_connection()
         #cursor = connection.cursor(dictionary=True) mysql
         cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
@@ -427,10 +686,10 @@ def dubai_areas():
             "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
             "avg_roi": [custom_round(med_roi*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
             "aquisitiondemand_2023" : [
-            custom_round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
-            custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
-            custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
-        ]
+                custom_round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
+                custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
+                custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
+            ]
         }
 
         units = {
@@ -444,68 +703,125 @@ def dubai_areas():
         with open('areas_coordinates/dubaiAreas.geojson', 'r') as file:
             geojson = json.load(file)
     
+        # Here is the order :
+        # average_sale_price
+        # avg_ca_5
+        # avgCA_10Y
+        # avg_roi
+        # supply_finished_pro
+        # supply_offplan_pro
+        # supply_lands
+        # aquisitiondemand_2023
+        # rentaldemand_2023
+
         # Enrich GeoJSON with price data and calculate fill colors
         for feature in geojson:
             area_id = int(feature['area_id'])
+            variable_names = []
+            variable_values = []
+            variables_units = []
+            variables_special = []  #(variables that have speical info-card) 0 for no special, 1 for projects, 2 for lands
+
+            variable_names.append("Avg. Meter Sale Price:")
             if area_id in data_stores['average_sale_price']:
                 price = data_stores['average_sale_price'][area_id]
-                feature["averageSalePrice"] = price
+                variable_values.append(price)   
                 feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
             else:
-                # Default color if no price data is available
-                feature['fillColorPrice'] = 'rgb(95,95,95)'  #  grey
+                variable_values.append(None)
+                feature['fillColorPrice'] = 'rgb(95,95,95)'  # grey
+            variables_units.append('AED')
+            variables_special.append(0)
 
+            # Process avg_ca_5
+            variable_names.append("Avg. Capital Appr. 5Y:")
             if area_id in data_stores['avg_ca_5']:
                 ca = data_stores['avg_ca_5'][area_id]
-                feature["avgCA_5Y"] = data_stores['avg_ca_5'][area_id]
+                variable_values.append(ca)
                 feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
             else:
-                feature["avgCA_5Y"] = None
-                feature['fillColorCA5'] = 'rgb(95,95,95)'  #  grey
+                variable_values.append(None)
+                feature['fillColorCA5'] = 'rgb(95,95,95)'  # grey
+            variables_units.append('%')
+            variables_special.append(0)
 
+            # Process avg_ca_10
+            variable_names.append("Avg. Capital Appr. 10Y:")
             if area_id in data_stores['avg_ca_10']:
-                feature["avgCA_10Y"] = data_stores['avg_ca_10'][area_id]
+                variable_values.append(data_stores['avg_ca_10'][area_id])
             else:
-                feature["avgCA_10Y"] = None
-            
+                variable_values.append(None)
+            variables_units.append('%')
+            variables_special.append(0)
+
+            # Process avg_roi
+            variable_names.append("Avg. ROI:")
             if area_id in data_stores['avg_roi']:
                 roi = data_stores['avg_roi'][area_id]
-                feature["avg_roi"] = data_stores['avg_roi'][area_id]
-                feature['fillColorRoi'] = get_color(roi, min_roi,med_roi, max_roi)
+                variable_values.append(roi)
+                feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
             else:
-                feature["avg_roi"] = None
+                variable_values.append(None)
                 feature['fillColorRoi'] = 'rgb(95,95,95)'
-            
-            if area_id in data_stores['supply_finished_pro']:
-                feature["supply_finished_pro"] = data_stores['supply_finished_pro'][area_id]
-            else:
-                feature["supply_finished_pro"] = None
-            
-            if area_id in data_stores['supply_offplan_pro']:
-                feature["supply_offplan_pro"] = data_stores['supply_offplan_pro'][area_id]
-            else:
-                feature["supply_offplan_pro"] = None
+            variables_units.append('%')
+            variables_special.append(0)
 
-            if area_id in data_stores['supply_lands']:
-                feature["supply_lands"] = data_stores['supply_lands'][area_id]
-            else:
-                feature["supply_lands"] = None
+            if is_premium_user:
+                # Process supply_finished_pro
+                variable_names.append("supply_finished_pro")
+                if area_id in data_stores['supply_finished_pro']:
+                    variable_values.append(data_stores['supply_finished_pro'][area_id])
+                else:
+                    variable_values.append(None)
+                variables_units.append('-')
+                variables_special.append(1)
 
-            if area_id in data_stores['aquisitiondemand_2023']:
-                feature["aquisitiondemand_2023"] = data_stores['aquisitiondemand_2023'][area_id]
-                feature['fillColorAquDemand'] = get_color(feature["aquisitiondemand_2023"], min_aqDemand,med_aqDemand, max_asDemand)
-                #print(f"{area_id} is  in data_stores['aquisitiondemand_2023'] so fill color = {feature['fillColorAquDemand']}")
-            else:
-                feature['fillColorAquDemand'] = 'rgb(95,95,95)'
-                feature["aquisitiondemand_2023"] = None
-                
-            if area_id in data_stores['rentaldemand_2023']:
-                feature["rentaldemand_2023"] = data_stores['rentaldemand_2023'][area_id]
-                feature['fillColorrentDemand'] = get_color(feature["rentaldemand_2023"], min_rentDemand,med_rentDemand, max_rentDemand)
-            else:
-                feature['fillColorrentDemand'] = 'rgb(95,95,95)'
-                feature["rentaldemand_2023"] = None
-    
+                # Process supply_offplan_pro
+                variable_names.append("supply_offplan_pro")
+                if area_id in data_stores['supply_offplan_pro']:
+                    variable_values.append(data_stores['supply_offplan_pro'][area_id])
+                else:
+                    variable_values.append(None)
+                variables_units.append('-')
+                variables_special.append(1)
+
+                # Process supply_lands
+                variable_names.append("supply_lands")
+                if area_id in data_stores['supply_lands']:
+                    variable_values.append(data_stores['supply_lands'][area_id])
+                else:
+                    variable_values.append(None)
+                variables_units.append('-')
+                variables_special.append(2)
+
+                # Process aquisitiondemand_2023
+                variable_names.append("Acquisition Demand 2023:")
+                if area_id in data_stores['aquisitiondemand_2023']:
+                    ademand = data_stores['aquisitiondemand_2023'][area_id]
+                    variable_values.append(ademand)
+                    feature['fillColorAquDemand'] = get_color(ademand, min_aqDemand, med_aqDemand, max_asDemand)
+                else:
+                    variable_values.append(None)
+                    feature['fillColorAquDemand'] = 'rgb(95,95,95)'
+                variables_units.append('%')
+                variables_special.append(0)
+
+                # Process rentaldemand_2023
+                variable_names.append("Rental Demand 2023:")
+                if area_id in data_stores['rentaldemand_2023']:
+                    rdemand = data_stores['rentaldemand_2023'][area_id]
+                    variable_values.append(rdemand)
+                    feature['fillColorrentDemand'] = get_color(rdemand, min_rentDemand, med_rentDemand, max_rentDemand)
+                else:
+                    variable_values.append(None)
+                    feature['fillColorrentDemand'] = 'rgb(95,95,95)'
+                variables_units.append('%')
+                variables_special.append(0)
+
+            feature["variableNames"] = variable_names
+            feature["variableValues"] = variable_values
+            feature["variableUnits"] = variables_units
+            feature["variableSpecial"] = variables_special
 
         cursor.close()
         connection.close()
@@ -616,6 +932,35 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
 
     return img_buffer
 
+def create_histogram(data):
+    # Convert data to DataFrame
+    df = pd.DataFrame(data)
+    
+    # Ensure the instance_date column is in datetime format
+    df['instance_date'] = pd.to_datetime(df['instance_date'])
+    
+    # Extract the year from the instance_date
+    df['year'] = df['instance_date'].dt.year
+    
+    # Plotting
+    plt.figure(figsize=(14, 7))
+    fig, ax = plt.subplots()
+    df['year'].value_counts().sort_index().plot(kind='bar', ax=ax, color='skyblue')
+    plt.title('Number of Transactions per Year')
+    plt.xlabel('Year')
+    plt.ylabel('Number of Transactions')
+    plt.xticks(rotation=45)
+    plt.grid(True)
+    plt.tight_layout()
+
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+
+    plt.close(fig)  # Close the figure to free up memory
+
+    return img_buffer
+
 def create_scatterplot(data):
     # Convert data to DataFrame
     df = pd.DataFrame(data)
@@ -641,10 +986,29 @@ def create_scatterplot(data):
 
 @app.route('/generate-pdf', methods=['POST'])
 def generate_pdf():
+
+    is_premium_user = False
+    if current_user.is_authenticated:
+        # Query the StripeCustomer table to check subscription status
+        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+        if stripe_customer:
+            # Fetch the subscription details from Stripe
+            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+            if subscription and subscription.status == "active":
+                is_premium_user = True
+
+    if not is_premium_user:
+        return jsonify({"error": "Premium subscription required"}), 403
+
     request_data = request.get_json()
     section = request_data['section']
     data = request_data['data']
+    print("data to generate pdf :")
+    print(data)
     area_data = request_data['area_data']
+    print("area_data :")
+    print(area_data)
     means_data = request_data['data'].get('means', [{}])[0]
     avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
     avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
@@ -653,6 +1017,7 @@ def generate_pdf():
     project_demand_data = execute_project_demand_query(area_data['area_id'])
     firstkeys = list(data.keys())
     dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+
     # Loop through the project_demand_data to find the matching project
     project_internaldemand2023 = project_externaldemand2023 = None
     externalDemand_5Y = []
@@ -701,17 +1066,21 @@ def generate_pdf():
 
     img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
     p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
-
+    print("PCICE CHART CREATED ")
     img_buffer_scatter = create_scatterplot(dateprice_paires)
     helper.y-=220
     p.drawImage(ImageReader(img_buffer_scatter), 35, helper.y, width=270, height=200)
 
+    img_buffer_historgram = create_histogram(dateprice_paires)
+    p.drawImage(ImageReader(img_buffer_historgram), 332, helper.y, width=270, height=200)
+    print("HISTORGAM CREATED")
     for k in firstkeys:
         if k !="means":
             parent_name = section
             render_pdf({k: data[k]},parent_name,helper,p)
 
     helper.new_page()
+
     #AREA SECTION 
     # Set the font and size for the title
     p.setFont("Helvetica-Bold", 24)
@@ -732,15 +1101,15 @@ def generate_pdf():
     # Data for the table
     table_data = [
         ['Metric', 'Value'],
-        ['Acquisition Demand 2023', f"{round_and_percentage(area_data['aquisitiondemand_2023'])} %"],
-        ['Rental Demand 2023', str(round_and_percentage(area_data['rentaldemand_2023']))+" %"],
-        ['Average Sale Price', f"{area_data['averageSalePrice']:,.2f} AED"],
-        ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['avgCA_10Y']))+" %"],
-        ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['avgCA_5Y']))+" %"],
-        ['Average Gross Rental Yield', str(round_and_percentage(area_data['avg_roi'],2))+" %"],
-        ['Supply Finished Properties', area_data['supply_finished_pro']],
-        ['Supply Off-Plan Properties', area_data['supply_offplan_pro']],
-        ['Supply Lands', area_data['supply_lands']],
+        ['Acquisition Demand 2023', f"{round_and_percentage(area_data['variableValues'][7])} %"],
+        ['Rental Demand 2023', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
+        ['Average Sale Price', f"{area_data['variableValues'][0]:,.2f} AED"],
+        ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['variableValues'][2]))+" %"],
+        ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['variableValues'][1]))+" %"],
+        ['Average Gross Rental Yield', str(round_and_percentage(area_data['variableValues'][3],2))+" %"],
+        ['Supply Finished Properties', area_data['variableValues'][4]],
+        ['Supply Off-Plan Properties', area_data['variableValues'][5]],
+        ['Supply Lands', area_data['variableValues'][6]],
     ]
 
     # Create a table

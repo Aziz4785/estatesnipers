@@ -48,6 +48,49 @@ X ) / (Number of units in project Y)*100">i</span>`;
     return table;
 }
 
+
+function positionOverlay() {
+  const tbody = document.getElementById('myTableBody');
+  const rows = tbody.getElementsByTagName('tr');
+  const overlay = document.getElementById('unlockOverlay');
+  
+  if (rows.length >= 8) {
+    const eighthLastRow = rows[rows.length - 8];
+    const rect = eighthLastRow.getBoundingClientRect();
+    overlay.style.top = `${rect.top}px`;
+    overlay.style.height = `${rect.height * 8}px`;
+  }
+}
+function showPremiumMessage() {
+    /*const premiumMessage = document.getElementById('premiumMessage');
+    premiumMessage.style.display = 'block';
+    setTimeout(() => {
+        premiumMessage.style.display = 'none';
+    }, 3000);  // Show the message for 3 seconds*/
+    openModal('Unlock all features today for $9.99');
+}
+
+function createInfoCard(title, value) {
+    const template = document.getElementById('info-card-template');
+    const card = template.content.cloneNode(true);
+    card.querySelector('.title').textContent = title;
+    card.querySelector('.value').textContent = value;
+    return card;
+}
+function createLandsCard(value) {
+    const template = document.getElementById('lands-card-template');
+    const card = template.content.cloneNode(true);
+    card.querySelector('.value').textContent = value;
+    return card;
+}
+function createSupplyCard(finishedValue, offplanValue) {
+    const template = document.getElementById('supply-card-template');
+    const card = template.content.cloneNode(true);
+    card.querySelector('.finished-value').textContent = finishedValue;
+    card.querySelector('.offplan-value').textContent = offplanValue;
+    return card;
+}
+
 function updateLegend(averageSalePrice, unit) {
     const legendContent = document.getElementById('legendContent');
     legendContent.innerHTML = ''; // Clear previous contents
@@ -146,6 +189,27 @@ function clearData() {
     const areaInfo = document.getElementById('area_info');
     areaInfo.innerHTML = '';
 }
+
+function openLoginModal(title, formToShow = 'login') {
+    var loginModal = document.getElementById("loginModal");
+    var modalTitle = document.getElementById("modalTitle");
+    var loginForm = document.getElementById("loginForm");
+    var registerForm = document.getElementById("registerForm");
+    var toggleFormText = document.getElementById("toggleFormText");
+
+    modalTitle.textContent = title;
+    loginModal.style.display = "block";
+    if (formToShow === 'register') {
+        loginForm.style.display = "none";
+        registerForm.style.display = "block";
+        toggleFormText.innerHTML = 'Already have an account? <a href="#" id="showLoginForm">Login</a>';
+    } else {
+        loginForm.style.display = "block";
+        registerForm.style.display = "none";
+        toggleFormText.innerHTML = 'Don\'t have an account? <a href="#" id="showRegisterForm">Register</a>';
+    }
+}
+
 
 function openChartModal(chartId, start_year, end_year,title) {
     // Fetch the dataset based on the chartId or directly pass the dataset
