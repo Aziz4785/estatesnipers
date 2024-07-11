@@ -10,6 +10,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import cm
 import io
+from .server_utils import * 
 from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
@@ -50,6 +51,19 @@ class PDFHelper:
         width, height = letter
         table.wrapOn(self.p, width, height)
         table.drawOn(self.p, 50, self.y - len(data) * 20 - 30)
+    def draw_contact_info(self):
+        contact_info = "Reach out to our team for any inquiries: contact@estatesnipers.com"
+        #additional_text = "We are here to assist you with any questions or concerns you may have. Your satisfaction is our priority."
+        #footer_text = "Thank you for choosing EstateSnipers!"
+        self.y -= 20
+        self.p.drawString(50, self.y, contact_info)
+        self.y -= 20
+        
+        # self.p.drawString(50, self.y, additional_text)
+        # self.y -= 20
+        
+        # self.p.drawString(50, self.y, footer_text)
+        # self.y -= 40  # Leave some space after the footer text
 
     def draw_footnotes(self, footnotes):
         if self.y <= self.min_y:
@@ -100,16 +114,63 @@ class PDFHelper:
         page_width = letter[0]
         title_x = (page_width - title_width) / 2
 
-        # Draw the title with an underline
-        self.p.drawString(title_x, y_position, title)
-        self.p.setLineWidth(1)
-        self.p.setStrokeColor(colors.HexColor("#2E4053"))
-        self.p.line(title_x, y_position - 5, title_x + title_width, y_position - 5)
+        if(title_width<page_width):
+            # Draw the title with an underline
+            self.p.drawString(title_x, y_position, title)
+            self.p.setLineWidth(1)
+            self.p.setStrokeColor(colors.HexColor("#2E4053"))
+            self.p.line(title_x, y_position - 5, title_x + title_width, y_position - 5)
 
-        # Reset the font and color for the rest of the content
-        self.p.setFont("Helvetica", 12)
-        self.p.setFillColor(colors.black)
-        self.y = y_position - 30  # Update the y position for subsequent content
+            # Reset the font and color for the rest of the content
+            self.p.setFont("Helvetica", 12)
+            self.p.setFillColor(colors.black)
+            self.y = y_position - 30  # Update the y position for subsequent content
+        elif " / " in title:
+            part1, part2 = separate_last_part(title)
+            # Calculate the width of the title to center it
+            title1_width = self.p.stringWidth(part1, "Helvetica-Bold", font_size)
+            title1_x = (page_width - title1_width) / 2
+
+            # Draw the title with an underline
+            self.p.drawString(title1_x, y_position, part1)
+            self.p.setLineWidth(1)
+            self.p.setStrokeColor(colors.HexColor("#2E4053"))
+            self.p.line(title1_x, y_position - 5, title1_x + title1_width, y_position - 5)
+            self.y = y_position - 30
+
+            # Calculate the width of the title to center it
+            title2_width = self.p.stringWidth(part2, "Helvetica-Bold", font_size)
+            title2_x = (page_width - title2_width) / 2
+
+            self.p.drawString(title2_x, self.y, part2)
+            self.p.setLineWidth(1)
+            self.p.setStrokeColor(colors.HexColor("#2E4053"))
+            self.p.line(title2_x, self.y - 5, title2_x + title2_width, self.y - 5)
+
+            self.p.setFont("Helvetica", 12)
+            self.p.setFillColor(colors.black)
+            self.y -= 30  # Update the y position for subsequent content
+        else:
+            font_size -=4
+            self.p.setFont("Helvetica-Bold", font_size)
+            self.p.setFillColor(colors.HexColor("#2E4053"))  # Dark blue color for a modern look
+
+            # Calculate the width of the title to center it
+            title_width = self.p.stringWidth(title, "Helvetica-Bold", font_size)
+            page_width = letter[0]
+            title_x = (page_width - title_width) / 2
+
+            # Draw the title with an underline
+            self.p.drawString(title_x, y_position, title)
+            self.p.setLineWidth(1)
+            self.p.setStrokeColor(colors.HexColor("#2E4053"))
+            self.p.line(title_x, y_position - 5, title_x + title_width, y_position - 5)
+
+            # Reset the font and color for the rest of the content
+            self.p.setFont("Helvetica", 12)
+            self.p.setFillColor(colors.black)
+            self.y = y_position - 30  # Update the y position for subsequent content
+
 
     
     def new_page(self):

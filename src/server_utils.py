@@ -265,6 +265,19 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
 def round_and_percentage(number,decimals=2):
     return round(number * 100, decimals)if number is not None else "N/A"
 
+def separate_last_part(input_string):
+    # Find the last occurrence of " / "
+    last_separator_index = input_string.rfind(" / ")
+    
+    if last_separator_index != -1:
+        # Split the string into two parts
+        first_part = input_string[:last_separator_index + 3]  # Include the last " / "
+        last_part = input_string[last_separator_index + 3:]  # Start after the last " / "
+        return first_part, last_part
+    else:
+        # If " / " is not found, return the original string and an empty string
+        return input_string, ""
+    
 def key_to_id(list):
     mapping = {
         "grouped_project" : "2",

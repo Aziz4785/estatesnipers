@@ -1004,11 +1004,9 @@ def generate_pdf():
     request_data = request.get_json()
     section = request_data['section']
     data = request_data['data']
-    print("data to generate pdf :")
-    print(data)
+
     area_data = request_data['area_data']
-    print("area_data :")
-    print(area_data)
+
     means_data = request_data['data'].get('means', [{}])[0]
     avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
     avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
@@ -1066,14 +1064,14 @@ def generate_pdf():
 
     img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
     p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
-    print("PCICE CHART CREATED ")
+
     img_buffer_scatter = create_scatterplot(dateprice_paires)
     helper.y-=220
     p.drawImage(ImageReader(img_buffer_scatter), 35, helper.y, width=270, height=200)
 
     img_buffer_historgram = create_histogram(dateprice_paires)
     p.drawImage(ImageReader(img_buffer_historgram), 332, helper.y, width=270, height=200)
-    print("HISTORGAM CREATED")
+
     for k in firstkeys:
         if k !="means":
             parent_name = section
@@ -1133,8 +1131,9 @@ def generate_pdf():
     land_data=execute_land_query(area_data['area_id'])
     img_buffer = create_land_type_pie_chart(land_data)
     p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
-
-    p.showPage()
+    helper.new_page()
+    helper.draw_contact_info()
+    #p.showPage()
     p.save()
 
     buffer.seek(0)
@@ -1146,7 +1145,6 @@ def render_pdf(node,parent_name,helper,p):
     helper.new_page()
     key, data = next(iter(node.items()))
     node_name = str(key)+" / "+parent_name
-    #helper.draw_centered_string(node_name, 30)
     helper.draw_Main_title(node_name,font_size=26)
     means_data2 = data.get('means', [{}])[0]
     avg_capital_appreciation_2013 = means_data2.get('avgCapitalAppreciation2013', 'N/A')
@@ -1164,9 +1162,10 @@ def render_pdf(node,parent_name,helper,p):
     ]
     helper.draw_table(general_means)
     img_buffer = create_price_chart(avg_meter_price)
-    p.drawImage(ImageReader(img_buffer), 95, 290, width=400, height=300)
+    helper.y =260
+    p.drawImage(ImageReader(img_buffer), 95, helper.y, width=400, height=300)
     # Update y position after the image
-    helper.y -= 440
+    helper.y -= 200
     firstkeys = list(data.keys())
     for key in firstkeys:
         if key !="means":

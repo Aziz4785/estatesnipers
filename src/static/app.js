@@ -180,7 +180,7 @@ function applyGeoJSONLayer(currentLegend) {
             type: 'FeatureCollection',
             features: features
         };
-        console.log("features after prcessing : ",features)
+
         // Clear existing GeoJSON layer
         if (window.geoJSONLayer) {
             window.geoJSONLayer.remove();
@@ -264,8 +264,6 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                 // Get the current JSON data
                 const currentData = getCurrentJsonData(); 
                 const currentAreaData = getCurrentAreaData(); 
-                console.log("currentdata : ",currentData)
-                console.log("Keys of currentData: ", Object.keys(currentData));
                 fetch('/generate-pdf', {
                     method: 'POST',
                     headers: {
@@ -279,7 +277,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                 })
                 .then(response => {
                     if (response.ok) {
-                        response.blob(); //maybe remove the return
+                        return response.blob(); //maybe remove the return
                     } else if (response.status === 403) {
                         openModal("Download as PDF is a premium feature");
                     } else {
@@ -287,6 +285,10 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     }
                 })
                 .then(blob => {
+                    console.log("Blob received:", blob);
+                    if (!blob) {
+                        throw new Error('No blob received from server');
+                    }
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.style.display = 'none';
@@ -296,7 +298,10 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     a.click();
                     window.URL.revokeObjectURL(url);
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    openModal(`An error occurred: ${error.message}`);
+                });
             });
         }
     }
@@ -767,6 +772,20 @@ function onEachFeature(feature, layer) {
                         supplyCard.querySelector('.offplan-value').textContent = offplanValue;
                         supplyCard.classList.remove('locked-card');  // Remove locked-card class
                         array_index+=2;
+
+                        const wrapper = supplyCard.closest('.info-card-wrapper');
+                        // Remove the lock icon
+                        if(wrapper){
+                            const lockIcon = wrapper.querySelector('.lock-icon-card');
+                            if (lockIcon) {
+                                lockIcon.remove();
+                            }
+                            // Move the card outside of the wrapper
+                            wrapper.parentNode.insertBefore(supplyCard, wrapper);
+                            // Remove the empty wrapper
+                            wrapper.remove();
+                        }
+
                     }
                 }
                 else if(card.id=='card6' && variableNames.length >5)
@@ -778,6 +797,21 @@ function onEachFeature(feature, layer) {
                         const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
                         landsCard.querySelector('.value').textContent = landsValue;
                         landsCard.classList.remove('locked-card');  // Remove locked-card class
+
+                        const wrapper = landsCard.closest('.info-card-wrapper');
+                        // Remove the lock icon
+                        if(wrapper){
+                            const lockIcon = wrapper.querySelector('.lock-icon-card');
+                            if (lockIcon) {
+                                lockIcon.remove();
+                            }
+                            // Move the card outside of the wrapper
+                            wrapper.parentNode.insertBefore(landsCard, wrapper);
+                            // Remove the empty wrapper
+                            wrapper.remove();
+                        }
+
+
                         array_index++;
                     }
                     
@@ -814,9 +848,7 @@ function onEachFeature(feature, layer) {
                         // Remove the empty wrapper
                         wrapper.remove();
                     }
-                    
-                    
-                    
+                
 
                     array_index++;
                 }
@@ -862,8 +894,9 @@ function onEachFeature(feature, layer) {
             var detailsButton = document.querySelector(".tablinks.active");
             detailsButton.dispatchEvent(evt);
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
-            statsButtons.forEach(button => {
-                button.addEventListener('click', function() {
+            const landbutton = document.getElementById('land-chart-button');
+            landbutton.addEventListener('click', function() {
+                    console.log("we click on land button ")
                     fetch(`/get-lands-stats?area_id=${currentAreaId}`)
                         .then(response => {
                             if (!response.ok) {
@@ -878,7 +911,6 @@ function onEachFeature(feature, layer) {
                             console.log('Error fetching land stats:', error);
                         });
                 });
-            });
 
         }
     });
