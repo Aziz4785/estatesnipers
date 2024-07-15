@@ -837,6 +837,33 @@ tbody td {
   visibility: visible;
 }*/
 
+/*CONTACT US*/
+#contactUsButton {
+  position: fixed;
+  bottom: 10px;
+  left: 50%; /* Position the left edge in the middle of the viewport */
+  padding: 5px 10px;
+  font-family: 'Roboto', sans-serif;
+  color: #007bff; /* Blue text color */
+  text-decoration: underline; /* Underline text */
+  border: none; /* No border */
+  font-size: 14px; /* Font size */
+  transform: translateX(-50%); /* Move the button to the left by half its width */
+  cursor: pointer; /* Change cursor to pointer to indicate clickability */
+  background: none; /* Remove background color */
+}
+#contactForm textarea {
+  width: 100%;
+  max-width: 500px;
+  height: 100px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s ease;
+}
+
 /*LEGEND*/
 #legendContainer {
   position: fixed;
@@ -980,7 +1007,7 @@ tbody td {
   padding: 0;
   font-size: 18px;
   line-height: 1.6;
-  margin: 20px 0 0 20px; /* Indent the list to show bullets */
+  margin: 10px 0 0 20px; /* Indent the list to show bullets */
 }
 
 .upgrade-button {

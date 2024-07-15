@@ -4,17 +4,6 @@ document.getElementById("settingsBtn").onclick = function() {
     retrieveListOrder();
 };
 
-document.querySelector(".close-button").onclick = function() {
-    document.getElementById("settingsModal").style.display = "none";
-};
-
-window.onclick = function(event) {
-    if (event.target == document.getElementById("settingsModal")) {
-        document.getElementById("settingsModal").style.display = "none";
-    }
-};
-
-
 // Function to retrieve and display the saved list order
 function retrieveListOrder() {
     console.log("retrieveListOrder")

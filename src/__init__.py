@@ -21,6 +21,8 @@ from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
 from flask import jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from reportlab.lib.colors import blue,black
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
@@ -52,10 +54,13 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
+
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
+
+limiter = Limiter(get_remote_address, app=app)#, default_limits=["3 per day"])
 
 #with app.app_context(): 
     #This will create model classes for all tables in your database. 
@@ -296,6 +301,28 @@ def handle_checkout_session(session):
     print("Subscription was successful.")
 
 
+@app.route('/send_message', methods=['POST'])
+@limiter.limit("3 per day")
+def send_message():
+    data = request.json
+    message = data.get('message')
+    
+    if not message:
+        return jsonify({"message": "No message provided"}), 400
+
+    # Check message count
+    today = datetime.now().date()
+
+    # Send email
+    try:
+        send_email(message)
+        
+        return jsonify({"message": "Message sent successfully"}), 200
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")
+        return jsonify({"message": "Failed to send message"}), 500
+    
+
 @app.route("/manage-subscription")
 @login_required
 def manage_subscription():
@@ -418,6 +445,8 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
+            print("------------------------group : -------------------------")
+            print(group)
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
@@ -448,10 +477,8 @@ def get_area_details():
             final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
             final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
 
-            # print("final df : ")
-            # print(final_df.info())
-            # print(final_df)
-            
+            if 'grouped_project' in df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
+                final_df = final_df.dropna(subset=['grouped_project'])
             update_nested_dict(final_df, nested_dicts, group)
 
         is_premium_user = False 
@@ -682,11 +709,11 @@ def dubai_areas():
         min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
 
         legends = {
-            "averageSalePrice": [round(med_price/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
-            "avgCA_5Y": [round(med_ca*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
-            "avg_roi": [custom_round(med_roi*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
+            "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
+            "avgCA_5Y": [round((min_ca+med_ca)*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
+            "avg_roi": [custom_round((min_roi+med_roi)*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
             "aquisitiondemand_2023" : [
-                custom_round(med_aqDemand*100/2) if med_aqDemand is not None else 0,
+                custom_round((med_aqDemand+min_aqDemand)*100/2) if med_aqDemand is not None else 0,
                 custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
                 custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
             ]
@@ -755,11 +782,19 @@ def dubai_areas():
             variables_special.append(0)
 
             # Process avg_roi
-            variable_names.append("Avg. ROI:")
+            variable_names.append("Avg. Gross Rental Yield:")
             if area_id in data_stores['avg_roi']:
+                
                 roi = data_stores['avg_roi'][area_id]
+                if area_id == 410:
+                    print(" for palm jumeirah, the roi  is : ",roi)
+                    print("the min roi is : ",min_roi)
+                    print("the max roi  is : ",max_roi)
+                    print("the med roi is : ",med_roi)
                 variable_values.append(roi)
                 feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
+                if area_id == 410:
+                    print("and the color we get is : ",feature['fillColorRoi'])
             else:
                 variable_values.append(None)
                 feature['fillColorRoi'] = 'rgb(95,95,95)'

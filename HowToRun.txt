@@ -1,6 +1,6 @@
 1)uncomment load_dotenv() in app.py
 2).\venv\Scripts\activate
-3)py app.py   ou PS C:\Users\aziz8\Documents\dubai_data\Flask_server> python manage.py run
+3) PS C:\Users\aziz8\Documents\dubai_data\Flask_server> python manage.py run /OU py app.py   
 4)http://localhost:5000/
 5) TO activate stripe webhook , in cmd do :  stripe login  
 6)stripe listen --forward-to localhost:5000/webhook

@@ -6,6 +6,8 @@ from scipy import interpolate
 from scipy.interpolate import interp1d
 from datetime import datetime
 from scipy.interpolate import PchipInterpolator
+from email.mime.text import MIMEText
+import smtplib
 
 # Function to safely convert string to float or None
 def safe_float(x):
@@ -264,6 +266,22 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
 
 def round_and_percentage(number,decimals=2):
     return round(number * 100, decimals)if number is not None else "N/A"
+
+def send_email(message):
+    sender_email = "estatesniperhosting@gmail.com"
+    receiver_email = "contact@estatesnipers.com"
+    password = "cxhj zutf hzrp hfcz"
+
+    msg = MIMEText(message)
+    msg['Subject'] = "New Contact Message"
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+    #s = smtplib.SMTP('localhost')
+    #s.sendmail(sender_email, [receiver_email], msg.as_string())
 
 def separate_last_part(input_string):
     # Find the last occurrence of " / "

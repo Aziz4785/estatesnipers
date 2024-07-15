@@ -7,10 +7,9 @@ function generateTable(data) {
     ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach((headerText, index) => {
         var header = document.createElement('th');
         if (index === 1) { // For 'Internal Demand 2023 %'
-            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in project Y in year
-X ) / (Number of units in project Y)*100">i</span>`;
+            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) / (Number of units in the project) * 100"">i</span>`;
         } else if (index === 2) { // For 'External Demand 2023 %'
-            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in project Y in yearX) /(Total number of transactions in year X)*100">i</span>';
+            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100">i</span>';
         } else {
             header.textContent = headerText;
         }
@@ -67,7 +66,7 @@ function showPremiumMessage() {
     setTimeout(() => {
         premiumMessage.style.display = 'none';
     }, 3000);  // Show the message for 3 seconds*/
-    openModal('Unlock all features today for $9.99');
+    openModal('Unlock all features today for $19.99');
 }
 
 function createInfoCard(title, value) {
@@ -163,7 +162,7 @@ function changeLegendTitle(title) {
         currentFillColor = "fillColorCA5";
         currentLegend = "avgCA_5Y";
         break;
-        case 'Gross Rental ROI':
+        case 'Gross Rental Yield':
         currentFillColor = "fillColorRoi";
         currentLegend = "avg_roi";
         break;

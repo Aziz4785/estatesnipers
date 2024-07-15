@@ -13,33 +13,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
-/*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
-We'll then use this key to create a new instance of Stripe.js.*/
-/*fetch("/config")
-.then((result) => { return result.json(); })
-.then((data) => {
-  // Initialize Stripe.js
-  const stripe = Stripe(data.publicKey);
-  document.querySelector("#goPremium").addEventListener("click", (event) => {
-    // Prevent the default action of the anchor tag
-    event.preventDefault();
-    
-    // Get Checkout Session ID
-    fetch("/create-checkout-session")
-      .then((result) => { return result.json(); })
-      .then((data) => {
-        console.log(data);
-        // Redirect to Stripe Checkout
-        return stripe.redirectToCheckout({ sessionId: data.sessionId });
-      })
-      .then((res) => {
-        console.log(res);
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
-  });
-});*/
 
 
 /*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
@@ -47,8 +20,6 @@ We'll then use this key to create a new instance of Stripe.js.*/
 document.addEventListener('DOMContentLoaded', function() {
     const upgradeButton = document.getElementById('upgradeButton');
     const goPremiumButton = document.querySelector("#goPremium");
-    console.log('Upgrade Button:', upgradeButton);
-    console.log('Go Premium Button:', goPremiumButton);
 
     fetch("/config")
         .then((result) => result.json())
@@ -167,6 +138,7 @@ function applyGeoJSONLayer(currentLegend) {
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
+        console.log("data : ",data)
         //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
         const legends = data[0];
         const units = data[2];
@@ -329,11 +301,6 @@ function addPdfDownloadListener(rowId, sectionName) {
         })
         .catch(error => console.error('Error:', error));
     });
-}
-
-function fetchAreaData(areaName) {
-    // Implement logic to fetch the data for the given area name
-    // This function should return the data in the required format
 }
 
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
@@ -587,7 +554,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = '99';
                 row.cells[2].innerText = '99';
                 row.cells[3].innerText = '99'; 
-                row.cells[4].innerHTML = '<img src="static/chartlocked.svg" alt="Locked Chart" width="40" height="40">';
+                row.cells[4].innerHTML = '<img src="static/lock_similar.svg" alt="Locked Chart" width="40" height="40">';
             }
         }
     });
@@ -632,9 +599,6 @@ function getListOrderFromUI() {
     }));
     return order;
 }
-
-//const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
-
 
 document.addEventListener('click', function(e) {
     if (e.target && e.target.classList.contains('expand-arrow')) {
@@ -734,19 +698,6 @@ function onEachFeature(feature, layer) {
             // Clear previous content and set up the areaName as a separate heading on top
             areaTitleH2.innerHTML = areaName;// areaName as a separate top element
 
-            // Prepare the container for cards with statistical data
-            const statsContainer = document.createElement('div');
-            statsContainer.id = 'stats-container';
-            statsContainer.style.display = 'flex';
-            statsContainer.style.overflowX = 'auto'; // Enables horizontal scrolling for cards
-            /*const cardData = [
-                { title: "Avg. Meter Sale Price:", value: `${feature.properties.averageSalePrice} AED` },
-                { title: "Avg. Capital Appr. 5Y:", value: `${(feature.properties.avgCA_5Y * 100).toFixed(2)}%` },
-                { title: "Avg. Capital Appr. 10Y:", value: ${(feature.properties.avgCA_10Y * 100).toFixed(2)}% },
-                { title: "Avg. ROI:", value: `${(feature.properties.avg_roi * 100).toFixed(2)}%` },
-                { title: "Acquisition Demand 2023:", value: `${(feature.properties.aquisitiondemand_2023 * 100).toFixed(2)}%` }, //if it is not in properties, put it as hidden
-                { title: "Rental Demand 2023:", value: `${(feature.properties.rentaldemand_2023 * 100).toFixed(2)}%` }
-            ];*/
             const variableNames = feature.properties.variableNames;
             const variableValues = feature.properties.variableValues;
             const variableunits = feature.properties.variableUnits;
@@ -760,8 +711,6 @@ function onEachFeature(feature, layer) {
 
                 if(card.id=='card5' && variableNames.length >5)
                 {
-                    console.log("we process : ",card.id)
-                    console.log("index : ",array_index)
                     const supplyCard = document.getElementById('card5');
                     if (supplyCard) {
                         console.log("this is card5 so we fill it with project");
@@ -790,10 +739,9 @@ function onEachFeature(feature, layer) {
                 }
                 else if(card.id=='card6' && variableNames.length >5)
                 {
-                    console.log("we process : ",card.id)
-                    console.log("index : ",array_index)
                     const landsCard = document.getElementById('card6');
                     if (landsCard) {
+                        landsCard.querySelector('.title').textContent ='Supply of Lands:';
                         const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
                         landsCard.querySelector('.value').textContent = landsValue;
                         landsCard.classList.remove('locked-card');  // Remove locked-card class
@@ -867,6 +815,7 @@ function onEachFeature(feature, layer) {
             const landsCard = createLandsCard(feature.properties.supply_lands || "-");
             statsContainer.appendChild(landsCard);*/
             // Append the container of cards to the panel content
+            const statsContainer = document.getElementById('stats-container');
             areaInfo.appendChild(statsContainer);
 
             const panel = document.getElementById('info-panel');
@@ -991,16 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     btn.onclick = function() {
         openLoginModal('Login', 'login');
-    }
-
-    span.onclick = function() {
-        loginmodal.style.display = "none";
-    }
-
-    window.onclick = function(event) {
-        if (event.target == loginmodal) {
-            loginmodal.style.display = "none";
-        }
     }
 
     document.addEventListener('click', function(event) {
