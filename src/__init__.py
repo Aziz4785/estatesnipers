@@ -1,7 +1,5 @@
 from flask import Flask, jsonify, render_template,request,send_file
 from flask_cors import CORS
-import pymysql
-import mysql.connector
 import json
 import logging
 from flask import session,current_app
@@ -31,7 +29,6 @@ from flask_login import login_required,current_user
 from reportlab.pdfgen import canvas
 import io
 from io import BytesIO
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from flask_wtf.csrf import CSRFProtect
 import matplotlib.backends.backend_agg as agg
@@ -123,6 +120,14 @@ stripe.api_key = stripe_keys["secret_key"]
 #db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
 
 
+def check_premium_user():
+    if current_user.is_authenticated:
+        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+        if stripe_customer:
+            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+            if subscription and subscription.status == "active":
+                return True
+    return False
 
 
 @app.route('/')
@@ -131,16 +136,7 @@ def index():
     login_form = LoginForm()  # Create an instance of the LoginForm
     register_form = RegisterForm()
     
-    is_premium_user = False
-    if current_user.is_authenticated:
-        # Query the StripeCustomer table to check subscription status
-        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-        if stripe_customer:
-            # Fetch the subscription details from Stripe
-            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-            if subscription and subscription.status == "active":
-                is_premium_user = True
+    is_premium_user = check_premium_user()
     return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=False,message='',form_to_show="login",is_premium_user=is_premium_user)
 
 @app.route("/config")
@@ -157,6 +153,8 @@ def check_auth():
 @app.route("/create-checkout-session")
 def create_checkout_session():
     domain_url = "http://localhost:5000/"
+    #for deployment use this : 
+    #domain_url = os.environ.get('DOMAIN_URL', 'https://your-production-domain.com/')
     stripe.api_key = stripe_keys["secret_key"]
 
     try:
@@ -184,16 +182,7 @@ def create_checkout_session():
     
 @app.route("/success")
 def success():
-    is_premium_user = False
-    if current_user.is_authenticated:
-        # Query the StripeCustomer table to check subscription status
-        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-        if stripe_customer:
-            # Fetch the subscription details from Stripe
-            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-            if subscription and subscription.status == "active":
-                is_premium_user = True
+    is_premium_user = check_premium_user()
     return render_template("index.html",is_premium_user=is_premium_user)
 
 
@@ -297,9 +286,6 @@ def handle_checkout_session(session):
     else:
         current_app.logger.warning(f"User with email {customer_email} not found in database")
 
-    print("Subscription was successful.")
-    print("Subscription was successful.")
-
 
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("3 per day")
@@ -319,7 +305,6 @@ def send_message():
         
         return jsonify({"message": "Message sent successfully"}), 200
     except Exception as e:
-        print(f"Error sending email: {str(e)}")
         return jsonify({"message": "Failed to send message"}), 500
     
 
@@ -362,16 +347,7 @@ list_order_in_memory = []
 @auth.login_required
 def get_area_details():
     try:
-        is_premium_user = False 
-        if current_user.is_authenticated:
-            #Query the StripeCustomer table to check subscription status
-            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-            if stripe_customer:
-                # Fetch the subscription details from Stripe
-                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-                if subscription and subscription.status == "active":
-                    is_premium_user = True
+        is_premium_user = check_premium_user()
 
         hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
         if is_premium_user:   
@@ -445,8 +421,6 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
-            print("------------------------group : -------------------------")
-            print(group)
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
@@ -520,6 +494,43 @@ def get_area_details():
         if 'engine' in locals():
             engine.dispose()
 
+
+@app.route('/search', methods=['GET'])
+def search():
+    query = request.args.get('q', '')
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Search for projects
+    cur.execute("""
+        SELECT a.area_id, p.project_name_en, a.area_name_en
+        FROM projects p
+        JOIN areas a ON p.area_id = a.area_id
+        WHERE p.project_name_en ILIKE %s
+        LIMIT 6
+    """, (f'%{query}%',))
+    projects = cur.fetchall()
+    
+    # Search for areas
+    cur.execute("""
+        SELECT area_id, area_name_en
+        FROM areas
+        WHERE area_name_en ILIKE %s
+        LIMIT 6
+    """, (f'%{query}%',))
+    areas = cur.fetchall()
+    
+    cur.close()
+    conn.close()
+    
+    results = [
+        {'type': 'project', 'id': p[0], 'name': f"{p[1]} ({p[2]})"} for p in projects
+    ] + [
+        {'type': 'area', 'id': a[0], 'name': a[1]} for a in areas
+    ]
+    
+    return jsonify(results)
 
 def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=None, rooms=None):
     connection = get_db_connection()
@@ -786,11 +797,6 @@ def dubai_areas():
             if area_id in data_stores['avg_roi']:
                 
                 roi = data_stores['avg_roi'][area_id]
-                if area_id == 410:
-                    print(" for palm jumeirah, the roi  is : ",roi)
-                    print("the min roi is : ",min_roi)
-                    print("the max roi  is : ",max_roi)
-                    print("the med roi is : ",med_roi)
                 variable_values.append(roi)
                 feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
                 if area_id == 410:
@@ -1036,6 +1042,10 @@ def generate_pdf():
     if not is_premium_user:
         return jsonify({"error": "Premium subscription required"}), 403
 
+    hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
+    if is_premium_user:   
+        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+        
     request_data = request.get_json()
     section = request_data['section']
     data = request_data['data']
@@ -1070,22 +1080,31 @@ def generate_pdf():
     helper.draw_Main_title(section,font_size=30)
     # Print means data
     # Data for the table
-    general_means = [
-        ["Description", "Value"],
-        ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
-        ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
-        ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
-        ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
-        ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
-    ]
-
+    general_means=[]
+    footnotes=[]
+    if hierarchy_keys[0]=="grouped_project":
+        general_means = [
+            ["Description", "Value"],
+            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
+            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+            ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
+            ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
+            ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
+        ]
+        footnotes = [
+        "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
+        "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
+        ]
+    else :
+         general_means = [
+            ["Description", "Value"],
+            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
+            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+            ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"]
+        ]
     # Draw the table
     helper.draw_table(general_means)
     
-    footnotes = [
-    "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
-    "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
-    ]
 
     # Draw the footnotes
     helper.draw_footnotes(footnotes)
@@ -1096,9 +1115,9 @@ def generate_pdf():
     p.drawImage(ImageReader(img_buffer), 35, helper.y, width=270, height=200)
     # Update y position after the image
     #helper.y -= 160
-
-    img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
-    p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
+    if hierarchy_keys[0]=="grouped_project":
+        img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
+        p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
 
     img_buffer_scatter = create_scatterplot(dateprice_paires)
     helper.y-=220

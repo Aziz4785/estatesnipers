@@ -47,6 +47,39 @@ function generateTable(data) {
     return table;
 }
 
+function highlightFeature(e) {
+    const layer = e.target;
+
+    // Reset style for all layers
+    window.geoJSONLayer.eachLayer(function(layer) {
+        window.geoJSONLayer.resetStyle(layer);
+    });
+
+    // Set the style for the clicked layer
+    layer.setStyle({
+        weight: 3,
+        color: 'white',
+        dashArray: '',
+        fillOpacity: 0.7
+    });
+
+    // Ensure the clicked area is brought to the front
+    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        layer.bringToFront();
+    }
+
+    // Center the map on the clicked area
+   map.fitBounds(layer.getBounds(),{ maxZoom: 12 });
+    // Center the map on the clicked area with a specific zoom level
+    //const bounds = layer.getBounds();
+    //const center = bounds.getCenter();
+    //map.setView(center, map.getZoom() > 16 ? map.getZoom() : 16); // Set a specific zoom level or use current zoom level if it's already greater
+
+
+    // Output additional info about the clicked area (optional)
+    console.log("Clicked area properties: ", layer.feature.properties);
+}
+
 
 function positionOverlay() {
   const tbody = document.getElementById('myTableBody');
@@ -128,12 +161,6 @@ function updateLegend(averageSalePrice, unit) {
         legendContent.appendChild(legendItem);
     });
 }
-/*document.getElementById('legendTitle').addEventListener('click', function() {
-    const dropdownMenu = document.getElementById('dropdownMenu');
-    dropdownMenu.style.display = dropdownMenu.style.display === 'none' ? 'block' : 'none';
-    const arrow = document.getElementById('arrow');
-    arrow.style.transform = dropdownMenu.style.display === 'block' ? 'rotate(180deg)' : 'rotate(0deg)';
-});*/
 
 let isMenuOpen = false;
 
@@ -175,6 +202,31 @@ function changeLegendTitle(title) {
     // Apply the GeoJSON layer with the new legend
     applyGeoJSONLayer(currentLegend);
 }
+
+function simulateClick(areaId) {
+    const layer = layersByAreaId[areaId];
+    if (layer) {
+        // Create a synthetic event
+        const event = {
+            target: layer,
+            latlng: layer.getBounds().getCenter()
+        };
+        // Call the click handler
+        highlightFeature(event);
+        mainTableBody.innerHTML = ''; // Clear existing rows
+        currentAreaId = areaId; // Set currentAreaId to the simulated area's ID
+
+        // Fire a click event on the layer
+        layer.fire('click', {
+            latlng: layer.getBounds().getCenter(),
+            layer: layer
+        });
+        
+    } else {
+        console.log(`No layer found for area_id: ${areaId}`);
+    }
+}
+
 function clearData() {
     // Clear the <tbody> of <table id="nestedTable">
     const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];

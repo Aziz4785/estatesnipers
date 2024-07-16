@@ -6,7 +6,6 @@ document.getElementById("settingsBtn").onclick = function() {
 
 // Function to retrieve and display the saved list order
 function retrieveListOrder() {
-    console.log("retrieveListOrder")
     fetch('/get-list-order')
     .then(response => {
         if (!response.ok) {

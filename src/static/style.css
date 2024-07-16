@@ -174,6 +174,7 @@
   z-index: 1000;
 }
  
+
 /* style for the login and registration form */
 #modalTitle {
   margin-bottom: 20px;
@@ -823,19 +824,6 @@ tbody td {
   visibility: visible;
   content: attr(data-tooltip);
 }
-/*
-.info-icon-internal::after {
-  content: "This is the tooltip text for Internal Demand 2023 %";
-}
-
-.info-icon-external::after {
-  content: "Représente la durée du contrat. Le remboursement peut intervenir de manière anticipée. Au plus tard au terme du contrat, le capital investi sera remboursé.";
-}
-
-.info-icon:hover::after {
-  opacity: 1;
-  visibility: visible;
-}*/
 
 /*CONTACT US*/
 #contactUsButton {
@@ -1021,4 +1009,80 @@ tbody td {
   border-radius: 5px;
   cursor: pointer;
   margin-top: 20px;
+}
+
+
+/*SEARCH BAR*/
+.search-container {
+  width: 100%;
+  max-width: 600px;
+  margin: 20px;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}
+
+#search {
+  width: 100%;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+}
+
+#search:focus {
+  outline: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#search-results {
+  position: absolute;
+  top: calc(100% - 10px); /* Aligns the top of the results container with the bottom of the search bar */
+  left: 0;
+  right: 0;
+  background-color: white;
+  border-radius: 0 0 25px 25px; /* Smooths out the bottom corners */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 300px;
+  overflow-y: auto;
+  display: block; /* Ensure it's always visible for the demo, change back to 'none' when integrating */
+  z-index: 10;
+  border-top: 1px solid #ddd; /* Small border to differentiate from the search bar */
+}
+
+.search-item {
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.search-item:hover {
+  background-color: #f0f0f0;
+}
+
+.search-item.project {
+  color: #2c3e50;
+}
+
+.search-item.area {
+  color: #3498db;
+}
+
+.search-item .item-name {
+  font-weight: bold;
+}
+
+.search-item .item-type {
+  font-size: 0.8em;
+  color: #7f8c8d;
+  margin-left: 10px;
+}
+
+.search-item .item-area {
+  font-size: 0.9em;
+  color: #7f8c8d;
+  margin-top: 2px;
 }

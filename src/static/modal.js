@@ -24,4 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+
+    document.getElementById("unlock-button-table").onclick = function() {
+        openModal('Unlock all projects Today for $19.99');
+    };
 });

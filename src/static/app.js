@@ -13,8 +13,8 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
-
-
+const layersByAreaId = {};
+let currentFillColor = 'fillColorPrice'; // Default value
 /*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
 We'll then use this key to create a new instance of Stripe.js.*/
 document.addEventListener('DOMContentLoaded', function() {
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 document.getElementById('toggle-fullscreen').addEventListener('click', function() {
     var panel = document.getElementById('info-panel');
-    panel.classList.toggle('fullscreen'); // This toggles the fullscreen class on and off
+    panel.classList.toggle('fullscreen'); 
 });
 
 let currentJsonData = null;
@@ -91,7 +91,6 @@ let currentAreaId = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     // Set the default checked radio button (in settings)
-    //document.getElementById('avgMeterPrice').checked = true;
     const elements = document.querySelectorAll('.scrollable-container');
     //initialisation of scrollable-containers
     elements.forEach(function(ele) {
@@ -142,7 +141,6 @@ function applyGeoJSONLayer(currentLegend) {
         //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
         const legends = data[0];
         const units = data[2];
-        //console.log("received data : ",data[1])
         const features = data[1].map(item => ({
             type: 'Feature',
             properties: item, // Store all item properties directly
@@ -205,7 +203,6 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     // Add PDF icon if the row is a root row (i.e., it has no parent)
     if (!parentRowId && fake_line==false ) {
         contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
-       // addPdfDownloadListener(rowId, name || "-");
     }
     if (fake_line) {
         row.classList.add('blurry-row');
@@ -257,7 +254,6 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     }
                 })
                 .then(blob => {
-                    console.log("Blob received:", blob);
                     if (!blob) {
                         throw new Error('No blob received from server');
                     }
@@ -279,9 +275,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     }
     return rowId;
 }
-function addPdfDownloadListener(rowId, sectionName) {
-    console.log("addpdf download listener on rowID : ",rowId)
-    console.log("and section name = ",sectionName)
+/*function addPdfDownloadListener(rowId, sectionName) {
     const pdfIcon = document.querySelector(`[data-row-id="${rowId}"] .pdf-icon`);
     pdfIcon.addEventListener('click', function(event) {
         event.preventDefault();
@@ -302,7 +296,7 @@ function addPdfDownloadListener(rowId, sectionName) {
         .catch(error => console.error('Error:', error));
     });
 }
-
+*/
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
@@ -357,7 +351,7 @@ function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title)
             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
             </svg>`;
 }
-
+/*
 function createSvgLineChart3(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
@@ -412,8 +406,8 @@ function createSvgLineChart3(dataPoints, chartId, startYear, endYear,chart_title
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
             </svg>`;
-}
-
+}*/
+/*
 function createSvgLineChart2(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
@@ -474,7 +468,7 @@ function createSvgLineChart2(dataPoints, chartId, startYear, endYear,chart_title
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
             </svg>`;
-}
+}*/
 // Close modal functionality
 document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('chartModal').style.display = 'none';
@@ -636,7 +630,6 @@ function areaStyle(feature, fillColorProperty) {
 function openTab(evt, tabName) {
     // Declare all variables
     var i, tabcontent, tablinks;
-    //console.log("we call open tab")
     // Get all elements with class="tabcontent" and hide them
     tabcontent = document.getElementsByClassName("tabcontent");
     for (i = 0; i < tabcontent.length; i++) {
@@ -679,14 +672,14 @@ function updateProjectsDemand() {
 }
 
 function onEachFeature(feature, layer) {
+    const areaId = feature.properties.area_id;
+    layersByAreaId[areaId] = layer; // Store layer by area_id
+
     layer.on({
         click: function(e) {
-            console.log("we call on each feature")
-            // Clear the <tbody> of <table id="nestedTable"> at the beginning
-            //const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
+            highlightFeature(e);
             mainTableBody.innerHTML = ''; // Clear existing rows
             currentAreaId = feature.properties.area_id;
-            console.log("feature : ",feature)
             // Create a copy of feature.properties without the "geometry" property
             const { geometry, ...propertiesWithoutGeometry } = feature.properties;
             currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
@@ -766,8 +759,6 @@ function onEachFeature(feature, layer) {
                 }
                 else if(variableSpecial[array_index]==0)
                 {
-                    console.log("we process : ",card.id)
-                    console.log("index : ",array_index)
                     const title = variableNames[array_index];
                     let value = variableValues[array_index];
                     card.querySelector('.title').textContent = title;
@@ -801,19 +792,7 @@ function onEachFeature(feature, layer) {
                     array_index++;
                 }
         });
-           /* cardData.forEach(data => {
-                const card = createInfoCard(data.title, data.value);
-                statsContainer.appendChild(card);
-            });
-
-            const supplyCard = createSupplyCard(
-                feature.properties.supply_finished_pro || "-",
-                feature.properties.supply_offplan_pro || "-"
-            );
-            statsContainer.appendChild(supplyCard);
-
-            const landsCard = createLandsCard(feature.properties.supply_lands || "-");
-            statsContainer.appendChild(landsCard);*/
+           
             // Append the container of cards to the panel content
             const statsContainer = document.getElementById('stats-container');
             areaInfo.appendChild(statsContainer);
@@ -938,8 +917,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var span = document.getElementsByClassName("close")[0];
     var messageDiv = document.getElementById("messageInfo");
 
-    btn.onclick = function() {
-        openLoginModal('Login', 'login');
+    if (btn) {
+        btn.onclick = function() {
+            openLoginModal('Login', 'login');
+        }
     }
 
     document.addEventListener('click', function(event) {
@@ -974,6 +955,74 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
 
+});
+
+$(function() {
+    const searchInput = $("#search");
+    const searchResults = $("#search-results");
+    searchInput.on("input", function() {
+        const query = $(this).val();
+        if (query.length >= 2) {
+          $.getJSON("/search", { q: query }, function(data) {
+            displayResults(data);
+          });
+        } else {
+          searchResults.hide().empty();
+        }
+      });
+
+    function displayResults(results) {
+        console.log("results : ",results)
+    searchResults.empty();
+    
+    if (results.length === 0) {
+      searchResults.hide();
+      return;
+    }
+
+    results.forEach(item => {
+      const resultItem = $("<div>")
+        .addClass("search-item")
+        .addClass(item.type);
+
+      const itemName = $("<span>")
+        .addClass("item-name")
+        .text(item.name);
+
+      const itemType = $("<span>")
+        .addClass("item-type")
+        .text(item.type);
+
+      resultItem.append(itemName, itemType);
+
+      if (item.type === 'project') {
+        const itemArea = $("<div>")
+          .addClass("item-area")
+          .text(item.area_name);
+        resultItem.append(itemArea);
+      }
+
+      resultItem.on("click", function() {
+        if (item.type === 'project') {
+          simulateClick(item.id);
+        } else if (item.type === 'area') {
+            simulateClick(item.id);
+        }
+        searchInput.val(item.name);
+        searchResults.hide();
+      });
+
+      searchResults.append(resultItem);
+    });
+
+    searchResults.show();
+  }
+
+  $(document).on("click", function(event) {
+    if (!$(event.target).closest(".search-container").length) {
+      searchResults.hide();
+    }
+  });
 });
 
 function getCurrentJsonData() {
