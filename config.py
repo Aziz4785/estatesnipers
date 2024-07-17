@@ -1,4 +1,5 @@
 from decouple import config
+import os
 
 DATABASE_URI = config("HEROKU_POSTGRESQL_NAVY_URL")
 if DATABASE_URI.startswith("postgres://"):
@@ -33,4 +34,6 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     DEBUG_TB_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = config("HEROKU_POSTGRESQL_NAVY_URL")
+    # Use os.environ to get the value from Heroku's environment
+    DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
