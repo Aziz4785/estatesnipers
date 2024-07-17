@@ -36,4 +36,6 @@ class ProductionConfig(Config):
     DEBUG_TB_ENABLED = False
     # Use os.environ to get the value from Heroku's environment
     DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+    if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
