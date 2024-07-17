@@ -221,7 +221,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     row.insertCell(); // Capital Appreciation 2018
     row.insertCell(); // Capital Appreciation 2013
     row.insertCell(); // ROI
-    
+    row.insertCell(); //avg transaction value
     row.insertCell();// Placeholder for avg_meter_price_2013_2023
 
      // Add event listener for PDF icon if it's a root row
@@ -492,6 +492,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 hasChildren = !value.avgCapitalAppreciation2018
                               && !value.avgCapitalAppreciation2013
                               && !value.avg_roi
+                              && !value.avg_actual_worth
                               && !value.avg_meter_price_2013_2023;
             }
         }
@@ -515,7 +516,8 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) ? (value.avg_actual_worth).toFixed(2) : '-';
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -533,7 +535,8 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[4].innerText = (value.avg_actual_worth || value.avg_actual_worth === 0) && !isNaN(value.avg_actual_worth) ? (value.avg_actual_worth).toFixed(2) : '-';
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(key.includes("locked project"))

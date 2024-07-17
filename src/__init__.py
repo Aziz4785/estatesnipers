@@ -374,7 +374,8 @@ def get_area_details():
             property_usage_en,
             instance_year,
             meter_sale_price,
-            roi
+            roi,
+            actual_worth
         FROM 
             base_table t
         LEFT JOIN
@@ -421,6 +422,8 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
+            print("---------group-----------")
+            print(group)
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
@@ -431,8 +434,10 @@ def get_area_details():
                 avg_meter_prices[f'AVG_meter_price_{year}'] = weighted_avg(df_prediction, group, year).rename(f'AVG_meter_price_{year}')
             
             avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
+            avg_transaction_value = df[df['instance_year'] >= 2023].groupby(group)['actual_worth'].mean().rename('avg_actual_worth')
+            
+            final_df = pd.concat([*avg_meter_prices.values(), avg_roi,avg_transaction_value], axis=1).reset_index()
 
-            final_df = pd.concat([*avg_meter_prices.values(), avg_roi], axis=1).reset_index()
             #concat the columns into an array : 
             final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in avg_meter_prices.keys()], axis=1)
 
@@ -448,11 +453,14 @@ def get_area_details():
             # Reorder and filter the DataFrame according to the combined list of columns
             final_df = final_df[combined_columns]
             # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
-            final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi'], how='all', inplace=True)
+
+            final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi','avg_actual_worth'], how='all', inplace=True)
+            print("after droping na")
             final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
 
             if 'grouped_project' in df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
                 final_df = final_df.dropna(subset=['grouped_project'])
+
             update_nested_dict(final_df, nested_dicts, group)
 
         is_premium_user = False 

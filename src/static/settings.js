@@ -124,7 +124,7 @@ function addDnDEvents(elem) {
 listItems.forEach(addDnDEvents);
 
 
-let currentFillColor = 'fillColorPrice'; // Default value
+
 // Save settings button functionality
 document.getElementById("saveSettings").onclick = function() {
     const listOrder = getListOrderFromUI();
