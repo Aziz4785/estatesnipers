@@ -41,7 +41,7 @@ from flask_sqlalchemy import SQLAlchemy
 import stripe
 
 # Load environment variables from .env file
-load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
