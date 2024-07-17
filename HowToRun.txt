@@ -1,4 +1,5 @@
 1)uncomment load_dotenv() in app.py
+2) dans le .env , changer la ligne de APP_SETTINGS
 2).\venv\Scripts\activate
 3) PS C:\Users\aziz8\Documents\dubai_data\Flask_server> python manage.py run /OU py app.py   
 4)http://localhost:5000/
