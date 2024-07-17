@@ -68,11 +68,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Go Premium button (directly to checkout)
-            goPremiumButton.addEventListener('click', async function(event) {
-                event.preventDefault();
-                await handleStripeCheckout();
-            });
+            if (goPremiumButton) {
+                // Go Premium button (directly to checkout)
+                goPremiumButton.addEventListener('click', async function(event) {
+                    event.preventDefault();
+                    await handleStripeCheckout();
+                });
+            }
         })
         .catch((error) => {
             console.error("Error fetching Stripe config:", error);
@@ -137,7 +139,6 @@ function applyGeoJSONLayer(currentLegend) {
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
-        console.log("data : ",data)
         //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
         const legends = data[0];
         const units = data[2];
@@ -660,7 +661,6 @@ function updateProjectsDemand() {
 
             .then(response => response.json())
             .then(data => {
-                //console.log("project data : ",data)
                 var div = document.getElementById('ProjectsTableContainer'); // Get the div by its ID
                 // Check if a table already exists and remove it
                 var existingTable = div.querySelector('table');
@@ -709,7 +709,6 @@ function onEachFeature(feature, layer) {
                 {
                     const supplyCard = document.getElementById('card5');
                     if (supplyCard) {
-                        console.log("this is card5 so we fill it with project");
                         supplyCard.querySelector('.title').textContent ='Supply of Projects:';
                         const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[4] : "-";
                         const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[5] : "-";
@@ -827,7 +826,6 @@ function onEachFeature(feature, layer) {
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
             const landbutton = document.getElementById('land-chart-button');
             landbutton.addEventListener('click', function() {
-                    console.log("we click on land button ")
                     fetch(`/get-lands-stats?area_id=${currentAreaId}`)
                         .then(response => {
                             if (!response.ok) {
@@ -944,7 +942,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (formToShow === 'register') {
             openLoginModal('Register', 'register');
         } else {
-            console.log("form to show is not register")
             openLoginModal('Login', 'login');
         }
     }

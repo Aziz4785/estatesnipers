@@ -1,20 +1,22 @@
 from flask import Flask, jsonify, render_template,request,send_file
 from flask_cors import CORS
 import json
-import logging
 from flask import session,current_app
-import time
 import os
 from collections import defaultdict
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
+from marshmallow import Schema, fields, ValidationError, validates, validates_schema
+from marshmallow.validate import Length
 from .pdfHelper import PDFHelper
 from .server_utils import * 
 from reportlab.lib.utils import ImageReader
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine,text
 from flask_login import LoginManager
+from flask_wtf import FlaskForm, CSRFProtect
+from wtforms import StringField, SubmitField
 from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
@@ -52,6 +54,11 @@ login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
 
+app.config.update(
+    SESSION_COOKIE_SAMESITE='Lax',  # Or 'Strict'
+    SESSION_COOKIE_SECURE=True  # Ensure cookies are only sent over HTTPS
+)
+
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -71,7 +78,10 @@ from src.accounts.forms import LoginForm ,RegisterForm
 app.register_blueprint(accounts_bp)
 app.register_blueprint(core_bp)
 
-#app.secret_key = 'some_secret_key'
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+if not app.config["SECRET_KEY"]:
+    raise ValueError("No SECRET_KEY set for Flask application. Did you follow the setup instructions?")
+
 auth = HTTPBasicAuth()
 users = {
     os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
@@ -287,18 +297,21 @@ def handle_checkout_session(session):
         current_app.logger.warning(f"User with email {customer_email} not found in database")
 
 
+class MessageSchema(Schema):
+    message = fields.Str(required=True, validate=Length(min=1, max=2000))  
+
+
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("3 per day")
 def send_message():
     data = request.json
-    message = data.get('message')
-    
-    if not message:
-        return jsonify({"message": "No message provided"}), 400
+    schema = MessageSchema()
 
-    # Check message count
-    today = datetime.now().date()
-
+    try:
+        validated_data = schema.load(data)
+    except ValidationError as err:
+        return jsonify({"errors": err.messages}), 400
+    message = validated_data['message']
     # Send email
     try:
         send_email(message)
@@ -366,7 +379,8 @@ def get_area_details():
 
         engine = create_engine(connection_url)
         
-        sql_query = f"""
+        
+        sql_query = text("""
         SELECT 
             pst.property_sub_type_en, 
             grouped_project, 
@@ -382,14 +396,14 @@ def get_area_details():
             propertysubtype pst 
         ON 
             t.property_sub_type_id = pst.property_sub_type_id
-        WHERE area_id = {area_id} AND instance_year >=2013;
-        """
+        WHERE area_id = :area_id AND instance_year >= 2013;
+        """)
 
-        #start_time = time.time()
-        df = pd.read_sql_query(sql_query, engine)
+        with engine.connect() as connection:
+            df = pd.read_sql_query(sql_query, connection, params={"area_id": area_id})
+
         #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
-
-        prediction_query = f"""SELECT
+        prediction_query = text("""SELECT
                         pst.property_sub_type_en, 
                         proj.project_name_en AS grouped_project, 
                         rooms_en, 
@@ -408,11 +422,13 @@ def get_area_details():
                     ON
                         predictions.project_number = proj.project_number
                     WHERE
-                        predictions.area_id = {area_id}
+                        predictions.area_id = :area_id
                     GROUP BY
-                        pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;"""
+                        pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;""")
         
-        df_prediction = pd.read_sql_query(prediction_query, engine)
+        with engine.connect() as connection:
+            df_prediction = pd.read_sql_query(prediction_query, connection, params={"area_id": area_id})
+
         df_prediction_filtered = df_prediction[df_prediction['instance_year'] == 2024]
         df_2024 = df[df['instance_year'] == 2024].copy()
         df_2024['total_rows'] = 1
@@ -422,8 +438,6 @@ def get_area_details():
         groupings = create_groupings(hierarchy_keys)
         
         for group_index,group in enumerate(groupings):
-            print("---------group-----------")
-            print(group)
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
             for year in range(2013, 2024):
@@ -455,7 +469,7 @@ def get_area_details():
             # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
 
             final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi','avg_actual_worth'], how='all', inplace=True)
-            print("after droping na")
+
             final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
 
             if 'grouped_project' in df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
@@ -506,39 +520,49 @@ def get_area_details():
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('q', '')
+    if not query:
+        return jsonify({'error': 'Search query is required'}), 400
     
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Search for projects
-    cur.execute("""
-        SELECT a.area_id, p.project_name_en, a.area_name_en
-        FROM projects p
-        JOIN areas a ON p.area_id = a.area_id
-        WHERE p.project_name_en ILIKE %s
-        LIMIT 6
-    """, (f'%{query}%',))
-    projects = cur.fetchall()
-    
-    # Search for areas
-    cur.execute("""
-        SELECT area_id, area_name_en
-        FROM areas
-        WHERE area_name_en ILIKE %s
-        LIMIT 6
-    """, (f'%{query}%',))
-    areas = cur.fetchall()
-    
-    cur.close()
-    conn.close()
-    
-    results = [
-        {'type': 'project', 'id': p[0], 'name': f"{p[1]} ({p[2]})"} for p in projects
-    ] + [
-        {'type': 'area', 'id': a[0], 'name': a[1]} for a in areas
-    ]
-    
-    return jsonify(results)
+    try:
+        # Search for projects
+        cur.execute("""
+            SELECT a.area_id, p.project_name_en, a.area_name_en
+            FROM projects p
+            JOIN areas a ON p.area_id = a.area_id
+            WHERE p.project_name_en ILIKE %s
+            LIMIT 6
+        """, (f'%{query}%',))
+        projects = cur.fetchall()
+        
+        # Search for areas
+        cur.execute("""
+            SELECT area_id, area_name_en
+            FROM areas
+            WHERE area_name_en ILIKE %s
+            LIMIT 6
+        """, (f'%{query}%',))
+        areas = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        results = [
+            {'type': 'project', 'id': p[0], 'name': f"{p[1]} ({p[2]})"} for p in projects
+        ] + [
+            {'type': 'area', 'id': a[0], 'name': a[1]} for a in areas
+        ]
+        
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        cur.close()
+        conn.close()
 
 def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=None, rooms=None):
     connection = get_db_connection()
@@ -578,6 +602,8 @@ def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=No
     return fetched_rows
 
 def execute_project_demand_query(area_id):
+    if not isinstance(area_id, int) or area_id <= 0:
+        raise ValueError("Invalid area_id")
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
@@ -602,12 +628,20 @@ WHERE
 GROUP BY 
     t.project_number, p.no_of_units, p.project_name_en;
     """
-    cursor.execute(query, (area_id,))
-    
-    # Fetch and format the results
-    fetched_rows = cursor.fetchall()
-    fetched_rows = group_external_demand_in_array(fetched_rows)
-    return fetched_rows
+    try:
+        cursor.execute(query, (area_id,))
+        
+        # Fetch and format the results
+        fetched_rows = cursor.fetchall()
+        fetched_rows = group_external_demand_in_array(fetched_rows)
+        return fetched_rows
+    except Exception as e:
+        # Log the error securely
+        print(f"An error occurred: {str(e)}")  # Replace with proper logging
+        return None  # Or handle the error appropriately
+    finally:
+        cursor.close()
+        connection.close()
 
 @app.route('/get-demand-per-project')
 @auth.login_required
@@ -807,8 +841,6 @@ def dubai_areas():
                 roi = data_stores['avg_roi'][area_id]
                 variable_values.append(roi)
                 feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
-                if area_id == 410:
-                    print("and the color we get is : ",feature['fillColorRoi'])
             else:
                 variable_values.append(None)
                 feature['fillColorRoi'] = 'rgb(95,95,95)'
@@ -1234,4 +1266,4 @@ def render_pdf(node,parent_name,helper,p):
             render_pdf({key: data[key]},node_name,helper,p)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

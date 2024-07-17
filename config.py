@@ -21,7 +21,7 @@ class DevelopmentConfig(Config):
     DEBUG = True
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
-    SQLALCHEMY_DATABASE_URI = DATABASE_URI 
+    SQLALCHEMY_DATABASE_URI = config("DEV_DATABASE_URI", default=DATABASE_URI)
 
 class TestingConfig(Config):
     TESTING = True
@@ -33,3 +33,4 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     DEBUG_TB_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = config("HEROKU_POSTGRESQL_NAVY_URL")

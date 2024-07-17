@@ -74,10 +74,6 @@ function highlightFeature(e) {
     //const bounds = layer.getBounds();
     //const center = bounds.getCenter();
     //map.setView(center, map.getZoom() > 16 ? map.getZoom() : 16); // Set a specific zoom level or use current zoom level if it's already greater
-
-
-    // Output additional info about the clicked area (optional)
-    console.log("Clicked area properties: ", layer.feature.properties);
 }
 
 
@@ -175,11 +171,9 @@ function toggleMenu() {
 function changeLegendTitle(title) {
     document.getElementById('legendTitle').children[0].textContent = title;
     toggleMenu(); // Close the menu after selection
-    console.log("changeLegendTitle()");
     // Handle the change of legend content based on the selected title
     currentFillColor = "fillColorPrice";
     currentLegend = "averageSalePrice";
-    console.log("title",title);
     switch (title) {
         case 'Average meter price':
         currentFillColor = "fillColorPrice";

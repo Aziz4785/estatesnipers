@@ -33,7 +33,7 @@
     <h2 id="modalTitle">Login</h2>
     <div id="messageInfo"></div>
     <form id="loginForm" method="POST" action="{{ url_for('accounts.login') }}">
-        {{ login_form.csrf_token }}
+      {{ login_form.hidden_tag() }}
         <div class="form-group">
             {{ login_form.email.label }}
             {{ login_form.email(class="form-control") }}
@@ -45,7 +45,7 @@
         <button type="submit" class="form-btn">Login</button>
     </form>
     <form id="registerForm" method="POST" action="{{ url_for('accounts.register') }}" style="display:none;">
-        {{ register_form.csrf_token }}
+      {{ register_form.hidden_tag() }}
         <div class="form-group">
             {{ register_form.email.label }}
             {{ register_form.email(class="form-control") }}
@@ -96,7 +96,7 @@
         <span class="close-button">&times;</span>
         <h2 id="modalTitle">Contact Us</h2>
         <form id="contactForm">
-          <textarea id="message" placeholder="Please share any questions, feedback, or suggestions you may have" required></textarea>
+          <textarea id="message" placeholder="Please share any questions, feedback, or suggestions you may have" required maxlength="2000"></textarea>
           <p class="message-limit">You are limited to 3 messages per day.</p>
           <button type="submit" class="form-btn">Send</button>
         </form>

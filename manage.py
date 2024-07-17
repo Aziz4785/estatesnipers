@@ -14,5 +14,7 @@ def test():
     else:
         return 1
     
+app = src.app #expose the app object
+
 if __name__ == "__main__":
     cli()

@@ -24,7 +24,6 @@ function retrieveListOrder() {
 
  // Function to rearrange the list based on the order
  function rearrangeList(order) {
-    console.log("rearrangeList : ",order)
     const listItems = Array.from(hierarchyList.children);
     const sortedItems = order.map(id => listItems.find(item => item.dataset.id === id.toString()));
     
@@ -41,13 +40,9 @@ function retrieveListOrder() {
 
 // Function to update the UI with the retrieved list order
 function updateUIWithListOrder(listOrder) {
-    console.log("updateUIWithListOrder")
     const hierarchyList = document.getElementById("hierarchyList");
     hierarchyList.innerHTML = '';
-    console.log("listOrder : ")
-    console.log(listOrder)
     listOrder.forEach(item => {
-        console.log("item : ",item)
         const li = document.createElement('li');
         li.draggable = true;
         li.dataset.id = item.id;
