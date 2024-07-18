@@ -1271,5 +1271,10 @@ def render_pdf(node,parent_name,helper,p):
         if key !="means":
             render_pdf({key: data[key]},node_name,helper,p)
 
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+    
 if __name__ == '__main__':
     app.run(debug=False)
