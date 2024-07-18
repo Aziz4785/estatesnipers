@@ -276,9 +276,9 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    if (error !== 'Premium subscription required') {
-                        alert("An error occurred.");
-                    }
+                    // if (error !== 'Premium subscription required') {
+                    //     alert("An error occurred.");
+                    // }
                 });
             });
         }
