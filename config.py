@@ -23,7 +23,7 @@ class DevelopmentConfig(Config):
     WTF_CSRF_ENABLED = False
     DEBUG_TB_ENABLED = True
     SQLALCHEMY_DATABASE_URI = config("DEV_DATABASE_URI", default=DATABASE_URI)
-
+    DOMAIN_URL="http://localhost:5000/"
 class TestingConfig(Config):
     TESTING = True
     DEBUG = True
@@ -39,3 +39,4 @@ class ProductionConfig(Config):
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    DOMAIN_URL="https://estatesnipers-1a1823af05ea.herokuapp.com/"

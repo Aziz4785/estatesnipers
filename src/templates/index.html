@@ -144,8 +144,8 @@
 
                 <ul id="hierarchyList" class="hierarchy-list {% if not is_premium_user %} locked-ul{% endif %}">
                     <li draggable="true" data-id = "2"><span class="drag-handle">■</span> Project</li>
-                    <li draggable="true" data-id = "1"><span class="drag-handle">■</span> Type (flat, villa ,shop ...)</li>
                     <li draggable="true" data-id = "3"><span class="drag-handle">■</span> Usage (residential, commercial ...)</li>
+                    <li draggable="true" data-id = "1"><span class="drag-handle">■</span> Type (flat, villa ,shop ...)</li>
                     <li draggable="true" data-id = "4"><span class="drag-handle">■</span> Sub Type (number of rooms, shop type, ..)</li>
                 </ul>
             </div>
@@ -298,7 +298,7 @@
               <div class="premium-header">PREMIUM</div>
               <ul class="prem-ul">
                 <li>Unlimited Project Details</li>
-                <li>Unlimited Report Downloads</li>
+                <li>Unlimited Report Downloads (<a href="{{ url_for('static', filename='example_report.pdf') }}" download="example_report.pdf">report example</a>)</li>
                 <li>Regularly Updated High-Quality Data</li>
                 <li>Dedicated Customer Support</li>
                 <li>Estate Snipers Community Membership</li>

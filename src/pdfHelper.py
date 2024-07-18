@@ -5,6 +5,8 @@ from reportlab.lib.colors import blue, black
 from reportlab.lib.utils import ImageReader
 import matplotlib.pyplot as plt
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.platypus import Paragraph, Frame
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
@@ -51,19 +53,47 @@ class PDFHelper:
         width, height = letter
         table.wrapOn(self.p, width, height)
         table.drawOn(self.p, 50, self.y - len(data) * 20 - 30)
+
+    def draw_disclaimer(self, disclaimer):
+        # Create a custom style for the disclaimer
+        disclaimer_style = ParagraphStyle(
+            'Disclaimer',
+            parent=self.styles['Normal'],
+            fontSize=8,
+            fontName='Helvetica'
+        )
+
+        # Create a Paragraph object with the disclaimer text
+        disclaimer_paragraph = Paragraph(disclaimer, disclaimer_style)
+
+        # Calculate available width (assuming 50 units margin on both sides)
+        available_width = self.p._pagesize[0] - 100
+
+        # Split the paragraph to fit the available width
+        _, used_height = disclaimer_paragraph.wrap(available_width, self.page_height)
+
+        # Check if there's enough space on the current page
+        if self.y - used_height < self.min_y:
+            self.p.showPage()  # Start a new page
+            self.y = self.page_height - 50  # Reset y position for the new page
+
+        # Draw the paragraph
+        disclaimer_paragraph.drawOn(self.p, 50, self.y - used_height)
+
+        # Update the y position
+        self.y -= used_height + 20
+
     def draw_contact_info(self):
         contact_info = "Reach out to our team for any inquiries: contact@estatesnipers.com"
         #additional_text = "We are here to assist you with any questions or concerns you may have. Your satisfaction is our priority."
         #footer_text = "Thank you for choosing EstateSnipers!"
+        disclaimer = """Estate Snipers provides AI-powered predictive analytics for informational purposes only. We do not offer financial or investment advice, and the information provided should not be construed as such. While we strive to ensure the accuracy and reliability of our predictive analytics, we cannot guarantee their accuracy or completeness. Users should conduct their own research and consult with professional advisors before making any financial or investment decisions. Estate Snipers is not responsible for any losses or damages resulting from the use of our services."""
         self.y -= 20
         self.p.drawString(50, self.y, contact_info)
-        self.y -= 20
+        self.y -= 50
         
-        # self.p.drawString(50, self.y, additional_text)
-        # self.y -= 20
-        
-        # self.p.drawString(50, self.y, footer_text)
-        # self.y -= 40  # Leave some space after the footer text
+        # Draw disclaimer
+        self.draw_disclaimer(disclaimer)
 
     def draw_footnotes(self, footnotes):
         if self.y <= self.min_y:

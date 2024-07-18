@@ -79,14 +79,17 @@ function highlightFeature(e) {
 
 function positionOverlay() {
   const tbody = document.getElementById('myTableBody');
-  const rows = tbody.getElementsByTagName('tr');
-  const overlay = document.getElementById('unlockOverlay');
-  
-  if (rows.length >= 8) {
-    const eighthLastRow = rows[rows.length - 8];
-    const rect = eighthLastRow.getBoundingClientRect();
-    overlay.style.top = `${rect.top}px`;
-    overlay.style.height = `${rect.height * 8}px`;
+  if(tbody)
+  {
+    const rows = tbody.getElementsByTagName('tr');
+    const overlay = document.getElementById('unlockOverlay');
+    
+    if (rows.length >= 8) {
+        const eighthLastRow = rows[rows.length - 8];
+        const rect = eighthLastRow.getBoundingClientRect();
+        overlay.style.top = `${rect.top}px`;
+        overlay.style.height = `${rect.height * 8}px`;
+    }
   }
 }
 function showPremiumMessage() {

@@ -162,9 +162,8 @@ def check_auth():
 
 @app.route("/create-checkout-session")
 def create_checkout_session():
-    domain_url = "http://localhost:5000/"
-    #for deployment use this : 
-    #domain_url = os.environ.get('DOMAIN_URL', 'https://your-production-domain.com/')
+    #for deployment use this (maybe ?): 
+    domain_url = os.environ.get('DOMAIN_URL', 'https://your-app-name.herokuapp.com/')
     stripe.api_key = stripe_keys["secret_key"]
 
     try:
@@ -316,7 +315,9 @@ def send_message():
     try:
         send_email(message)
         
-        return jsonify({"message": "Message sent successfully"}), 200
+        response = jsonify({"message": "Message sent successfully"})
+        response.headers['Content-Type'] = 'application/json'
+        return response, 200
     except Exception as e:
         return jsonify({"message": "Failed to send message"}), 500
     
@@ -362,9 +363,9 @@ def get_area_details():
     try:
         is_premium_user = check_premium_user()
 
-        hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
+        hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
         if is_premium_user:   
-            hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+            hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
         area_id = request.args.get('area_id')
         if not area_id:
             return jsonify({'error': 'Area ID is required'}), 400
@@ -602,8 +603,6 @@ def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=No
     return fetched_rows
 
 def execute_project_demand_query(area_id):
-    if not isinstance(area_id, int) or area_id <= 0:
-        raise ValueError("Invalid area_id")
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
@@ -691,7 +690,7 @@ def save_list_order():
 @app.route('/get-list-order', methods=['GET'])
 @auth.login_required
 def get_list_order():
-    hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+    hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
     return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
     
@@ -1081,10 +1080,10 @@ def generate_pdf():
 
     if not is_premium_user:
         return jsonify({"error": "Premium subscription required"}), 403
-
-    hierarchy_keys = ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en']
+    
+    hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
     if is_premium_user:   
-        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_sub_type_en','property_usage_en', 'rooms_en'])
+        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
         
     request_data = request.get_json()
     section = request_data['section']
@@ -1194,16 +1193,17 @@ def generate_pdf():
     table_data = [
         ['Metric', 'Value'],
         ['Acquisition Demand 2023', f"{round_and_percentage(area_data['variableValues'][7])} %"],
-        ['Rental Demand 2023', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
+        ['Rental Demand 2023¹', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
         ['Average Sale Price', f"{area_data['variableValues'][0]:,.2f} AED"],
         ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['variableValues'][2]))+" %"],
         ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['variableValues'][1]))+" %"],
         ['Average Gross Rental Yield', str(round_and_percentage(area_data['variableValues'][3],2))+" %"],
-        ['Supply Finished Properties', area_data['variableValues'][4]],
-        ['Supply Off-Plan Properties', area_data['variableValues'][5]],
-        ['Supply Lands', area_data['variableValues'][6]],
+        ['Supply of Finished Projects', area_data['variableValues'][4]],
+        ['Supply of Off-Plan Projects', area_data['variableValues'][5]],
+        ['Supply of Lands', area_data['variableValues'][6]],
     ]
-
+    footnotes = [
+        "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
     # Create a table
     table = Table(table_data)
     table.setStyle(TableStyle([
@@ -1220,7 +1220,7 @@ def generate_pdf():
     # Build the table on canvas
     table.wrapOn(p, 175, 500)
     table.drawOn(p, 175, 500)
-
+    helper.draw_footnotes(footnotes)
     helper.y -= 100
     land_data=execute_land_query(area_data['area_id'])
     img_buffer = create_land_type_pie_chart(land_data)
@@ -1231,7 +1231,6 @@ def generate_pdf():
     p.save()
 
     buffer.seek(0)
-    
     
     return send_file(buffer, as_attachment=True, download_name=f"{section}_report.pdf", mimetype='application/pdf')
 

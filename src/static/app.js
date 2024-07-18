@@ -246,13 +246,14 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     })
                 })
                 .then(response => {
-                    if (response.ok) {
-                        return response.blob(); //maybe remove the return
-                    } else if (response.status === 403) {
+                    if (response.status === 403) {
+                        // Handle the 403 status code explicitly
                         openModal("Download as PDF is a premium feature");
-                    } else {
+                        return Promise.reject('Premium subscription required');
+                    } else if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
+                    return response.blob();
                 })
                 .then(blob => {
                     if (!blob) {
@@ -269,7 +270,9 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    openModal(`An error occurred: ${error.message}`);
+                    if (error !== 'Premium subscription required') {
+                        alert("An error occurred.");
+                    }
                 });
             });
         }

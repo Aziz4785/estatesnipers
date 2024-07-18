@@ -38,7 +38,7 @@ def login():
         if user and bcrypt.check_password_hash(user.password, request.form["password"]):
             login_user(user)
             # Regenerate session ID after successful login
-            session.regenerate()
+            #session.regenerate()
             # Reset login attempts on successful login
             session.pop('login_attempts', None)
             return redirect(url_for("index"))
