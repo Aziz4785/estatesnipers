@@ -1272,7 +1272,5 @@ def render_pdf(node,parent_name,helper,p):
             render_pdf({key: data[key]},node_name,helper,p)
 
 if __name__ == '__main__':
-    gunicorn_logger = logging.getLogger('gunicorn.error')
-    app.logger.handlers = gunicorn_logger.handlers
-    app.logger.setLevel(gunicorn_logger.level)
-    app.run(debug=False)
+    app.logger.setLevel(logging.DEBUG)
+    app.run(debug=True)

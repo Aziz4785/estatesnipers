@@ -279,28 +279,6 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     }
     return rowId;
 }
-/*function addPdfDownloadListener(rowId, sectionName) {
-    const pdfIcon = document.querySelector(`[data-row-id="${rowId}"] .pdf-icon`);
-    pdfIcon.addEventListener('click', function(event) {
-        event.preventDefault();
-        fetch(`/generate-pdf?section=${sectionName}`, {
-            method: 'GET'
-        })
-        .then(response => response.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `${sectionName}_report.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-        })
-        .catch(error => console.error('Error:', error));
-    });
-}
-*/
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
