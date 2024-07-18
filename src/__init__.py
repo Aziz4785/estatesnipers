@@ -1083,6 +1083,7 @@ def generate_pdf():
                     is_premium_user = True
             except Exception as e:
                 app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
+                return jsonify({"error": str(e)}), 403
 
     if not is_premium_user:
         app.logger.warning('Non-premium user attempted to generate PDF')
@@ -1275,6 +1276,6 @@ if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     app.logger.handlers = gunicorn_logger.handlers
     app.logger.setLevel(gunicorn_logger.level)
-    
+
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
