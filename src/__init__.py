@@ -4,6 +4,8 @@ import json
 import traceback
 from flask import session,current_app
 import os
+from wtforms import TextAreaField, SubmitField
+from wtforms.validators import DataRequired
 from collections import defaultdict
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
@@ -43,7 +45,7 @@ from flask_sqlalchemy import SQLAlchemy
 import stripe
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -305,6 +307,7 @@ class MessageSchema(Schema):
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("10 per day")
 @auth.login_required
+@csrf.exempt
 def send_message():
     app.logger.info('Received request send_message()')
     app.logger.debug(f'the request : : {request.json}')
