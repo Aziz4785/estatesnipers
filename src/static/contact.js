@@ -24,8 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
       fetch('/send_message', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': csrfToken
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({message: message}),
       })
