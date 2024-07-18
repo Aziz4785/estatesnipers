@@ -303,6 +303,7 @@ class MessageSchema(Schema):
 
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("3 per day")
+@auth.login_required
 def send_message():
     app.logger.info('Received request send_message()')
     app.logger.debug(f'the request : : {request.json}')
@@ -1071,6 +1072,7 @@ def create_scatterplot(data):
     return img_buffer
 
 @app.route('/generate-pdf', methods=['POST'])
+@auth.login_required
 def generate_pdf():
     app.logger.info('Received request for PDF generation')
     is_premium_user = False
