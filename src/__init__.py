@@ -9,6 +9,7 @@ from reportlab.lib.colors import HexColor
 from marshmallow import Schema, fields, ValidationError, validates, validates_schema
 from marshmallow.validate import Length
 from .pdfHelper import PDFHelper
+import logging
 from .server_utils import * 
 from reportlab.lib.utils import ImageReader
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -1066,19 +1067,25 @@ def create_scatterplot(data):
 
 @app.route('/generate-pdf', methods=['POST'])
 def generate_pdf():
-
+    app.logger.info('Received request for PDF generation')
     is_premium_user = False
     if current_user.is_authenticated:
+        app.logger.debug(f'User authenticated: {current_user.id}')
         # Query the StripeCustomer table to check subscription status
         stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
 
         if stripe_customer:
-            # Fetch the subscription details from Stripe
-            subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-            if subscription and subscription.status == "active":
-                is_premium_user = True
+            app.logger.debug(f'Stripe customer found: {stripe_customer.id}')
+            try:
+                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+                app.logger.debug(f'Subscription status: {subscription.status}')
+                if subscription and subscription.status == "active":
+                    is_premium_user = True
+            except Exception as e:
+                app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
 
     if not is_premium_user:
+        app.logger.warning('Non-premium user attempted to generate PDF')
         return jsonify({"error": "Premium subscription required"}), 403
     
     hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
@@ -1265,4 +1272,7 @@ def render_pdf(node,parent_name,helper,p):
             render_pdf({key: data[key]},node_name,helper,p)
 
 if __name__ == '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
     app.run(debug=False)
