@@ -699,6 +699,7 @@ def get_list_order():
 @auth.login_required
 def dubai_areas():
     try:
+        app.logger.info('we call dubai areas')
         is_premium_user = False 
         if current_user.is_authenticated:
             #Query the StripeCustomer table to check subscription status
@@ -1069,6 +1070,7 @@ def create_scatterplot(data):
 def generate_pdf():
     app.logger.info('Received request for PDF generation')
     is_premium_user = False
+    return jsonify({"SUCECSS": 'generate pdf '}), 200
     if current_user.is_authenticated:
         app.logger.debug(f'User authenticated: {current_user.id}')
         # Query the StripeCustomer table to check subscription status
