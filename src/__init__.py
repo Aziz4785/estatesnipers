@@ -1079,60 +1079,63 @@ def generate_pdf():
     try:
         app.logger.info('Received request for PDF generation')
         is_premium_user = False
-    except Exception as e:
-        app.logger.error(f"Error in generate_pdf: {str(e)}")
-        app.logger.error(traceback.format_exc())
-        return jsonify({"error": "Internal server error"}), 500
     
-    if current_user.is_authenticated:
-        app.logger.debug(f'User authenticated: {current_user.id}')
-        # Query the StripeCustomer table to check subscription status
-        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-        if stripe_customer:
-            app.logger.debug(f'Stripe customer found: {stripe_customer.id}')
-            try:
-                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-                app.logger.debug(f'Subscription status: {subscription.status}')
-                if subscription and subscription.status == "active":
-                    is_premium_user = True
-            except Exception as e:
-                app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
-                return jsonify({"error": "error"}), 404
-
-    if not is_premium_user:
-        app.logger.warning('Non-premium user attempted to generate PDF')
-        return jsonify({"error": "Premium subscription required"}), 403
     
-    hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
-    if is_premium_user:   
-        hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
+        if current_user.is_authenticated:
+            app.logger.debug(f'User authenticated: {current_user.id}')
+            # Query the StripeCustomer table to check subscription status
+            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+
+            if stripe_customer:
+                app.logger.debug(f'Stripe customer found: {stripe_customer.id}')
+                try:
+                    subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
+                    app.logger.debug(f'Subscription status: {subscription.status}')
+                    if subscription and subscription.status == "active":
+                        is_premium_user = True
+                except Exception as e:
+                    app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
+                    return jsonify({"error": "error"}), 404
+
+        if not is_premium_user:
+            app.logger.warning('Non-premium user attempted to generate PDF')
+            response = jsonify({"error": "Premium subscription required"})
+            response.status_code = 403
+            app.logger.info('Sending 403 response')
+            return response
         
-    request_data = request.get_json()
-    section = request_data['section']
-    data = request_data['data']
+        hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
+        if is_premium_user:   
+            hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
+            
+        request_data = request.get_json()
+        section = request_data['section']
+        data = request_data['data']
 
-    area_data = request_data['area_data']
+        area_data = request_data['area_data']
 
-    means_data = request_data['data'].get('means', [{}])[0]
-    avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
-    avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
-    avg_roi = means_data.get('avg_roi', 'N/A')
-    avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
-    project_demand_data = execute_project_demand_query(area_data['area_id'])
-    firstkeys = list(data.keys())
-    dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+        means_data = request_data['data'].get('means', [{}])[0]
+        avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
+        avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
+        avg_roi = means_data.get('avg_roi', 'N/A')
+        avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
+        project_demand_data = execute_project_demand_query(area_data['area_id'])
+        firstkeys = list(data.keys())
+        dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
 
-    # Loop through the project_demand_data to find the matching project
-    project_internaldemand2023 = project_externaldemand2023 = None
-    externalDemand_5Y = []
-    for item in project_demand_data:
-        if item['project_name_en'] == section:
-            project_internaldemand2023 = item['internaldemand2023']
-            project_externaldemand2023 = item['externaldemand2023']
-            externalDemand_5Y = item['externalDemandYears']
-            break
+        # Loop through the project_demand_data to find the matching project
+        project_internaldemand2023 = project_externaldemand2023 = None
+        externalDemand_5Y = []
+        for item in project_demand_data:
+            if item['project_name_en'] == section:
+                project_internaldemand2023 = item['internaldemand2023']
+                project_externaldemand2023 = item['externaldemand2023']
+                externalDemand_5Y = item['externalDemandYears']
+                break
 
+    except Exception as e:
+        app.logger.error(f'Error in generate_pdf: {str(e)}', exc_info=True)
+        return jsonify({"error": "Internal server error"}), 500
     # Create a PDF
     buffer = BytesIO()
     p = canvas.Canvas(buffer, pagesize=letter)
