@@ -1071,7 +1071,7 @@ def create_scatterplot(data):
 
     return img_buffer
 
-@app.route('/generate-pdf', methods=['POST'])
+@app.route('/generate-pdf', methods=['GET','POST'])
 @auth.login_required
 def generate_pdf():
     app.logger.info('Received request for PDF generation')
