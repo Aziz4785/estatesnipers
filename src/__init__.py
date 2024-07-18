@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, render_template,request,send_file
 from flask_cors import CORS
 import json
+import traceback
 from flask import session,current_app
 import os
 from collections import defaultdict
@@ -1074,8 +1075,14 @@ def create_scatterplot(data):
 @app.route('/generate-pdf', methods=['GET','POST'])
 @auth.login_required
 def generate_pdf():
-    app.logger.info('Received request for PDF generation')
-    is_premium_user = False
+    try:
+        app.logger.info('Received request for PDF generation')
+        is_premium_user = False
+    except Exception as e:
+        app.logger.error(f"Error in generate_pdf: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({"error": "Internal server error"}), 500
+    
     if current_user.is_authenticated:
         app.logger.debug(f'User authenticated: {current_user.id}')
         # Query the StripeCustomer table to check subscription status
