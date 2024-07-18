@@ -1072,7 +1072,7 @@ def create_scatterplot(data):
 
     return img_buffer
 
-@app.route('/generate-pdf', methods=['GET'])
+@app.route('/generate-pdf', methods=['POST'])
 @csrf.exempt
 @auth.login_required
 def generate_pdf():
