@@ -304,14 +304,18 @@ class MessageSchema(Schema):
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("3 per day")
 def send_message():
+    app.logger.info('Received request send_message()')
+    app.logger.debug(f'the request : : {request.json}')
     data = request.json
     schema = MessageSchema()
 
     try:
         validated_data = schema.load(data)
     except ValidationError as err:
+        app.logger.info('The message is not validated correctly)')
         return jsonify({"errors": err.messages}), 400
     message = validated_data['message']
+    app.logger.debug(f'the message : : {message}')
     # Send email
     try:
         send_email(message)
@@ -1070,7 +1074,6 @@ def create_scatterplot(data):
 def generate_pdf():
     app.logger.info('Received request for PDF generation')
     is_premium_user = False
-    return jsonify({"SUCECSS": 'generate pdf '}), 200
     if current_user.is_authenticated:
         app.logger.debug(f'User authenticated: {current_user.id}')
         # Query the StripeCustomer table to check subscription status
@@ -1085,7 +1088,7 @@ def generate_pdf():
                     is_premium_user = True
             except Exception as e:
                 app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
-                return jsonify({"error": str(e)}), 403
+                return jsonify({"error": "error"}), 404
 
     if not is_premium_user:
         app.logger.warning('Non-premium user attempted to generate PDF')
