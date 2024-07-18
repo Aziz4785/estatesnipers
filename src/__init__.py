@@ -1272,5 +1272,4 @@ def render_pdf(node,parent_name,helper,p):
             render_pdf({key: data[key]},node_name,helper,p)
 
 if __name__ == '__main__':
-    app.logger.setLevel(logging.DEBUG)
-    app.run(debug=True)
+    app.run(debug=False)
