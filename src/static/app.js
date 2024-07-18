@@ -246,14 +246,17 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     })
                 })
                 .then(response => {
-                    console.log("response: ",response)
+                    console.log('Response status:', response.status);
                     if (response.status === 403) {
-                        
-                        // Handle the 403 status code explicitly
-                        openModal("Download as PDF is a premium feature");
-                        return Promise.reject('Premium subscription required');
+                        return response.json().then(data => {
+                            console.log('403 response data:', data);
+                            throw new Error('Premium subscription required');
+                        });
                     } else if (!response.ok) {
-                        throw new Error('Network response was not ok');
+                        return response.text().then(text => {
+                            console.log('Error response:', text);
+                            throw new Error('Server error');
+                        });
                     }
                     return response.blob();
                 })
