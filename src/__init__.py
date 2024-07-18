@@ -1072,7 +1072,7 @@ def create_scatterplot(data):
 
     return img_buffer
 
-@app.route('/generate-pdf', methods=['POST'])
+@app.route('/generate-pdf', methods=['GET'])
 @csrf.exempt
 @auth.login_required
 def generate_pdf():
@@ -1080,7 +1080,7 @@ def generate_pdf():
         app.logger.info('Received request for PDF generation')
         is_premium_user = False
         payload_size = request.content_length
-        logging.info(f"Received payload size: {payload_size} bytes")
+        app.logger.info(f"Received payload size: {payload_size} bytes")
     
         if current_user.is_authenticated:
             app.logger.debug(f'User authenticated: {current_user.id}')
