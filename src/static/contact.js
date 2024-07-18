@@ -19,13 +19,13 @@ document.addEventListener("DOMContentLoaded", function() {
       if (message.length > 2000) {
         alert("Message is too long. Please keep it under 2000 characters.");
         return;
-    }
-
+      }
+      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
       fetch('/send_message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRF-Token': '{{ csrf_token() }}'
+          'X-CSRF-Token': csrfToken
         },
         body: JSON.stringify({message: message}),
       })
