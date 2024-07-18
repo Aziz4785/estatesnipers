@@ -55,16 +55,7 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
-def remove_zstd_encoding():
-    ae = request.headers.get('Accept-Encoding', '')
-    if 'zstd' in ae:
-        new_ae = ', '.join(enc.strip() for enc in ae.split(',') if 'zstd' not in enc)
-        request.headers['Accept-Encoding'] = new_ae
 
-@app.before_request
-def before_request_func():
-    remove_zstd_encoding()
-    
 app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',  # Or 'Strict'
     SESSION_COOKIE_SECURE=True  # Ensure cookies are only sent over HTTPS
@@ -1088,7 +1079,8 @@ def generate_pdf():
     try:
         app.logger.info('Received request for PDF generation')
         is_premium_user = False
-    
+        payload_size = request.content_length
+        logging.info(f"Received payload size: {payload_size} bytes")
     
         if current_user.is_authenticated:
             app.logger.debug(f'User authenticated: {current_user.id}')
