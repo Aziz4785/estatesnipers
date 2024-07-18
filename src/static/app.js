@@ -246,8 +246,9 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     })
                 })
                 .then(response => {
+                    console.log("response: ",response)
                     if (response.status === 403) {
-                        console.log("response: ",response)
+                        
                         // Handle the 403 status code explicitly
                         openModal("Download as PDF is a premium feature");
                         return Promise.reject('Premium subscription required');
