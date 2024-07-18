@@ -303,7 +303,7 @@ class MessageSchema(Schema):
 
 
 @app.route('/send_message', methods=['POST'])
-@limiter.limit("3 per day")
+@limiter.limit("10 per day")
 @auth.login_required
 def send_message():
     app.logger.info('Received request send_message()')
