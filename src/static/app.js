@@ -250,7 +250,8 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
                     if (response.status === 403) {
                         return response.json().then(data => {
                             console.log('403 response data:', data);
-                            throw new Error('Premium subscription required');
+                            openModal("Download as PDF is a premium feature");
+                            //throw new Error('Premium subscription required');
                         });
                     } else if (!response.ok) {
                         return response.text().then(text => {
