@@ -167,7 +167,7 @@ def check_auth():
 @app.route("/create-checkout-session")
 def create_checkout_session():
     #for deployment use this (maybe ?): 
-    domain_url = os.environ.get('DOMAIN_URL', 'https://your-app-name.herokuapp.com/')
+    domain_url = os.environ.get('DOMAIN_URL', 'https://estatesnipers-1a1823af05ea.herokuapp.com/')
     stripe.api_key = stripe_keys["secret_key"]
 
     try:

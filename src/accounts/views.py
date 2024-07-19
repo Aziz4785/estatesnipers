@@ -6,7 +6,7 @@ from src.accounts.models import User
 from .forms import LoginForm, RegisterForm
 
 accounts_bp = Blueprint("accounts", __name__)
-MAX_LOGIN_ATTEMPTS = 3
+MAX_LOGIN_ATTEMPTS = 5
 
 @accounts_bp.route("/register", methods=["GET", "POST"])
 def register():

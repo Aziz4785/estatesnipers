@@ -905,12 +905,26 @@ document.addEventListener('DOMContentLoaded', function() {
     var span = document.getElementsByClassName("close")[0];
     var messageDiv = document.getElementById("messageInfo");
 
+    const togglePassword = document.querySelectorAll('.toggle-password');
+    
+    togglePassword.forEach(button => {
+        button.addEventListener('click', function() {
+            const input = this.closest('.input-group').querySelector('input');
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            
+            // Toggle eye icon
+            this.querySelector('i').classList.toggle('fa-eye');
+            this.querySelector('i').classList.toggle('fa-eye-slash');
+        });
+    });
+    
     if (btn) {
         btn.onclick = function() {
             openLoginModal('Login', 'login');
         }
     }
-
+    
     document.addEventListener('click', function(event) {
         if (event.target && event.target.id == 'showRegisterForm') {
             event.preventDefault();
