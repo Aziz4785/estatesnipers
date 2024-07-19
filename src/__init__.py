@@ -205,6 +205,7 @@ def cancelled():
 
 
 @app.route("/webhook", methods=["POST"])
+@csrf.exempt
 def stripe_webhook():
     """
     There are two types of events in Stripe and programming in general. Synchronous events, 
