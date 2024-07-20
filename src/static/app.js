@@ -728,6 +728,29 @@ function onEachFeature(feature, layer) {
                         landsCard.querySelector('.value').textContent = landsValue;
                         landsCard.classList.remove('locked-card');  // Remove locked-card class
 
+                        const landbutton = document.getElementById('land-chart-button');
+                        landbutton.addEventListener('click', function() {
+                                fetch(`/get-lands-stats?area_id=${currentAreaId}`)
+                                    .then(response => {
+                                        if (response.status === 204) {
+                                            // No content for non-premium users, do nothing
+                                            return null;
+                                        }
+                                        if (!response.ok) {
+                                            throw new Error('Network response was not ok');
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(data => {
+                                        if (data) {
+                                            renderLandStatsChart(data);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.log('Error fetching land stats:', error);
+                                    });
+                            });
+
                         const wrapper = landsCard.closest('.info-card-wrapper');
                         // Remove the lock icon
                         if(wrapper){
@@ -750,7 +773,21 @@ function onEachFeature(feature, layer) {
                 {
                     const title = variableNames[array_index];
                     let value = variableValues[array_index];
-                    card.querySelector('.title').textContent = title;
+                    if(card.id=='card8')
+                    {
+                        const tooltipText = "Fraction of long-term rented units in the area";
+                        card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+                    }
+                    else if(card.id=='card7')
+                    {
+                        const tooltipText = "Fraction of sold units in the area"
+                        card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+                    }
+                    else
+                    {
+                        card.querySelector('.title').textContent = title;
+                    }
+                    
                     if(variableunits[array_index]=="%")
                     {
                         card.querySelector('.value').textContent= `${(value * 100).toFixed(2)} %`;
@@ -811,22 +848,7 @@ function onEachFeature(feature, layer) {
             var detailsButton = document.querySelector(".tablinks.active");
             detailsButton.dispatchEvent(evt);
             const statsButtons = statsContainer.querySelectorAll('.stats-button');
-            const landbutton = document.getElementById('land-chart-button');
-            landbutton.addEventListener('click', function() {
-                    fetch(`/get-lands-stats?area_id=${currentAreaId}`)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Network response was not ok');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            renderLandStatsChart(data); 
-                        })
-                        .catch(error => {
-                            console.log('Error fetching land stats:', error);
-                        });
-                });
+            
 
         }
     });

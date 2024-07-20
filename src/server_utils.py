@@ -7,8 +7,10 @@ from scipy.interpolate import interp1d
 from datetime import datetime
 from scipy.interpolate import PchipInterpolator
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import smtplib
-
+from flask_mailman import EmailMessage
+from flask import render_template_string,url_for
 # Function to safely convert string to float or None
 def safe_float(x):
     try:
@@ -267,19 +269,57 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
 def round_and_percentage(number,decimals=2):
     return round(number * 100, decimals)if number is not None else "N/A"
 
-def send_email(message):
-    sender_email = "estatesniperhosting@gmail.com"
-    receiver_email = "contact@estatesnipers.com"
-    password = "cxhj zutf hzrp hfcz"
 
-    msg = MIMEText(message)
-    msg['Subject'] = "New Contact Message"
-    msg['From'] = sender_email
-    msg['To'] = receiver_email
+reset_password_email_html_content = """
+<p>Hello,</p>
+<p>You are receiving this email because you requested a password reset for your account.</p>
+<p>
+    To reset your password
+    <a href="{{ reset_password_url }}">click here</a>.
+</p>
+<p>
+    Alternatively, you can paste the following link in your browser's address bar: <br>
+    {{ reset_password_url }}
+</p>
+<p>If you have not requested a password reset please contact us at contact@estatesnipers.com</p>
+<p>
+    Thank you!
+</p>
+"""
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, msg.as_string())
+
+
+def send_email(message,mail_server='smtp.gmail.com',sender ="estatesniperhosting@gmail.com",receiver ="contact@estatesnipers.com",password="cxhj zutf hzrp hfcz",subject="New Contact Message",port=465,message_type='plain'):
+    msg = MIMEMultipart()
+    msg.set_unixfrom('author')
+    msg['From'] = sender
+    msg['To'] = receiver
+    msg['Subject'] = subject
+    
+    #msg.attach(MIMEText(message, 'plain'))
+    msg.attach(MIMEText(message, message_type))
+    try:
+        # Set up the SMTP server and login
+        mailserver = smtplib.SMTP_SSL(mail_server, port)
+        mailserver.ehlo()
+        mailserver.login(sender, password)
+        
+        # Send the email
+        mailserver.sendmail(sender, receiver, msg.as_string())
+        
+        # Quit the SMTP server
+        mailserver.quit()
+        
+        print("Email sent successfully")
+        
+    except smtplib.SMTPAuthenticationError:
+        print("SMTP Authentication Error: Unable to log in. Check the email and password.")
+    except smtplib.SMTPConnectError:
+        print("SMTP Connection Error: Unable to connect to the SMTP server.")
+    except smtplib.SMTPServerDisconnected:
+        print("SMTP Server Disconnected: The server unexpectedly disconnected.")
+    except smtplib.SMTPException as e:
+        print(f"SMTP error occurred: {e}")
     #s = smtplib.SMTP('localhost')
     #s.sendmail(sender_email, [receiver_email], msg.as_string())
 

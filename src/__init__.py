@@ -4,9 +4,8 @@ import json
 import traceback
 from flask import session,current_app
 import os
-from wtforms import TextAreaField, SubmitField
-from wtforms.validators import DataRequired
-from collections import defaultdict
+from smtplib import SMTPException, SMTPServerDisconnected, SMTPAuthenticationError
+
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from marshmallow import Schema, fields, ValidationError, validates, validates_schema
@@ -20,7 +19,6 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from sqlalchemy import create_engine,text
 from flask_login import LoginManager
 from flask_wtf import FlaskForm, CSRFProtect
-from wtforms import StringField, SubmitField
 from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
 import psycopg2
@@ -35,6 +33,8 @@ from flask_login import login_required,current_user
 from reportlab.pdfgen import canvas
 import io
 from io import BytesIO
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from flask_wtf.csrf import CSRFProtect
 import matplotlib.backends.backend_agg as agg
@@ -43,9 +43,10 @@ from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 import stripe
+from flask_mailman import Mail
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -56,6 +57,17 @@ app.config.from_object(config("APP_SETTINGS"))
 csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
+
+# Configuration for Flask-Mailman
+app.config['MAIL_SERVER'] = 'smtpout.secureserver.net'
+app.config['MAIL_PORT'] = 80#465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USERNAME'] = 'no_reply@estatesnipers.com'
+app.config['MAIL_PASSWORD'] = 'Snipers2024!'
+app.config['MAIL_DEFAULT_SENDER'] = 'no_reply@estatesnipers.com'
+
+mail = Mail(app)
 
 
 app.config.update(
@@ -78,7 +90,7 @@ limiter = Limiter(get_remote_address, app=app)#, default_limits=["3 per day"])
 # Registering blueprints
 from src.accounts.views import accounts_bp
 from src.core.views import core_bp
-from src.accounts.forms import LoginForm ,RegisterForm
+from src.accounts.forms import LoginForm ,RegisterForm,ResetPasswordRequestForm,ResetPasswordForm
 app.register_blueprint(accounts_bp)
 app.register_blueprint(core_bp)
 
@@ -151,7 +163,8 @@ def index():
     register_form = RegisterForm()
     
     is_premium_user = check_premium_user()
-    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=False,message='',form_to_show="login",is_premium_user=is_premium_user)
+    show_modal = request.args.get('show_modal', 'False') == 'True'
+    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user)
 
 @app.route("/config")
 def get_publishable_key():
@@ -305,6 +318,84 @@ class MessageSchema(Schema):
     message = fields.Str(required=True, validate=Length(min=1, max=2000))  
 
 
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_password_request():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    form = ResetPasswordRequestForm()
+    if form.validate_on_submit():
+
+        user = User.query.filter_by(email=form.email.data).first()
+
+        if user:
+            send_reset_password_email(user)
+        flash(
+            "Instructions to reset your password were sent to your email address,"
+            " if it exists in our system."
+        )
+        return redirect(url_for("reset_password_request"))
+
+    return render_template(
+        "reset_password_request.html", title="Reset Password", form=form
+    )
+
+
+def send_reset_password_email(user):
+    reset_password_url = url_for(
+        "reset_password",
+        token=user.generate_reset_password_token(),
+        user_id=user.id,
+        _external=True,
+    )
+
+    email_body = render_template_string(
+        reset_password_email_html_content, reset_password_url=reset_password_url
+    )
+    send_email(email_body, receiver =user.email,subject="Reset your password",message_type='html')
+    
+    #send_email(email_body,mail_server =app.config['MAIL_SERVER'],sender=app.config['MAIL_DEFAULT_SENDER'], receiver =user.email,password=app.config['MAIL_PASSWORD'],subject="Reset your password",port=app.config['MAIL_PORT'])
+    # message = EmailMessage(
+    #     subject="Reset your password",
+    #     body=email_body,
+    #     from_email=app.config['MAIL_DEFAULT_SENDER'],
+    #     to=[user.email],
+    # )
+    # message.content_subtype = "html"
+
+    # #try:
+    # mail.send(message)
+    # except SMTPServerDisconnected:
+    #     print("The server unexpectedly disconnected")
+    # except SMTPAuthenticationError:
+    #     print("Authentication failed. Check your username and password")
+    # except SMTPException as e:
+    #     print(f"An error occurred: {str(e)}")
+
+@app.route("/reset_password/<token>/<int:user_id>", methods=["GET", "POST"])
+def reset_password(token, user_id):
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+
+    user = User.validate_reset_password_token(token, user_id)
+    if not user:
+        return render_template(
+            "reset_password_error.html", title="Reset Password error"
+        )
+
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+
+        return render_template(
+            "reset_password_success.html", title="Reset Password success"
+        )
+
+    return render_template(
+        "reset_password.html", title="Reset Password", form=form
+    )
+
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("10 per day")
 @auth.login_required
@@ -391,7 +482,6 @@ def get_area_details():
 
         engine = create_engine(connection_url)
         
-        
         sql_query = text("""
         SELECT 
             pst.property_sub_type_en, 
@@ -448,7 +538,6 @@ def get_area_details():
 
         nested_dicts = {}
         groupings = create_groupings(hierarchy_keys)
-        
         for group_index,group in enumerate(groupings):
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
@@ -484,7 +573,7 @@ def get_area_details():
 
             final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
 
-            if 'grouped_project' in df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
+            if 'grouped_project' in final_df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
                 final_df = final_df.dropna(subset=['grouped_project'])
 
             update_nested_dict(final_df, nested_dicts, group)
@@ -621,7 +710,7 @@ def execute_project_demand_query(area_id):
     query = """
        SELECT 
     MAX(p.project_name_en) AS project_name_en,
-    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / p.no_of_units AS internaldemand2023,
+    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / (p.no_of_units+p.no_of_villas) AS internaldemand2023,
     (SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) AS externaldemand2023,
     (SUM(CASE WHEN t.instance_year = 2022 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022))  AS externalDemand2022,
     (SUM(CASE WHEN t.instance_year = 2021 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021))  AS externalDemand2021,
@@ -636,7 +725,7 @@ WHERE
     t.area_id = %s
     AND p.no_of_units > 80
 GROUP BY 
-    t.project_number, p.no_of_units, p.project_name_en;
+    t.project_number, p.no_of_units, no_of_villas,p.project_name_en;
     """
     try:
         cursor.execute(query, (area_id,))
@@ -678,14 +767,51 @@ def execute_land_query(area_id):
     fetched_rows = cursor.fetchall()
     return fetched_rows
 
+def execute_projectInfo_query(proejct_name):
+    connection = get_db_connection()
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+
+    query = """
+    SELECT project_description_en,no_of_units,project_status,no_of_buildings,no_of_villas
+    FROM projects
+    WHERE project_name_en = %s;
+    """
+    cursor.execute(query, (proejct_name,))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    return fetched_rows
+
+def execute_unitsbyRooms_query(proejct_name):
+    connection = get_db_connection()
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+
+    query = """
+    SELECT rooms_en, COUNT(*) AS count
+    FROM units
+    WHERE project_name_en = %s
+    GROUP BY rooms_en;
+    """
+    cursor.execute(query, (proejct_name,))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    return fetched_rows
+
 @app.route('/get-lands-stats')
 @auth.login_required
 def get_lands_stats():
-    area_id = request.args.get('area_id')
-    fetched_rows = execute_land_query(area_id)
-    fetched_rows_json = jsonify(fetched_rows)
-    return fetched_rows_json
-
+    is_premium_user = check_premium_user()
+    if is_premium_user:
+        area_id = request.args.get('area_id')
+        fetched_rows = execute_land_query(area_id)
+        fetched_rows_json = jsonify(fetched_rows)
+        return fetched_rows_json
+    else:
+        return '', 204  # No Content response for non-premium users
+    
 @app.route('/save-list-order', methods=['POST'])
 @auth.login_required
 def save_list_order():
@@ -694,7 +820,6 @@ def save_list_order():
     data = request.json
     list_order_in_memory = data.get('listOrder', [])
     session['hierarchy_keys'] = map_text_to_field(list_order_in_memory)
-
     return jsonify({'message': 'List order saved successfully!'})
 
 
@@ -924,9 +1049,9 @@ def dubai_areas():
     except Exception as e:
         return jsonify({'error': 'An error occurred', 'message': str(e)}), 500
     
-def create_land_type_pie_chart(data):
+def create_land_type_pie_chart(data,data_key = 'land_type_en',title = 'Land Type Distribution',legend_title='Land Types'):
     # Extract land types and counts
-    land_types = [row['land_type_en'] if row['land_type_en'] else 'Unknown' for row in data]
+    land_types = [row[data_key] if row[data_key] else 'Unknown' for row in data]
     counts = [row['count'] for row in data]
     
     # Calculate percentages
@@ -939,7 +1064,7 @@ def create_land_type_pie_chart(data):
     wedges, _, _ = ax.pie(counts, startangle=90, autopct='')
     
     ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
-    ax.set_title('Land Type Distribution')
+    ax.set_title(title)
     
     # Create legend labels with percentages and counts
     legend_labels = [f'{land_type} - {percentage:.1f}% ({count})' 
@@ -947,7 +1072,7 @@ def create_land_type_pie_chart(data):
     
     # Add a legend
     ax.legend(wedges, legend_labels,
-              title="Land Types",
+              title=legend_title,
               loc="center left",
               bbox_to_anchor=(1, 0, 0.5, 1))
     
@@ -962,41 +1087,6 @@ def create_land_type_pie_chart(data):
     
     return img_buffer
 
-def create_land_type_donut_chart(data):
-    # Extract land types and counts
-    land_types = [row['land_type_en'] if row['land_type_en'] else 'Unknown' for row in data]
-    counts = [row['count'] for row in data]
-
-    # Create the donut chart
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Colors for the chart
-    colors = plt.cm.Set3(np.linspace(0, 1, len(land_types)))
-    
-    # Create donut chart
-    wedges, texts, autotexts = ax.pie(counts, autopct='%1.1f%%', pctdistance=0.85,
-                                      wedgeprops=dict(width=0.5), startangle=-40, colors=colors)
-    
-    # Equal aspect ratio ensures that pie is drawn as a circle
-    ax.axis('equal')
-    
-    # Set title
-    plt.title('Land Type Distribution', fontsize=16, pad=20)
-
-    # Add legend
-    legend_labels = [f'{lt} ({count})' for lt, count in zip(land_types, counts)]
-    ax.legend(wedges, legend_labels, title="Land Types", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
-
-    # Adjust layout
-    plt.tight_layout()
-
-    # Save the chart to a buffer
-    img_buffer = io.BytesIO()
-    FigureCanvas(fig).print_png(img_buffer)
-    img_buffer.seek(0)
-    plt.close(fig)  # Close the figure to free up memory
-
-    return img_buffer
 
 def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sale Price 2013-2023',y_axis='Average Meter Price',contain_pred=True):
     years = list(range(start_year, start_year + len(avg_meter_price)))
@@ -1022,6 +1112,29 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
 
     plt.close(fig)  # Close the figure to free up memory
 
+    return img_buffer
+
+def create_rooms_count_doughnut_chart(rooms_count_pairs):
+    # Extract room types and counts from the query results
+    room_types = [row['rooms_en'] for row in rooms_count_pairs]
+    counts = [row['count'] for row in rooms_count_pairs]
+    
+    fig, ax = plt.subplots()
+    
+    # Create a pie chart with a hole in the middle
+    wedges, texts, autotexts = ax.pie(counts, labels=room_types, autopct=lambda pct: "{:.0f}".format(pct * sum(counts) / 100), startangle=90, wedgeprops=dict(width=0.3))
+    
+    # Beautify the plot
+    plt.setp(autotexts, size=8, weight="bold")
+    ax.set_title('Room Count Distribution')
+    
+    # Save the plot to a buffer
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+    
+    plt.close(fig)  # Close the figure to free up memory
+    
     return img_buffer
 
 def create_histogram(data):
@@ -1126,7 +1239,10 @@ def generate_pdf():
         avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
         project_demand_data = execute_project_demand_query(area_data['area_id'])
         firstkeys = list(data.keys())
-        dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+        if hierarchy_keys[0]=="grouped_project":
+            dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+            rooms_count_pairs = execute_unitsbyRooms_query(section)
+            project_data = execute_projectInfo_query(section)
 
         # Loop through the project_demand_data to find the matching project
         project_internaldemand2023 = project_externaldemand2023 = None
@@ -1147,20 +1263,37 @@ def generate_pdf():
 
     helper = PDFHelper(p, 720, 750, 100)
 
+    if hierarchy_keys[0]!="grouped_project":
+        section+= f" ({area_data['name']})"
     helper.draw_Main_title(section,font_size=30)
+
     # Print means data
     # Data for the table
     general_means=[]
     footnotes=[]
     if hierarchy_keys[0]=="grouped_project":
+        helper.draw_paragraph(project_data[0]['project_description_en'], font_size=10, font_name='Times-Roman')
         general_means = [
-            ["Description", "Value"],
+        ["Description", "Value"],
+        ["Project status: ",str(project_data[0]['project_status'])]]
+
+        if project_data[0]['no_of_buildings'] != 0:
+            general_means.append(["Nbr of Buildings: ", str(project_data[0]['no_of_buildings'])])
+
+        if project_data[0]['no_of_villas'] != 0:
+            general_means.append(["Nbr of Villas: ", str(project_data[0]['no_of_villas'])])
+            
+        if project_data[0]['no_of_units'] != 0:
+            general_means.append(["Nbr of Units: ", str(project_data[0]['no_of_units'])])
+
+        general_means.extend([
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
             ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
             ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
-        ]
+        ])
+
         footnotes = [
         "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
         "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
@@ -1172,6 +1305,8 @@ def generate_pdf():
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"]
         ]
+    
+    helper.y+=10
     # Draw the table
     helper.draw_table(general_means)
     
@@ -1181,7 +1316,7 @@ def generate_pdf():
     
     img_buffer = create_price_chart(avg_meter_price)
     # Insert the image into the PDF from the BytesIO object
-    helper.y=350
+    helper.y=290
     p.drawImage(ImageReader(img_buffer), 35, helper.y, width=270, height=200)
     # Update y position after the image
     #helper.y -= 160
@@ -1189,13 +1324,22 @@ def generate_pdf():
         img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
         p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
 
-    img_buffer_scatter = create_scatterplot(dateprice_paires)
-    helper.y-=220
-    p.drawImage(ImageReader(img_buffer_scatter), 35, helper.y, width=270, height=200)
+        helper.y-=220
 
-    img_buffer_historgram = create_histogram(dateprice_paires)
-    p.drawImage(ImageReader(img_buffer_historgram), 332, helper.y, width=270, height=200)
+        img_buffer_scatter = create_scatterplot(dateprice_paires)
+        
+        p.drawImage(ImageReader(img_buffer_scatter), 32,  helper.y, width=270, height=200)
 
+        img_buffer_historgram = create_histogram(dateprice_paires)
+        p.drawImage(ImageReader(img_buffer_historgram), 329,  helper.y, width=270, height=200)
+
+        helper.new_page()
+
+        #units_repartition = create_rooms_count_doughnut_chart(rooms_count_pairs)
+        units_repartition = create_land_type_pie_chart(rooms_count_pairs,data_key = 'rooms_en',title = 'Unit Type Distribution',legend_title='Types')
+        p.drawImage(ImageReader(units_repartition), 50,  helper.y-300, width=500, height=300)
+
+        
     for k in firstkeys:
         if k !="means":
             parent_name = section

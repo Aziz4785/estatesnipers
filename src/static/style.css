@@ -185,6 +185,11 @@
 .form-group {
   margin-bottom: 15px;
 }
+.forgot-password-link {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9em;
+}
 .form-group label {
   display: block;
   margin-bottom: 5px;
@@ -253,10 +258,10 @@
 }
 
 .info-card {
-  display: flex; /* Use flexbox layout */
-  flex-direction: column; /* Stack children vertically */
-  justify-content: center; /* Center children vertically */
-  align-items: center; /* Center children horizontally */
+  display: flex;
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
   flex: 0 0 auto;
   background: #f9f9f9;
   padding: 20px;
@@ -267,7 +272,7 @@
   transition: all 0.3s ease;
   position: relative;
   text-align: center; /* Ensures text within children is centered, though flexbox alignment takes precedence for positioning */
-  z-index: 0;
+  /*z-index: 0;*/
 }
 
 .info-card .title, .info-card.supply-projects .title {
@@ -327,6 +332,9 @@
 .info-card .stats-button i {
   color: #68696b; /* Color of the icon */
   font-size: 24px; /* Size of the icon */
+}
+.lastcard {
+  margin-right: 30px; /* Adjust the value as needed */
 }
 /*.info-card-wrapper{
   position: relative;
@@ -779,51 +787,42 @@ tbody td {
   100% { transform: rotate(1turn) }
 }
 
-.info-icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    background-color: #e0e0e0;
-    color: #333;
-    border-radius: 50%;
-    text-align: center;
-    line-height: 16px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-left: 5px;
-    position: relative;
-}
-
-.info-icon::after {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: white;
-    color: #333;
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 14px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    z-index: 9999;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    width: 300px;
-    max-width: 300px;
-    word-wrap: break-word;
-    white-space: normal;
-    height: auto;
-    min-height: 20px;
-    max-height: none;
-}
-
-.info-icon:hover::after {
-  opacity: 1;
-  visibility: visible;
-  content: attr(data-tooltip);
-}
+/*TOOLTIP*/
+.info-icon {     
+  display: inline-block;     
+  width: 16px;     height: 16px;     background-color: #e0e0e0;     
+  color: #333;     
+  border-radius: 50%;     
+  text-align: center;     
+  line-height: 16px;     
+  font-size: 12px;     
+  font-weight: bold;     
+  cursor: pointer;     margin-left: 5px;     position: relative; 
+}  
+.info-icon::after {     
+  position: absolute;     
+  top: 100%;     
+  left: 50%;     
+  transform: translateX(-70%);     
+  background-color: white;     
+  color: #333;     
+  padding: 10px;     
+  border-radius: 4px;     
+  font-size: 14px;     
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);     
+  z-index: 9999;     
+  opacity: 0;     
+  visibility: hidden;     transition: opacity 0.3s, visibility 0.3s;     
+  width: 300px;     max-width: 200px;     word-wrap: break-word;     
+  white-space: normal;     
+  height: auto;     
+  min-height: 20px;     
+  max-height: none; 
+}  
+.info-icon:hover::after {   
+  opacity: 1;   
+  visibility: visible;   
+  content: attr(data-tooltip); }
 
 /*CONTACT US*/
 #contactUsButton {

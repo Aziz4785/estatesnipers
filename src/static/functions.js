@@ -98,7 +98,7 @@ function showPremiumMessage() {
     setTimeout(() => {
         premiumMessage.style.display = 'none';
     }, 3000);  // Show the message for 3 seconds*/
-    openModal('Unlock all features today for $19.99');
+    openModal('Access all content today for $19.99');
 }
 
 function createInfoCard(title, value) {

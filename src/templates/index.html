@@ -41,7 +41,15 @@
         </div>
         <div class="form-group">
             {{ login_form.password.label }}
-            {{ login_form.password(class="form-control") }}
+            <div class="input-group">
+              {{ login_form.password(class="form-control") }}
+              <div class="input-group-append">
+                  <button class="btn btn-outline-secondary toggle-password" type="button">
+                      <i class="fa fa-eye"></i>
+                  </button>
+              </div>
+            </div>
+            <a href="{{ url_for('reset_password_request') }}" class="forgot-password-link">Forgot Password?</a>
         </div>
         <button type="submit" class="form-btn">Login</button>
     </form>
@@ -240,8 +248,9 @@
                   </div>
                   </div>
                   <div class="info-card-wrapper">
-                    <div class="info-card locked-card" id="card8">
-                      <div class="title">Locked</div>
+                    <div class="info-card locked-card lastcard" id="card8">
+                      <div class="title">Locked
+                      </div>
                       <div class="value">99</div>
                     </div>
                     <div class="lock-icon-card">

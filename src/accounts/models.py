@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_login import UserMixin
-from src import bcrypt, db
-
+from src import bcrypt, db,app
+from itsdangerous import URLSafeTimedSerializer,BadSignature,SignatureExpired
 
 class User(UserMixin, db.Model):
 
@@ -19,9 +19,38 @@ class User(UserMixin, db.Model):
         self.created_on = datetime.now()
         self.is_admin = is_admin
 
+    def set_password(self, password):
+        self.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        
     def __repr__(self):
         return f"<email {self.email}>"
     
+    def generate_reset_password_token(self):
+        serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+        return serializer.dumps(self.email, salt=self.password)
+
+    @staticmethod
+    def validate_reset_password_token(token: str, user_id: int):
+        user = db.session.get(User, user_id)
+
+        if user is None:
+            return None
+
+        serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
+        try:
+            token_user_email = serializer.loads(
+                token,
+                max_age=3600, #1 hour before expiration
+                salt=user.password,
+            )
+        except (BadSignature, SignatureExpired):
+            return None
+
+        if token_user_email != user.email:
+            return None
+
+        return user
+
 
 class StripeCustomer(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

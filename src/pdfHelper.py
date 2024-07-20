@@ -13,6 +13,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import cm
 import io
 from .server_utils import * 
+from reportlab.lib.enums import TA_CENTER
 from io import BytesIO
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
@@ -83,6 +84,36 @@ class PDFHelper:
         # Update the y position
         self.y -= used_height + 20
 
+    def draw_paragraph(self, text, font_size=12, font_name='Helvetica',alignment=TA_CENTER):
+        # Create a custom style for the paragraph
+        paragraph_style = ParagraphStyle(
+            'CustomParagraph',
+            parent=self.styles['Normal'],
+            fontSize=font_size,
+            fontName=font_name,
+            alignment=alignment
+        )
+
+        # Create a Paragraph object with the text
+        paragraph = Paragraph(text, paragraph_style)
+
+        # Calculate available width (assuming 50 units margin on both sides)
+        available_width = self.p._pagesize[0] - 100
+
+        # Split the paragraph to fit the available width
+        _, used_height = paragraph.wrap(available_width, self.page_height)
+
+        # Check if there's enough space on the current page
+        if self.y - used_height < self.min_y:
+            self.p.showPage()  # Start a new page
+            self.y = self.page_height - 50  # Reset y position for the new page
+
+        # Draw the paragraph
+        paragraph.drawOn(self.p, 50, self.y - used_height)
+
+        # Update the y position
+        self.y -= used_height -5
+
     def draw_contact_info(self):
         contact_info = "Reach out to our team for any inquiries: contact@estatesnipers.com"
         #additional_text = "We are here to assist you with any questions or concerns you may have. Your satisfaction is our priority."
@@ -100,7 +131,8 @@ class PDFHelper:
             self.p.showPage()
             self.y = self.page_height
             self.new_page_setup()
-        self.y = self.min_y - 40  # Set the position for footnotes
+        self.y = self.min_y - 55  # Set the position for footnotes
+        self.p.setFont("Helvetica", 8)
         for footnote in footnotes:
             self.p.drawString(50, self.y, footnote)
             self.y -= 20
