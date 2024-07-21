@@ -237,10 +237,8 @@ document.addEventListener('click', function(event) {
 });
 
 function generatePDF(name) {
-    console.log("generatePDF is called with name = ",name)
     const currentData = getCurrentJsonData();
     const currentAreaData = getCurrentAreaData();
-    console.log("current data: ",currentData)
     fetch('/generate-pdf', {
         method: 'POST',
         headers: {
