@@ -190,6 +190,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
         
     row.setAttribute('data-row-id', rowId);
     row.setAttribute('data-level', level);
+    row.setAttribute('data-name', name || "-");
 
     if (parentRowId) {
         //if parent row hide all children
@@ -203,7 +204,8 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
 
     // Add PDF icon if the row is a root row (i.e., it has no parent)
     if (!parentRowId && fake_line==false ) {
-        contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
+        //contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
+        contentCellHtml += `<button class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></button>`;
     }
     if (fake_line) {
         row.classList.add('blurry-row');
@@ -219,72 +221,65 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     }
     //contentCell.classList.add('content-cell'); // Add a class for additional styling if needed
     // Creating placeholders for the other values
-    row.insertCell(); // Capital Appreciation 2018
-    row.insertCell(); // Capital Appreciation 2013
-    row.insertCell(); // ROI
-    row.insertCell(); //avg transaction value
-    row.insertCell();// Placeholder for avg_meter_price_2013_2023
+    ['Capital Appreciation 2018', 'Capital Appreciation 2013', 'ROI', 'avg transaction value', 'avg_meter_price_2013_2023'].forEach(() => row.insertCell());
 
-     // Add event listener for PDF icon if it's a root row
-     if (!parentRowId) {
-        const pdfIcon = contentCell.querySelector('.pdf-icon');
-        if (pdfIcon) {
-            pdfIcon.addEventListener('click', function(event) {
-                event.preventDefault();
-                // Get the current JSON data
-                const currentData = getCurrentJsonData(); 
-                const currentAreaData = getCurrentAreaData(); 
-                fetch('/generate-pdf', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        section: name || "-",
-                        data: currentData[name || "-"],
-                        area_data: currentAreaData
-                    })
-                })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    if (response.status === 403) {
-                        return response.json().then(data => {
-                            console.log('403 response data:', data);
-                            openModal("Download as PDF is a premium feature");
-                            //throw new Error('Premium subscription required');
-                        });
-                    } else if (!response.ok) {
-                        return response.text().then(text => {
-                            console.log('Error response:', text);
-                            throw new Error('Server error');
-                        });
-                    }
-                    return response.blob();
-                })
-                .then(blob => {
-                    if (!blob) {
-                        throw new Error('No blob received from server');
-                    }
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = `${name || "-"}_report.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    // if (error !== 'Premium subscription required') {
-                    //     alert("An error occurred.");
-                    // }
-                });
-            });
-        }
-    }
     return rowId;
 }
+// Event delegation for PDF icon clicks
+document.addEventListener('click', function(event) {
+    const pdfIcon = event.target.closest('.pdf-icon');
+    if (pdfIcon) {
+        event.preventDefault();
+        const row = pdfIcon.closest('tr');
+        const name = row.getAttribute('data-name');
+        generatePDF(name);
+    }
+});
+
+function generatePDF(name) {
+    console.log("generatePDF is called with name = ",name)
+    const currentData = getCurrentJsonData();
+    const currentAreaData = getCurrentAreaData();
+    console.log("current data: ",currentData)
+    fetch('/generate-pdf', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            section: name,
+            data: currentData[name],
+            area_data: currentAreaData
+        })
+    })
+    .then(response => {
+        if (response.status === 403) {
+            openModal("Download as PDF is a premium feature");
+            throw new Error('Premium subscription required');
+        }
+        if (!response.ok) {
+            throw new Error('Server error');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${name || "-"}_report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (error.message !== 'Premium subscription required') {
+            alert("An error occurred while generating the PDF. Please try again later.");
+        }
+    });
+}
+
 function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
@@ -995,7 +990,6 @@ $(function() {
       });
 
     function displayResults(results) {
-        console.log("results : ",results)
     searchResults.empty();
     
     if (results.length === 0) {

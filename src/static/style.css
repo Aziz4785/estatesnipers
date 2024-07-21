@@ -953,7 +953,11 @@ tbody td {
   vertical-align: middle;
 }
 .pdf-icon {
+  background: none;
+  border: none;
+  padding: 0;
   position: absolute;
+  cursor: pointer;
   right: 5px; /* Adjust as needed */
   top: 50%;
   transform: translateY(-50%);
@@ -1084,4 +1088,23 @@ tbody td {
   font-size: 0.9em;
   color: #7f8c8d;
   margin-top: 2px;
+}
+
+/*REVEAL PASSWORD*/
+.input-group {
+  display: flex;
+  align-items: center;
+}
+
+.input-group-append {
+  display: flex;
+}
+
+.toggle-password {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

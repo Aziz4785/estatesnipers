@@ -46,7 +46,7 @@ import stripe
 from flask_mailman import Mail
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -257,6 +257,7 @@ def stripe_webhook():
 
 @app.route("/cancel-subscription", methods=["POST"])
 @login_required
+@csrf.exempt
 def cancel_subscription():
     customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
     
@@ -426,6 +427,7 @@ def send_message():
 
 @app.route("/manage-subscription")
 @login_required
+@csrf.exempt
 def manage_subscription():
     customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
     
@@ -773,7 +775,7 @@ def execute_projectInfo_query(proejct_name):
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
 
     query = """
-    SELECT project_description_en,no_of_units,project_status,no_of_buildings,no_of_villas
+    SELECT project_description_en,no_of_units,project_status,no_of_buildings,no_of_villas,percent_completed,completion_date
     FROM projects
     WHERE project_name_en = %s;
     """
@@ -1286,6 +1288,12 @@ def generate_pdf():
         if project_data[0]['no_of_units'] != 0:
             general_means.append(["Nbr of Units: ", str(project_data[0]['no_of_units'])])
 
+        if project_data[0]['percent_completed'] >0:
+            general_means.append(["Percent Completed: ", str(project_data[0]['percent_completed'])+" %"])
+
+        if project_data[0]['completion_date'] is not None:
+            general_means.append(["Completion Date: ", str(project_data[0]['completion_date'])])
+
         general_means.extend([
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
@@ -1316,15 +1324,20 @@ def generate_pdf():
     
     img_buffer = create_price_chart(avg_meter_price)
     # Insert the image into the PDF from the BytesIO object
-    helper.y=290
+    helper.y=240
+
+    if hierarchy_keys[0]=="grouped_project":
+        helper.y=220
+
     p.drawImage(ImageReader(img_buffer), 35, helper.y, width=270, height=200)
     # Update y position after the image
     #helper.y -= 160
     if hierarchy_keys[0]=="grouped_project":
         img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
         p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
-
-        helper.y-=220
+        
+        helper.new_page()
+        helper.y-=250
 
         img_buffer_scatter = create_scatterplot(dateprice_paires)
         
@@ -1333,11 +1346,11 @@ def generate_pdf():
         img_buffer_historgram = create_histogram(dateprice_paires)
         p.drawImage(ImageReader(img_buffer_historgram), 329,  helper.y, width=270, height=200)
 
-        helper.new_page()
+        helper.y-=550
 
         #units_repartition = create_rooms_count_doughnut_chart(rooms_count_pairs)
         units_repartition = create_land_type_pie_chart(rooms_count_pairs,data_key = 'rooms_en',title = 'Unit Type Distribution',legend_title='Types')
-        p.drawImage(ImageReader(units_repartition), 50,  helper.y-300, width=500, height=300)
+        p.drawImage(ImageReader(units_repartition), 50,  helper.y, width=500, height=300)
 
         
     for k in firstkeys:
