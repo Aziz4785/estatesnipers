@@ -251,7 +251,7 @@
     },
     {
         "area_id": "303",
-        "name": "um suqaim first",
+        "name": "Umm Suqaim first",
         "geometry": {
             "type": "Polygon",
             "coordinates": 
@@ -1374,7 +1374,7 @@
 
     {
         "area_id": "414",
-        "name": "Al Barshaa South Second",
+        "name": "Al Barsha South Second",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -4151,7 +4151,7 @@
     },
     {
         "area_id": "441",
-        "name": "jumeirah village circle (jvc)",
+        "name": "jumeirah village circle (JVC)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -4622,7 +4622,7 @@
     },
     {
         "area_id": "335",
-        "name": "nad al shiba first",
+        "name": "Nad Al Sheba First",
         "geometry": {
             "type": "Polygon",
             "coordinates": [

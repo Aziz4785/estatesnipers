@@ -115,7 +115,8 @@ class PDFHelper:
         self.y -= used_height -5
 
     def draw_contact_info(self):
-        contact_info = "Reach out to our team for any inquiries: contact@estatesnipers.com"
+        self.y -= 20
+        contact_info = "Contact us for any inquiries or personalised market research: contact@estatesnipers.com"
         #additional_text = "We are here to assist you with any questions or concerns you may have. Your satisfaction is our priority."
         #footer_text = "Thank you for choosing EstateSnipers!"
         disclaimer = """Estate Snipers provides AI-powered predictive analytics for informational purposes only. We do not offer financial or investment advice, and the information provided should not be construed as such. While we strive to ensure the accuracy and reliability of our predictive analytics, we cannot guarantee their accuracy or completeness. Users should conduct their own research and consult with professional advisors before making any financial or investment decisions. Estate Snipers is not responsible for any losses or damages resulting from the use of our services."""

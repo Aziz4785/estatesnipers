@@ -8,11 +8,23 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
-            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #021224;
         }
 
         .container {
-            max-width: 600px;
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            padding: 10px 40px 40px 40px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
         }
 
         .card {
@@ -36,6 +48,8 @@
         }
 
         .header h2 {
+            color: #333;
+            margin: 10px 0 10px 0;
             font-size: 2rem;
             font-weight: bold;
         }
@@ -55,29 +69,38 @@
 <body>
     <div class="container">
         <div class="header text-center">
-            <h2>Manage Subscription</h2>
+            <h2>Your subscription:</h2>
         </div>
-        {% if subscription and subscription.status == "active" %}
-        <h4 class="text-center">Your subscription:</h4>
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">{{ product.name }}</h5>
-                <p class="card-text">{{ product.description }}</p>
-                <p class="status-text">Status: {{ subscription.status }}</p>
-                <p>Next billing date: {{ subscription.current_period_end | datetime }}</p>
-                <div class="text-center">
-                    <form action="{{ url_for('cancel_subscription') }}" method="POST">
-                        <button type="submit" class="btn btn-danger btn-lg" id="cancelBtn">Cancel Subscription</button>
-                    </form>
+        {% if subscription %}
+            <div class="card">
+                <div class="card-body">
+                    <p class="status-text">Status: 
+                        {% if subscription.status == "active" and cancel_at_period_end %}
+                            Non Premium
+                        {% elif subscription.status == "active" %}
+                            Premium
+                        {% else %}
+                            {{ subscription.status }}
+                        {% endif %}
+                    </p>
+                    {% if subscription.status == "active" and not cancel_at_period_end  %}
+                        <p>Next billing date: {{ subscription.current_period_end | datetime }}</p>
+                        
+                        <div class="text-center">
+                            <form action="{{ url_for('cancel_subscription') }}" method="POST">
+                                <button type="submit" class="btn btn-danger btn-lg" id="cancelBtn">Cancel Subscription</button>
+                            </form>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-        </div>
         {% else %}
-        <p class="text-center no-subscription-text">You don't have an active subscription.</p>
-        <div class="text-center">
-            <button type="submit" class="btn btn-subscribe btn-lg" id="submitBtn">Subscribe</button>
-        </div>
+            <p class="text-center no-subscription-text">You don't have an active subscription.</p>
+            <div class="text-center">
+                <button type="submit" class="btn btn-subscribe btn-lg" id="submitBtn">Subscribe</button>
+            </div>
         {% endif %}
+        <a href="/" class="back-to-login">Back to the Plateform</a>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>

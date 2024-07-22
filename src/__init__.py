@@ -151,8 +151,10 @@ def check_premium_user():
         stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
         if stripe_customer:
             subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-            if subscription and subscription.status == "active":
-                return True
+            if subscription:
+                # Check if the subscription is active or scheduled to cancel at the end of the period
+                if subscription.status == "active" or (subscription.cancel_at_period_end and subscription.status == "canceled"):
+                    return True
     return False
 
 
@@ -164,7 +166,12 @@ def index():
     
     is_premium_user = check_premium_user()
     show_modal = request.args.get('show_modal', 'False') == 'True'
-    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user)
+    last_billing_period = False
+    if current_user.is_authenticated:
+        stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
+        if(stripe_customer):
+            last_billing_period = stripe_customer.cancel_at_period_end
+    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period)
 
 @app.route("/config")
 def get_publishable_key():
@@ -179,8 +186,8 @@ def check_auth():
 
 @app.route("/create-checkout-session")
 def create_checkout_session():
-    #for deployment use this (maybe ?): 
     domain_url = os.environ.get('DOMAIN_URL', 'https://estatesnipers-1a1823af05ea.herokuapp.com/')
+    #domain_url = "http://localhost:5000/"
     stripe.api_key = stripe_keys["secret_key"]
 
     try:
@@ -191,6 +198,8 @@ def create_checkout_session():
             # the user saved in your database
             #
             # example: client_reference_id=user.id,
+            customer_email=current_user.email,  # Pre-fill the email field
+            client_reference_id=current_user.id,  # Associate the session with the user
             success_url=domain_url + "success?session_id={CHECKOUT_SESSION_ID}",
             cancel_url=domain_url + "cancel",
             payment_method_types=["card"],
@@ -252,8 +261,30 @@ def stripe_webhook():
 
         # Fulfill the purchase...
         handle_checkout_session(session)
-
+    elif event["type"] == "customer.subscription.updated":
+        subscription = event["data"]["object"]
+        handle_subscription_updated(subscription)
+    elif event["type"] == "customer.subscription.deleted":
+        subscription = event["data"]["object"]
+        handle_subscription_deleted(subscription)
     return "Success", 200
+
+
+def handle_subscription_deleted(subscription):
+    customer = StripeCustomer.query.filter_by(stripeSubscriptionId=subscription.id).first()
+    if customer:
+        db.session.delete(customer)
+        db.session.commit()
+
+def handle_subscription_updated(subscription):
+    customer = StripeCustomer.query.filter_by(stripeSubscriptionId=subscription.id).first()
+    if customer:
+        customer.cancel_at_period_end = subscription.cancel_at_period_end
+        db.session.commit()
+        if subscription.status == 'canceled':
+            # The subscription has ended, remove it from the database
+            db.session.delete(customer)
+            db.session.commit()
 
 @app.route("/cancel-subscription", methods=["POST"])
 @login_required
@@ -266,14 +297,16 @@ def cancel_subscription():
         return redirect(url_for('manage_subscription'))
     
     try:
-        subscription = stripe.Subscription.retrieve(customer.stripeSubscriptionId)
-        stripe.Subscription.delete(customer.stripeSubscriptionId)
+        updated_subscription = stripe.Subscription.modify(
+            customer.stripeSubscriptionId,
+            cancel_at_period_end=True
+        )
         
-        # Update the database
-        db.session.delete(customer)
-        db.session.commit()
-        
-        flash("Your subscription has been cancelled successfully.", "success")
+        # Update the database to reflect the pending cancellation
+        # customer.cancel_at_period_end = True
+        # db.session.commit()
+
+        #flash("Your subscription will be cancelled at the end of the current billing period.", "success")
     except stripe.error.StripeError as e:
         flash(f"An error occurred while cancelling your subscription: {str(e)}", "error")
     
@@ -286,10 +319,11 @@ def handle_checkout_session(session):
     customer_email = session['customer_details']['email']
     stripe_customer_id = session['customer']
     stripe_subscription_id = session['subscription']
-
+    user_id_from_session = session['client_reference_id']
     # Find the user by email
-    user = User.query.filter_by(email=customer_email).first()
-
+    #user = User.query.filter_by(email=customer_email).first()
+    # Find the user by id
+    user = User.query.filter_by(id=user_id_from_session).first()
     if user:
         # Check if the user already has a StripeCustomer record
         existing_stripe_customer = StripeCustomer.query.filter_by(user_id=user.id).first()
@@ -313,7 +347,6 @@ def handle_checkout_session(session):
         current_app.logger.info(f"Subscription successful for user {user.email}")
     else:
         current_app.logger.warning(f"User with email {customer_email} not found in database")
-
 
 class MessageSchema(Schema):
     message = fields.Str(required=True, validate=Length(min=1, max=2000))  
@@ -437,6 +470,7 @@ def manage_subscription():
         context = {
             "subscription": subscription,
             "product": product,
+            "cancel_at_period_end": subscription.cancel_at_period_end
         }
         return render_template("manage_subscription.html", **context)
     
@@ -580,16 +614,7 @@ def get_area_details():
 
             update_nested_dict(final_df, nested_dicts, group)
 
-        is_premium_user = False 
-        if current_user.is_authenticated:
-            #Query the StripeCustomer table to check subscription status
-            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-            if stripe_customer:
-                # Fetch the subscription details from Stripe
-                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-                if subscription and subscription.status == "active":
-                    is_premium_user = True
+        is_premium_user = check_premium_user()
 
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
@@ -738,7 +763,7 @@ GROUP BY
         return fetched_rows
     except Exception as e:
         # Log the error securely
-        print(f"An error occurred: {str(e)}")  # Replace with proper logging
+        #print(f"An error occurred: {str(e)}")  # Replace with proper logging
         return None  # Or handle the error appropriately
     finally:
         cursor.close()
@@ -775,7 +800,7 @@ def execute_projectInfo_query(proejct_name):
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
 
     query = """
-    SELECT project_description_en,no_of_units,project_status,no_of_buildings,no_of_villas,percent_completed,completion_date
+    SELECT project_description_en,no_of_units,project_status,no_of_buildings,no_of_villas,percent_completed,completion_date,project_start_date 
     FROM projects
     WHERE project_name_en = %s;
     """
@@ -837,16 +862,7 @@ def get_list_order():
 def dubai_areas():
     try:
         app.logger.info('we call dubai areas')
-        is_premium_user = False 
-        if current_user.is_authenticated:
-            #Query the StripeCustomer table to check subscription status
-            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-            if stripe_customer:
-                # Fetch the subscription details from Stripe
-                subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-                if subscription and subscription.status == "active":
-                    is_premium_user = True
+        is_premium_user = check_premium_user()
 
         connection = get_db_connection()
         #cursor = connection.cursor(dictionary=True) mysql
@@ -1201,21 +1217,7 @@ def generate_pdf():
         payload_size = request.content_length
         app.logger.info(f"Received payload size: {payload_size} bytes")
     
-        if current_user.is_authenticated:
-            app.logger.debug(f'User authenticated: {current_user.id}')
-            # Query the StripeCustomer table to check subscription status
-            stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
-
-            if stripe_customer:
-                app.logger.debug(f'Stripe customer found: {stripe_customer.id}')
-                try:
-                    subscription = stripe.Subscription.retrieve(stripe_customer.stripeSubscriptionId)
-                    app.logger.debug(f'Subscription status: {subscription.status}')
-                    if subscription and subscription.status == "active":
-                        is_premium_user = True
-                except Exception as e:
-                    app.logger.error(f'Error retrieving Stripe subscription: {str(e)}')
-                    return jsonify({"error": "error"}), 404
+        is_premium_user = check_premium_user()
 
         if not is_premium_user:
             app.logger.warning('Non-premium user attempted to generate PDF')
@@ -1288,11 +1290,15 @@ def generate_pdf():
         if project_data[0]['no_of_units'] != 0:
             general_means.append(["Nbr of Units: ", str(project_data[0]['no_of_units'])])
 
-        if project_data[0]['percent_completed'] >0:
-            general_means.append(["Percent Completed: ", str(project_data[0]['percent_completed'])+" %"])
+        if project_data[0]['project_start_date'] is not None:
+            general_means.append(["Start Date: ", str(project_data[0]['project_start_date'])])
 
         if project_data[0]['completion_date'] is not None:
             general_means.append(["Completion Date: ", str(project_data[0]['completion_date'])])
+        
+        if project_data[0]['percent_completed'] >0:
+            general_means.append(["Percent Completed: ", str(project_data[0]['percent_completed'])+" %"])
+
 
         general_means.extend([
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
@@ -1346,7 +1352,7 @@ def generate_pdf():
         img_buffer_historgram = create_histogram(dateprice_paires)
         p.drawImage(ImageReader(img_buffer_historgram), 329,  helper.y, width=270, height=200)
 
-        helper.y-=550
+        helper.y-=440
 
         #units_repartition = create_rooms_count_doughnut_chart(rooms_count_pairs)
         units_repartition = create_land_type_pie_chart(rooms_count_pairs,data_key = 'rooms_en',title = 'Unit Type Distribution',legend_title='Types')

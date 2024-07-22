@@ -1,7 +1,7 @@
 [
     {
         "area_id": "229",
-        "name": "um suqaim",
+        "name": "Umm Suqaim",
         "geometry": {
             "type": "MultiPolygon",
             "coordinates": [
@@ -5654,7 +5654,7 @@
     },
     {
         "area_id": "303",
-        "name": "um suqaim first",
+        "name": "Umm Suqaim first",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -9228,7 +9228,7 @@
     },
     {
         "area_id": "335",
-        "name": "nad al shiba first",
+        "name": "Nad Al Sheba First",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -10095,7 +10095,7 @@
     },
     {
         "area_id": "350",
-        "name": "al thanyah fifth",
+        "name": "Al Thanyah Fifth (JLT)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -11389,7 +11389,7 @@
     },
     {
         "area_id": "390",
-        "name": "burj khalifa",
+        "name": "Burj khalifa (Downtown Dubai)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -12470,7 +12470,7 @@
     },
     {
         "area_id": "412",
-        "name": "al merkadh",
+        "name": "Al Merkadh (MBR City)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -18531,7 +18531,7 @@
     },
     {
         "area_id": "432",
-        "name": "palm deira",
+        "name": "Palm Deira (Dubai Islands)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -23355,7 +23355,7 @@
     },
     {
         "area_id": "441",
-        "name": "jumeirah village circle (jvc)",
+        "name": "jumeirah village circle (JVC)",
         "geometry": {
             "type": "Polygon",
             "coordinates": [
@@ -24156,7 +24156,7 @@
     },
     {
         "area_id": "414",
-        "name": "Al Barshaa South Second",
+        "name": "Al Barsha South Second",
         "geometry": {
             "type": "Polygon",
             "coordinates": [

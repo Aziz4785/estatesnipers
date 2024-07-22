@@ -19,7 +19,7 @@
         <button id="profileButton" class="profile-button"></button>
         <div id="dropdown" class="dropdown-content">
             <a href="{{ url_for('manage_subscription') }}">Manage Subscription</a>
-            {% if not is_premium_user %}
+            {% if not is_premium_user or last_billing_period %}
               <a href="#" id="goPremium">Go Premium <span  style="font-size: 24px; color: rgb(255, 173, 9);">&#9733;</span ></a>
             {% endif %}
             <a href="{{ url_for('accounts.logout') }}">Log Out</a>

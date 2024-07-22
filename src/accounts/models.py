@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String, nullable=False)
     created_on = db.Column(db.DateTime, nullable=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
-
+    
     def __init__(self, email, password, is_admin=False):
         self.email = email
         self.password = bcrypt.generate_password_hash(password).decode('utf-8') #because https://stackoverflow.com/questions/34548846/flask-bcrypt-valueerror-invalid-salt
@@ -57,11 +57,13 @@ class StripeCustomer(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     stripeCustomerId = db.Column(db.String(255), nullable=False)
     stripeSubscriptionId = db.Column(db.String(255), nullable=False)
+    cancel_at_period_end = db.Column(db.Boolean, default=False)
 
     def __init__(self, user_id, stripeCustomerId, stripeSubscriptionId):
         self.user_id = user_id
         self.stripeCustomerId = stripeCustomerId
         self.stripeSubscriptionId = stripeSubscriptionId
+        self.cancel_at_period_end = False
 
     def __repr__(self):
         return f"<StripeCustomer user_id={self.user_id}, stripeCustomerId={self.stripeCustomerId}>"

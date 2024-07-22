@@ -6,6 +6,13 @@
 5) TO activate stripe webhook , in cmd do :  stripe login  
 6)stripe listen --forward-to localhost:5000/webhook
 
+en local : si on a modifier un model ORM et qu'on veut update la database sans perdre nos données :
+1)supprimer le contenu de la table alembic_version
+2)supprimer le dossier migrations
+3)faire flask db init
+4)faire flask db migrate -m "Add cancel_at_period_end to StripeCustomer"
+5)ouvrir le fichier genere dans migrations et effacer les truc inutiles
+6)flask db upgrade
 you can first migrate the database, and then run the app.
 
 flask db init #To initialize the database (create a migration repository)

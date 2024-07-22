@@ -3,6 +3,7 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 from scipy import interpolate
+from src import app
 from scipy.interpolate import interp1d
 from datetime import datetime
 from scipy.interpolate import PchipInterpolator
@@ -310,16 +311,14 @@ def send_email(message,mail_server='smtp.gmail.com',sender ="estatesniperhosting
         # Quit the SMTP server
         mailserver.quit()
         
-        print("Email sent successfully")
-        
     except smtplib.SMTPAuthenticationError:
-        print("SMTP Authentication Error: Unable to log in. Check the email and password.")
+        app.logger.warning("SMTP Authentication Error: Unable to log in. Check the email and password.")
     except smtplib.SMTPConnectError:
-        print("SMTP Connection Error: Unable to connect to the SMTP server.")
+        app.logger.warning("SMTP Connection Error: Unable to connect to the SMTP server.")
     except smtplib.SMTPServerDisconnected:
-        print("SMTP Server Disconnected: The server unexpectedly disconnected.")
+        app.logger.warning("SMTP Server Disconnected: The server unexpectedly disconnected.")
     except smtplib.SMTPException as e:
-        print(f"SMTP error occurred: {e}")
+        app.logger.warning(f"SMTP error occurred: {e}")
     #s = smtplib.SMTP('localhost')
     #s.sendmail(sender_email, [receiver_email], msg.as_string())
 
