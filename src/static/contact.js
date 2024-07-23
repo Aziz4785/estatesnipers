@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function() {
         alert("Message is too long. Please keep it under 2000 characters.");
         return;
       }
-      const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
       fetch('/send_message', {
         method: 'POST',
         headers: {

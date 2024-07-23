@@ -342,7 +342,7 @@ document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('chartModal').style.display = 'none';
 });
 
-let chartDataMappings = {};
+export let chartDataMappings = {};
 
 function processDictionary(dictionary, level = 0, parentRowId = null) {
     Object.entries(dictionary).forEach(([key, value]) => {

@@ -1,4 +1,4 @@
-import { map ,setCurrentFillColor,applyGeoJSONLayer } from './app.js';
+import { map ,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
 
 function generateTable(data) {
     var table = document.createElement('table');
