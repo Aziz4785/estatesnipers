@@ -12,7 +12,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 import {initializeStripe, setupPremiumButton, handleStripeCheckout } from './stripe-handlers.js';
-import { updateLegend,highlightFeature,openLoginModal,openChartModal,simulateClick } from './functions.js';
+import { generateTable,updateLegend,highlightFeature,openLoginModal,openChartModal,simulateClick } from './functions.js';
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
 export const layersByAreaId = {};
@@ -289,7 +289,7 @@ function generatePDF(name) {
     });
 }
 
-function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
+export function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
     if (!dataPoints || !dataPoints.length) return '';
 
     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
@@ -483,7 +483,7 @@ function areaStyle(feature, fillColorProperty) {
 }
 
 
-function openTab(evt, tabName) {
+export function openTab(evt, tabName) {
     // Declare all variables
     var i, tabcontent, tablinks;
     // Get all elements with class="tabcontent" and hide them

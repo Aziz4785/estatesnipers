@@ -1,6 +1,6 @@
-import { map ,getCurrentAreaId,setCurrentAreaId,layersByAreaId,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
+import { map ,createSvgLineChart,getCurrentAreaId,setCurrentAreaId,layersByAreaId,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
 
-function generateTable(data) {
+export function generateTable(data) {
     var table = document.createElement('table');
 
     // Create the table header
