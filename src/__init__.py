@@ -818,11 +818,17 @@ def get_lands_stats():
         return '', 204  # No Content response for non-premium users
     
 @app.route('/save-list-order', methods=['POST'])
+@csrf.exempt
 def save_list_order():
+    app.logger.info('Received request to save list order')
     # todo
     global list_order_in_memory  # Reference the global variable
     data = request.json
+    if not data:
+        app.logger.warning('Received empty JSON data in save-list-order request')
+        return jsonify({'error': 'No data received'}), 400
     list_order_in_memory = data.get('listOrder', [])
+    app.logger.debug(f'New list order: {list_order_in_memory}')
     session['hierarchy_keys'] = map_text_to_field(list_order_in_memory)
     return jsonify({'message': 'List order saved successfully!'})
 
