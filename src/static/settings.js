@@ -120,31 +120,3 @@ listItems.forEach(addDnDEvents);
 
 
 
-// Save settings button functionality
-document.getElementById("saveSettings").onclick = function() {
-    const listOrder = getListOrderFromUI();
-    document.getElementById("settingsModal").style.display = "none";
-    
-    fetch('/save-list-order', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ listOrder: listOrder })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok.');
-        }
-        return response.json();
-    })
-    .then(data => {
-        // After successfully saving the settings, refetch the area details
-        if (currentAreaId) {
-            fetchAreaDetails(currentAreaId);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-};

@@ -1,4 +1,4 @@
-import { map ,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
+import { map ,getCurrentAreaId,setCurrentAreaId,layersByAreaId,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
 
 function generateTable(data) {
     var table = document.createElement('table');
@@ -202,7 +202,7 @@ export function changeLegendTitle(title) {
 }
 
 
-function simulateClick(areaId) {
+export function simulateClick(areaId) {
     const layer = layersByAreaId[areaId];
     if (layer) {
         // Create a synthetic event
@@ -213,7 +213,7 @@ function simulateClick(areaId) {
         // Call the click handler
         highlightFeature(event);
         mainTableBody.innerHTML = ''; // Clear existing rows
-        currentAreaId = areaId; // Set currentAreaId to the simulated area's ID
+        setCurrentAreaId(areaId); // Set currentAreaId to the simulated area's ID
 
         // Fire a click event on the layer
         layer.fire('click', {

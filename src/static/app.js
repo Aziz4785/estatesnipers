@@ -12,20 +12,28 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 import {initializeStripe, setupPremiumButton, handleStripeCheckout } from './stripe-handlers.js';
-import { updateLegend,highlightFeature,openLoginModal,openChartModal } from './functions.js';
+import { updateLegend,highlightFeature,openLoginModal,openChartModal,simulateClick } from './functions.js';
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
-const layersByAreaId = {};
+export const layersByAreaId = {};
 
 let state = {
     currentFillColor: 'fillColorPrice',
-    currentLegend: 'averageSalePrice'
+    currentLegend: 'averageSalePrice',
+    currentAreaId: null
 };
 
 export function getCurrentFillColor() {
     return state.currentFillColor;
 }
 
+export function getCurrentAreaId() {
+    return state.currentAreaId;
+}
+
+export function setCurrentAreaId(areaidd) {
+    state.currentAreaId = areaidd;
+}
 export function setCurrentFillColor(color) {
     state.currentFillColor = color;
 }
@@ -80,7 +88,6 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
 
 let currentJsonData = null;
 let currentAreaData = null;
-let currentAreaId = null; 
 
 document.addEventListener('DOMContentLoaded', function () {
     // Set the default checked radio button (in settings)
@@ -501,8 +508,8 @@ function openTab(evt, tabName) {
 }
 
 function updateProjectsDemand() {
-    if (currentAreaId) {
-        fetch(`/get-demand-per-project?area_id=${currentAreaId}`)
+    if (getCurrentAreaId()) {
+        fetch(`/get-demand-per-project?area_id=${getCurrentAreaId()}`)
 
             .then(response => response.json())
             .then(data => {
@@ -527,12 +534,12 @@ function onEachFeature(feature, layer) {
         click: function(e) {
             highlightFeature(e);
             mainTableBody.innerHTML = ''; // Clear existing rows
-            currentAreaId = feature.properties.area_id;
+            setCurrentAreaId(feature.properties.area_id);
             // Create a copy of feature.properties without the "geometry" property
             const { geometry, ...propertiesWithoutGeometry } = feature.properties;
             currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
             
-            currentAreaId = feature.properties.area_id;
+            setCurrentAreaId(feature.properties.area_id);
             const areaName = feature.properties.name;
             const areaInfo = document.getElementById('area_info');
             const areaTitleH2 = document.getElementById('area-title');
@@ -588,7 +595,7 @@ function onEachFeature(feature, layer) {
 
                         const landbutton = document.getElementById('land-chart-button');
                         landbutton.addEventListener('click', function() {
-                                fetch(`/get-lands-stats?area_id=${currentAreaId}`)
+                                fetch(`/get-lands-stats?area_id=${getCurrentAreaId()}`)
                                     .then(response => {
                                         if (response.status === 204) {
                                             // No content for non-premium users, do nothing
@@ -691,7 +698,7 @@ function onEachFeature(feature, layer) {
             }
             
             // Use the new fetchAreaDetails function
-            fetchAreaDetails(currentAreaId);
+            fetchAreaDetails(getCurrentAreaId());
 
              // If ProjectsDemand tab is active, refetch data with new area_id
 
@@ -712,6 +719,34 @@ function onEachFeature(feature, layer) {
     });
 }
 
+// Save settings button functionality
+document.getElementById("saveSettings").onclick = function() {
+    const listOrder = getListOrderFromUI();
+    document.getElementById("settingsModal").style.display = "none";
+    
+    fetch('/save-list-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ listOrder: listOrder })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // After successfully saving the settings, refetch the area details
+        if (getCurrentAreaId()) {
+            fetchAreaDetails(getCurrentAreaId());
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+};
 
 function fetchAreaDetails(areaId) {
    // const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
