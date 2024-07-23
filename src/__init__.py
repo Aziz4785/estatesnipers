@@ -46,7 +46,7 @@ import stripe
 from flask_mailman import Mail
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 #pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -186,7 +186,7 @@ def check_auth():
 
 @app.route("/create-checkout-session")
 def create_checkout_session():
-    domain_url = os.environ.get('DOMAIN_URL', 'https://estatesnipers-1a1823af05ea.herokuapp.com/')
+    domain_url = os.environ.get('DOMAIN_URL', 'https://www.platformestatesnipers.com/')
     #domain_url = "http://localhost:5000/"
     stripe.api_key = stripe_keys["secret_key"]
 

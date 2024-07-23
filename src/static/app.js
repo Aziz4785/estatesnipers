@@ -131,6 +131,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         ele.addEventListener('mousedown', mouseDownHandler);
     });
+
+    var profileButton = document.getElementById('profileButton');
+    if (profileButton) {
+        profileButton.addEventListener('click', function() {
+            var dropdown = document.getElementById('dropdown');
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
+
+    const submitBtn = document.getElementById("submitBtn");
+    if (submitBtn) {
+        submitBtn.addEventListener("click", async function(event) {
+            event.preventDefault(); // Prevent the default form submission if needed
+            await handleStripeCheckout();
+        });
+    }
+
 });
 
 
@@ -332,124 +354,7 @@ function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title)
             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
             </svg>`;
 }
-/*
-function createSvgLineChart3(dataPoints, chartId, startYear, endYear,chart_title) {
-    if (!dataPoints || !dataPoints.length) return '';
 
-    const maxVal = Math.max(...dataPoints.filter(point => point !== null));
-    const minVal = Math.min(Math.min(...dataPoints.filter(point => point !== null)), 0);
-    const height = 50; // SVG height
-    const width = 100; // SVG width
-    const padding = 5; // Padding around the chart to ensure the path doesn't touch the edges
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
-    const pointWidth = chartWidth / (dataPoints.length - 1);
-
-    let pathD = ''; // Path for the main line chart (blue)
-    let redPathD = ''; // Path for the last 5 points (red)
-    let moveToNext = true; // Flag to indicate when to move to the next point without drawing
-
-    dataPoints.forEach((point, index) => {
-        if (point !== null) {
-            const x = padding + pointWidth * index;
-            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
-            if (index >= dataPoints.length - 5) {
-                // Connect the blue and red paths seamlessly
-                if (redPathD === '') {
-                    if (pathD) {
-                        redPathD = pathD.trim() + ` L ${x},${y}`;
-                    } else {
-                        redPathD = `M ${x},${y}`;
-                    }
-                } else {
-                    redPathD += ` L ${x},${y}`;
-                }
-            } else {
-                if (moveToNext) {
-                    pathD += `M ${x},${y} `;
-                    moveToNext = false;
-                } else {
-                    pathD += `L ${x},${y} `;
-                }
-            }
-        } else {
-            moveToNext = true;
-        }
-    });
-
-    // Create the axis lines
-    const xAxisY = padding + chartHeight;
-    const yAxisX = padding;
-
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},${chart_title})" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-            <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
-            <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
-            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
-            <path d="${redPathD.trim()}" stroke="red" fill="none"/>
-            </svg>`;
-}*/
-/*
-function createSvgLineChart2(dataPoints, chartId, startYear, endYear,chart_title) {
-    if (!dataPoints || !dataPoints.length) return '';
-
-    const maxVal = Math.max(...dataPoints.filter(point => point !== null));
-    const minVal = Math.min(...dataPoints.filter(point => point !== null));
-    const height = 50; // SVG height
-    const width = 100; // SVG width
-    const padding = 10; // Padding around the chart to ensure the path doesn't touch the edges
-    const chartWidth = width - 2 * padding;
-    const chartHeight = height - 2 * padding;
-    const pointWidth = chartWidth / (dataPoints.length - 1);
-
-    let pathD = ''; // Path for the line chart
-    let moveToNext = true; // Flag to indicate when to move to the next point without drawing
-
-    // Generate the complete path
-    dataPoints.forEach((point, index) => {
-        if (point !== null) {
-            const x = padding + pointWidth * index;
-            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
-            if (moveToNext) {
-                pathD += `M ${x},${y} `;
-                moveToNext = false;
-            } else {
-                pathD += `L ${x},${y} `;
-            }
-        } else {
-            moveToNext = true; // Move to the next point without drawing a line for null values
-        }
-    });
-
-    // Determine where to start the red path
-    const redStartIndex = Math.max(dataPoints.length - 5, 0);
-    let redPathD = '';
-    let redMoveToNext = true;
-
-    for (let i = redStartIndex; i < dataPoints.length; i++) {
-        const point = dataPoints[i];
-        if (point !== null) {
-            const x = padding + pointWidth * i;
-            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
-            if (redMoveToNext) {
-                redPathD += `M ${x},${y} `;
-                redMoveToNext = false;
-            } else {
-                redPathD += `L ${x},${y} `;
-            }
-        }
-    }
-
-    // Create the axis lines
-    const xAxisY = padding + chartHeight;
-    const yAxisX = padding;
-
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},${chart_title})" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-            <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
-            <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
-            <path d="${pathD.trim()}" stroke="blue" fill="none"/>
-            <path d="${redPathD.trim()}" stroke="red" fill="none"/>
-            </svg>`;
-}*/
 // Close modal functionality
 document.querySelector('.close').addEventListener('click', function() {
     document.getElementById('chartModal').style.display = 'none';
@@ -536,28 +441,6 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             }
         }
     });
-}
-
-
-function openChartJsModal(dataArray) {
-    const cleanedData = dataArray.map(value => value === null ? null : value);
-    const ctx = document.getElementById('chartModal').getContext('2d');
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: Array.from({length: cleanedData.length}, (_, i) => i + 1),
-            datasets: [{
-                label: 'Data',
-                data: cleanedData,
-                borderColor: 'blue',
-                borderWidth: 2,
-                fill: false
-            }]
-        }
-    });
-
-    document.getElementById('chartModal').style.display = 'block';
 }
 
 function hideIndirectChildren(parentRowId) {
@@ -884,24 +767,6 @@ function fetchAreaDetails(areaId) {
         });
 }
 
-
-
-
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    var profileButton = document.getElementById('profileButton');
-    if (profileButton) {
-        profileButton.addEventListener('click', function() {
-            var dropdown = document.getElementById('dropdown');
-            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
-                dropdown.style.display = 'block';
-            } else {
-                dropdown.style.display = 'none';
-            }
-        });
-    }
-});
 // Close the dropdown if the user clicks outside of it
 window.onclick = function(event) {
     if (!event.target.matches('.profile-button')) {
@@ -969,7 +834,31 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.style.display = "block";
     }
 
-    
+    // Function to close a modal
+    function closeModal(modal) {
+        modal.style.display = "none";
+    }
+    // Get all modals and close buttons
+    const modals = document.querySelectorAll('.modal');
+    const closeButtons = document.querySelectorAll('.close-button');
+    // Attach event listeners to each close button
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            closeModal(modal);
+        });
+    });
+    // Optional: Close the modal if the user clicks outside of the modal content
+    window.addEventListener('click', function(event) {
+        modals.forEach(modal => {
+            if (event.target === modal) {
+                closeModal(modal);
+            }
+        });
+    });
+    document.getElementById("unlock-button-table").onclick = function() {
+        openModal('Unlock all projects Today for $19.99');
+    };
 
 });
 
