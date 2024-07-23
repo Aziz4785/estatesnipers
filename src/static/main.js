@@ -1,4 +1,4 @@
-import { generateTable,simulateClick,changeLegendTitle,updateLegend,showPremiumMessage,highlightFeature,openLoginModal,openChartModal} from './functions.js';
+import { generateTable,positionOverlay,simulateClick,changeLegendTitle,updateLegend,showPremiumMessage,highlightFeature,openLoginModal,openChartModal} from './functions.js';
 import { createSvgLineChart,openTab,getCurrentAreaId,setCurrentAreaId,layersByAreaId,getCurrentFillColor, setCurrentFillColor,getCurrentLegend, setCurrentLegend,applyGeoJSONLayer,map,chartDataMappings } from './app.js';
 
 // Make changeLegendTitle globally available
@@ -22,3 +22,4 @@ window.getCurrentAreaId = getCurrentAreaId;
 window.openTab = openTab;
 window.generateTable = generateTable;
 window.createSvgLineChart = createSvgLineChart;
+window.positionOverlay = positionOverlay;

@@ -79,7 +79,7 @@ export function highlightFeature(e) {
 }
 
 
-function positionOverlay() {
+export function positionOverlay() {
   const tbody = document.getElementById('myTableBody');
   if(tbody)
   {

@@ -12,7 +12,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 import {initializeStripe, setupPremiumButton, handleStripeCheckout } from './stripe-handlers.js';
-import { generateTable,updateLegend,highlightFeature,openLoginModal,openChartModal,simulateClick } from './functions.js';
+import { generateTable,positionOverlay,updateLegend,highlightFeature,openLoginModal,openChartModal,simulateClick } from './functions.js';
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
 export const layersByAreaId = {};

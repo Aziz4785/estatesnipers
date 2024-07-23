@@ -98,15 +98,15 @@ app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 if not app.config["SECRET_KEY"]:
     raise ValueError("No SECRET_KEY set for Flask application. Did you follow the setup instructions?")
 
-auth = HTTPBasicAuth()
-users = {
-    os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
-}
+# auth = HTTPBasicAuth()
+# users = {
+#     os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
+# }
 
-@auth.verify_password
-def verify_password(username, password):
-    if username in users and users[username] == password:
-        return username
+# @auth.verify_password
+# def verify_password(username, password):
+#     if username in users and users[username] == password:
+#         return username
 
 
 from src.accounts.models import User,StripeCustomer
@@ -159,7 +159,6 @@ def check_premium_user():
 
 
 @app.route('/')
-@auth.login_required
 def index():
     login_form = LoginForm()  # Create an instance of the LoginForm
     register_form = RegisterForm()
@@ -388,23 +387,6 @@ def send_reset_password_email(user):
     )
     send_email(email_body, receiver =user.email,subject="Reset your password",message_type='html')
     
-    #send_email(email_body,mail_server =app.config['MAIL_SERVER'],sender=app.config['MAIL_DEFAULT_SENDER'], receiver =user.email,password=app.config['MAIL_PASSWORD'],subject="Reset your password",port=app.config['MAIL_PORT'])
-    # message = EmailMessage(
-    #     subject="Reset your password",
-    #     body=email_body,
-    #     from_email=app.config['MAIL_DEFAULT_SENDER'],
-    #     to=[user.email],
-    # )
-    # message.content_subtype = "html"
-
-    # #try:
-    # mail.send(message)
-    # except SMTPServerDisconnected:
-    #     print("The server unexpectedly disconnected")
-    # except SMTPAuthenticationError:
-    #     print("Authentication failed. Check your username and password")
-    # except SMTPException as e:
-    #     print(f"An error occurred: {str(e)}")
 
 @app.route("/reset_password/<token>/<int:user_id>", methods=["GET", "POST"])
 def reset_password(token, user_id):
@@ -432,7 +414,6 @@ def reset_password(token, user_id):
 
 @app.route('/send_message', methods=['POST'])
 @limiter.limit("10 per day")
-@auth.login_required
 @csrf.exempt
 def send_message():
     app.logger.info('Received request send_message()')
@@ -496,7 +477,6 @@ def get_db_connection():
 list_order_in_memory = []
 
 @app.route('/get-area-details')
-@auth.login_required
 def get_area_details():
     try:
         is_premium_user = check_premium_user()
@@ -770,7 +750,6 @@ GROUP BY
         connection.close()
 
 @app.route('/get-demand-per-project')
-@auth.login_required
 def get_demand_per_project():
     area_id = request.args.get('area_id')
     fetched_rows = execute_project_demand_query(area_id)
@@ -828,7 +807,6 @@ def execute_unitsbyRooms_query(proejct_name):
     return fetched_rows
 
 @app.route('/get-lands-stats')
-@auth.login_required
 def get_lands_stats():
     is_premium_user = check_premium_user()
     if is_premium_user:
@@ -840,7 +818,6 @@ def get_lands_stats():
         return '', 204  # No Content response for non-premium users
     
 @app.route('/save-list-order', methods=['POST'])
-@auth.login_required
 def save_list_order():
     # todo
     global list_order_in_memory  # Reference the global variable
@@ -851,14 +828,12 @@ def save_list_order():
 
 
 @app.route('/get-list-order', methods=['GET'])
-@auth.login_required
 def get_list_order():
     hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
     return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
     
 @app.route('/dubai-areas')
-@auth.login_required
 def dubai_areas():
     try:
         app.logger.info('we call dubai areas')
@@ -1243,7 +1218,6 @@ def send_email(message,mail_server='smtp.gmail.com',sender ="estatesniperhosting
 
 @app.route('/generate-pdf', methods=['POST'])
 @csrf.exempt
-@auth.login_required
 def generate_pdf():
     try:
         app.logger.info('Received request for PDF generation')
@@ -1498,4 +1472,4 @@ if __name__ != '__main__':
     app.logger.setLevel(gunicorn_logger.level)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
