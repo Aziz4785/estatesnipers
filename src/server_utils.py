@@ -3,7 +3,6 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 from scipy import interpolate
-from src import app
 from scipy.interpolate import interp1d
 from datetime import datetime
 from scipy.interpolate import PchipInterpolator
@@ -289,38 +288,6 @@ reset_password_email_html_content = """
 """
 
 
-
-def send_email(message,mail_server='smtp.gmail.com',sender ="estatesniperhosting@gmail.com",receiver ="contact@estatesnipers.com",password="cxhj zutf hzrp hfcz",subject="New Contact Message",port=465,message_type='plain'):
-    msg = MIMEMultipart()
-    msg.set_unixfrom('author')
-    msg['From'] = sender
-    msg['To'] = receiver
-    msg['Subject'] = subject
-    
-    #msg.attach(MIMEText(message, 'plain'))
-    msg.attach(MIMEText(message, message_type))
-    try:
-        # Set up the SMTP server and login
-        mailserver = smtplib.SMTP_SSL(mail_server, port)
-        mailserver.ehlo()
-        mailserver.login(sender, password)
-        
-        # Send the email
-        mailserver.sendmail(sender, receiver, msg.as_string())
-        
-        # Quit the SMTP server
-        mailserver.quit()
-        
-    except smtplib.SMTPAuthenticationError:
-        app.logger.warning("SMTP Authentication Error: Unable to log in. Check the email and password.")
-    except smtplib.SMTPConnectError:
-        app.logger.warning("SMTP Connection Error: Unable to connect to the SMTP server.")
-    except smtplib.SMTPServerDisconnected:
-        app.logger.warning("SMTP Server Disconnected: The server unexpectedly disconnected.")
-    except smtplib.SMTPException as e:
-        app.logger.warning(f"SMTP error occurred: {e}")
-    #s = smtplib.SMTP('localhost')
-    #s.sendmail(sender_email, [receiver_email], msg.as_string())
 
 def separate_last_part(input_string):
     # Find the last occurrence of " / "
