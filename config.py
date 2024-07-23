@@ -39,4 +39,4 @@ class ProductionConfig(Config):
     if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
-    DOMAIN_URL="https://estatesnipers-1a1823af05ea.herokuapp.com/"
+    DOMAIN_URL="https://www.platformestatesnipers.com/"
