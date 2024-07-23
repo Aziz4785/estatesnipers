@@ -14,7 +14,6 @@
     <div id="dubaiMap"></div>
     
 {% if current_user.is_authenticated %}
-    <p>Hello, {{ current_user.email }}!</p>
     <div class="dropdown-container">
         <button id="profileButton" class="profile-button"></button>
         <div id="dropdown" class="dropdown-content">
@@ -344,7 +343,7 @@
     <script src="../static/premium_modal.js"></script>
     <script src="../static/contact.js"></script>
     <script src="../static/functions.js"></script>
-    <script src="../static/app.js"></script>
+    <script type="module" src="../static/app.js"></script>
     <script src="../static/settings.js"></script>
     
 </body>

@@ -11,6 +11,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19
 }).addTo(map);
 
+import {initializeStripe, setupPremiumButton, handleStripeCheckout } from './stripe-handlers.js';
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
 const layersByAreaId = {};
@@ -19,34 +20,8 @@ let currentFillColor = 'fillColorPrice'; // Default value
 We'll then use this key to create a new instance of Stripe.js.*/
 document.addEventListener('DOMContentLoaded', function() {
     const upgradeButton = document.getElementById('upgradeButton');
-    const goPremiumButton = document.querySelector("#goPremium");
-
-    fetch("/config")
-        .then((result) => result.json())
-        .then((data) => {
-            const stripe = Stripe(data.publicKey);
-
-            // Function to handle Stripe checkout
-            async function handleStripeCheckout() {
-                try {
-                    const sessionResponse = await fetch("/create-checkout-session");
-                    const sessionData = await sessionResponse.json();
-                    
-                    if (sessionData.error) {
-                        console.error('Error:', sessionData.error);
-                        return;
-                    }
-                    
-                    const result = await stripe.redirectToCheckout({ sessionId: sessionData.sessionId });
-                    
-                    if (result.error) {
-                        console.error(result.error.message);
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                }
-            }
-
+    initializeStripe()
+        .then((stripe) => {
             // Upgrade button (requires login check)
             upgradeButton.addEventListener('click', async function(event) {
                 event.preventDefault();
@@ -57,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     if (authData.isAuthenticated) {
                         // User is logged in, proceed to Stripe checkout
-                        await handleStripeCheckout();
+                        await handleStripeCheckout(stripe);
                     } else {
                         // User is not logged in, show login modal
                         document.getElementById("premiumModal").style.display = 'none';
@@ -68,13 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            if (goPremiumButton) {
-                // Go Premium button (directly to checkout)
-                goPremiumButton.addEventListener('click', async function(event) {
-                    event.preventDefault();
-                    await handleStripeCheckout();
-                });
-            }
+            // Setup the "Go Premium" button
+            setupPremiumButton('goPremium', stripe);
         })
         .catch((error) => {
             console.error("Error fetching Stripe config:", error);
@@ -142,16 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdown.style.display = 'none';
             }
         });
-    }
-
-
-    const submitBtn = document.getElementById("submitBtn");
-    if (submitBtn) {
-        submitBtn.addEventListener("click", async function(event) {
-            event.preventDefault(); // Prevent the default form submission if needed
-            await handleStripeCheckout();
-        });
-    }
+    }    
 
 });
 
