@@ -13,7 +13,7 @@ en local : si on a modifier un model ORM et qu'on veut update la database sans p
 4)faire flask db migrate -m "Add cancel_at_period_end to StripeCustomer"
 5)ouvrir le fichier genere dans migrations et effacer les truc inutiles
 6)flask db upgrade
-you can first migrate the database, and then run the app.
+7) si on veut deployer, apres avori git push , faire :  heroku run FLASK_APP=src flask db upgrade
 
 flask db init #To initialize the database (create a migration repository)
 flask db migrate #To migrate the database changes, use the command:

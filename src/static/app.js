@@ -1,5 +1,5 @@
 // Initialize the map on the "dubaiMap" div with a given center and zoom
-var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Dubai
+export var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Dubai
 
 // Add a base layer to the map (OpenStreetMap tiles)
 /*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -12,10 +12,31 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 import {initializeStripe, setupPremiumButton, handleStripeCheckout } from './stripe-handlers.js';
+import { updateLegend,highlightFeature,openLoginModal,openChartModal } from './functions.js';
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
 const layersByAreaId = {};
-let currentFillColor = 'fillColorPrice'; // Default value
+
+let state = {
+    currentFillColor: 'fillColorPrice',
+    currentLegend: 'averageSalePrice'
+};
+
+export function getCurrentFillColor() {
+    return state.currentFillColor;
+}
+
+export function setCurrentFillColor(color) {
+    state.currentFillColor = color;
+}
+export function getCurrentLegend() {
+    return state.currentLegend;
+}
+
+export function setCurrentLegend(legend) {
+    state.currentLegend = legend;
+}
+
 /*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
 We'll then use this key to create a new instance of Stripe.js.*/
 document.addEventListener('DOMContentLoaded', function() {
@@ -118,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 // load the .geojson file to display the areas
-function applyGeoJSONLayer(currentLegend) {
+export function applyGeoJSONLayer(currentLegend) {
     fetch('/dubai-areas')
     .then(response => response.json())
     .then(data => {
@@ -142,7 +163,7 @@ function applyGeoJSONLayer(currentLegend) {
         
         // Apply new GeoJSON layer with dynamic fill color
         window.geoJSONLayer = L.geoJSON(featureCollection, {
-            style: feature => areaStyle(feature, currentFillColor),
+            style: feature => areaStyle(feature, getCurrentFillColor()),
             onEachFeature: onEachFeature
         }).addTo(map);
 
@@ -957,6 +978,11 @@ function renderLandStatsChart(data) {
         chartModal.style.display = 'none';
     }
 }
+
 // On document ready or when initializing your app
-applyGeoJSONLayer("averageSalePrice");
+// On document ready or when initializing your app
+document.addEventListener('DOMContentLoaded', () => {
+    applyGeoJSONLayer("averageSalePrice");
+});
+
 

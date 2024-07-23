@@ -1,9 +1,8 @@
 import { handleStripeCheckout } from './stripe-handlers.js';
-
+import {openLoginModal} from './functions.js';
 document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('subscribeBtn').addEventListener('click', async function(event) {
         event.preventDefault();
-        console.log("we click on subscribeBtn")
         try {
             const authResponse = await fetch('/check-auth');
             const authData = await authResponse.json();

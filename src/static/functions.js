@@ -1,3 +1,5 @@
+import { map ,setCurrentFillColor,applyGeoJSONLayer } from './app.js';
+
 function generateTable(data) {
     var table = document.createElement('table');
 
@@ -47,7 +49,7 @@ function generateTable(data) {
     return table;
 }
 
-function highlightFeature(e) {
+export function highlightFeature(e) {
     const layer = e.target;
 
     // Reset style for all layers
@@ -69,7 +71,7 @@ function highlightFeature(e) {
     }
 
     // Center the map on the clicked area
-   map.fitBounds(layer.getBounds(),{ maxZoom: 12 });
+    map.fitBounds(layer.getBounds(),{ maxZoom: 12 });
     // Center the map on the clicked area with a specific zoom level
     //const bounds = layer.getBounds();
     //const center = bounds.getCenter();
@@ -92,7 +94,7 @@ function positionOverlay() {
     }
   }
 }
-function showPremiumMessage() {
+export function showPremiumMessage() {
     /*const premiumMessage = document.getElementById('premiumMessage');
     premiumMessage.style.display = 'block';
     setTimeout(() => {
@@ -122,7 +124,7 @@ function createSupplyCard(finishedValue, offplanValue) {
     return card;
 }
 
-function updateLegend(averageSalePrice, unit) {
+export function updateLegend(averageSalePrice, unit) {
     const legendContent = document.getElementById('legendContent');
     legendContent.innerHTML = ''; // Clear previous contents
     const colors = [
@@ -171,34 +173,34 @@ function toggleMenu() {
   document.getElementById('arrow').style.transform = isMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
-function changeLegendTitle(title) {
+export function changeLegendTitle(title) {
     document.getElementById('legendTitle').children[0].textContent = title;
     toggleMenu(); // Close the menu after selection
     // Handle the change of legend content based on the selected title
-    currentFillColor = "fillColorPrice";
-    currentLegend = "averageSalePrice";
+    setCurrentFillColor("fillColorPrice");
+    setCurrentLegend("averageSalePrice");
     switch (title) {
         case 'Average meter price':
-        currentFillColor = "fillColorPrice";
-        currentLegend = "averageSalePrice";
+        setCurrentFillColor("fillColorPrice");
+        setCurrentLegend("averageSalePrice");
         break;
         case 'Capital Appreciation':
-        currentFillColor = "fillColorCA5";
-        currentLegend = "avgCA_5Y";
+        setCurrentFillColor("fillColorCA5");
+        setCurrentLegend("avgCA_5Y");
         break;
         case 'Gross Rental Yield':
-        currentFillColor = "fillColorRoi";
-        currentLegend = "avg_roi";
+        setCurrentFillColor("fillColorRoi");
+        setCurrentLegend("avg_roi");
         break;
         case 'Acquisition Demand':
-        currentFillColor = "fillColorAquDemand";
-        currentLegend = "aquisitiondemand_2023";
+        setCurrentFillColor("fillColorAquDemand");
+        setCurrentLegend("aquisitiondemand_2023");
         break;
     }
 
-    // Apply the GeoJSON layer with the new legend
-    applyGeoJSONLayer(currentLegend);
+    applyGeoJSONLayer(getCurrentLegend());
 }
+
 
 function simulateClick(areaId) {
     const layer = layersByAreaId[areaId];
@@ -238,7 +240,7 @@ function clearData() {
     areaInfo.innerHTML = '';
 }
 
-function openLoginModal(title, formToShow = 'login') {
+export function openLoginModal(title, formToShow = 'login') {
     var loginModal = document.getElementById("loginModal");
     var modalTitle = document.getElementById("modalTitle");
     var loginForm = document.getElementById("loginForm");
@@ -259,7 +261,7 @@ function openLoginModal(title, formToShow = 'login') {
 }
 
 
-function openChartModal(chartId, start_year, end_year,title) {
+export function openChartModal(chartId, start_year, end_year,title) {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];
     if (!dataset) {
