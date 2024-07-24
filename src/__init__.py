@@ -82,10 +82,10 @@ CORS(app)
 
 limiter = Limiter(get_remote_address, app=app)#, default_limits=["3 per day"])
 
-#with app.app_context(): 
-    #This will create model classes for all tables in your database. 
-    # You can then access them via db.metadata.tables['table_name'].
-    #db.reflect()
+@app.after_request
+def add_header(response):
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+    return response
 
 # Registering blueprints
 from src.accounts.views import accounts_bp
