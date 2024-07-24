@@ -71,23 +71,16 @@ mail = Mail(app)
 
 
 app.config.update(
-    SESSION_COOKIE_SAMESITE='None',  # Or 'Strict'
+    SESSION_COOKIE_SAMESITE='Lax',  # Or 'Strict'
     SESSION_COOKIE_SECURE=True  # Ensure cookies are only sent over HTTPS
 )
 
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-CORS(app)
-
+#CORS(app)
+CORS(app, resources={r"/*": {"origins": "https://www.platformestatesnipers.com"}})
 limiter = Limiter(get_remote_address, app=app)#, default_limits=["3 per day"])
-
-# @app.after_request
-# def add_header(response):
-#     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
-#     response.headers['Pragma'] = 'no-cache'
-#     response.headers['Expires'] = '-1'
-#     return response
 
 # Registering blueprints
 from src.accounts.views import accounts_bp
