@@ -74,6 +74,10 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='Lax',  # Or 'Strict'
     SESSION_COOKIE_SECURE=True  # Ensure cookies are only sent over HTTPS
 )
+@app.after_request
+def add_header(response):
+    response.cache_control.no_store = True
+    return response
 
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
