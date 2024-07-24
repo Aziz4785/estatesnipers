@@ -78,8 +78,7 @@ app.config.update(
 bcrypt = Bcrypt(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-#CORS(app)
-CORS(app, resources={r"/*": {"origins": "https://www.platformestatesnipers.com"}})
+CORS(app)
 limiter = Limiter(get_remote_address, app=app)#, default_limits=["3 per day"])
 
 # Registering blueprints
