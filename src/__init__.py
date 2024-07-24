@@ -58,6 +58,13 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
+@app.after_request
+def add_header(response):
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 # Configuration for Flask-Mailman
 app.config['MAIL_SERVER'] = 'smtpout.secureserver.net'
 app.config['MAIL_PORT'] = 80#465
