@@ -58,6 +58,16 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
+def versioned_url_for(endpoint, **values):
+    if endpoint == 'static':
+        filename = values.get('filename', None)
+        if filename:
+            file_path = os.path.join(app.root_path, endpoint, filename)
+            values['v'] = int(os.stat(file_path).st_mtime)
+    return url_for(endpoint, **values)
+
+app.jinja_env.globals['url_for'] = versioned_url_for
+
 @app.after_request
 def add_header(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
