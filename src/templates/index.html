@@ -340,12 +340,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
-    <script src="../static/premium_modal.js"></script>
-    <script src="../static/contact.js"></script>
-    <script type="module" src="../static/functions.js"></script>
-    <script type="module" src="../static/app.js"></script>
-    <script src="../static/settings.js"></script>
-    <script type="module" src="../static/main.js"></script>
+    <script src="{{ url_for('static', filename='premium_modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='contact.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='functions.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ url_for('static', filename='settings.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
     
 </body>
 </html>
