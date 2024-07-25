@@ -23,3 +23,17 @@ window.openTab = openTab;
 window.generateTable = generateTable;
 window.createSvgLineChart = createSvgLineChart;
 window.positionOverlay = positionOverlay;
+
+function clearCache() {
+    if ('caches' in window) {
+        caches.keys().then(function(names) {
+            for (let name of names)
+                caches.delete(name);
+        });
+    }
+    window.location.reload(true);
+}
+
+// Call this function when you want to clear the cache and reload
+// For example, you could call it when the page loads
+window.onload = clearCache;
