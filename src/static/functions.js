@@ -1,6 +1,4 @@
-import { map ,createSvgLineChart,getCurrentAreaId,setCurrentAreaId,layersByAreaId,setCurrentFillColor,applyGeoJSONLayer,chartDataMappings } from './app.js';
-
-export function generateTable(data) {
+ function generateTable(data) {
     var table = document.createElement('table');
 
     // Create the table header
@@ -49,7 +47,7 @@ export function generateTable(data) {
     return table;
 }
 
-export function highlightFeature(e) {
+ function highlightFeature(e) {
     const layer = e.target;
 
     // Reset style for all layers
@@ -79,7 +77,7 @@ export function highlightFeature(e) {
 }
 
 
-export function positionOverlay() {
+ function positionOverlay() {
   const tbody = document.getElementById('myTableBody');
   if(tbody)
   {
@@ -94,12 +92,7 @@ export function positionOverlay() {
     }
   }
 }
-export function showPremiumMessage() {
-    /*const premiumMessage = document.getElementById('premiumMessage');
-    premiumMessage.style.display = 'block';
-    setTimeout(() => {
-        premiumMessage.style.display = 'none';
-    }, 3000);  // Show the message for 3 seconds*/
+ function showPremiumMessage() {
     openModal('Access all content today for $19.99');
 }
 
@@ -124,7 +117,7 @@ function createSupplyCard(finishedValue, offplanValue) {
     return card;
 }
 
-export function updateLegend(averageSalePrice, unit) {
+ function updateLegend(averageSalePrice, unit) {
     const legendContent = document.getElementById('legendContent');
     legendContent.innerHTML = ''; // Clear previous contents
     const colors = [
@@ -173,7 +166,7 @@ function toggleMenu() {
   document.getElementById('arrow').style.transform = isMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
-export function changeLegendTitle(title) {
+ function changeLegendTitle(title) {
     document.getElementById('legendTitle').children[0].textContent = title;
     toggleMenu(); // Close the menu after selection
     // Handle the change of legend content based on the selected title
@@ -202,7 +195,7 @@ export function changeLegendTitle(title) {
 }
 
 
-export function simulateClick(areaId) {
+ function simulateClick(areaId) {
     const layer = layersByAreaId[areaId];
     if (layer) {
         // Create a synthetic event
@@ -240,7 +233,7 @@ function clearData() {
     areaInfo.innerHTML = '';
 }
 
-export function openLoginModal(title, formToShow = 'login') {
+ function openLoginModal(title, formToShow = 'login') {
     var loginModal = document.getElementById("loginModal");
     var modalTitle = document.getElementById("modalTitle");
     var loginForm = document.getElementById("loginForm");
@@ -261,7 +254,7 @@ export function openLoginModal(title, formToShow = 'login') {
 }
 
 
-export function openChartModal(chartId, start_year, end_year,title) {
+ function openChartModal(chartId, start_year, end_year,title) {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];
     if (!dataset) {

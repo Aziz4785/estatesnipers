@@ -1,4 +1,4 @@
-export function initializeStripe() {
+ function initializeStripe() {
     return fetch("/config")
         .then((result) => result.json())
         .then((data) => {
@@ -7,7 +7,7 @@ export function initializeStripe() {
 }
 
 
-export async function setupPremiumButton(buttonId, stripe) {
+ async function setupPremiumButton(buttonId, stripe) {
     const button = document.getElementById(buttonId);
     if (button) {
         button.addEventListener('click', async function(event) {
@@ -18,7 +18,7 @@ export async function setupPremiumButton(buttonId, stripe) {
 }
 
 // Function to handle Stripe checkout
-export async function handleStripeCheckout(stripe) {
+ async function handleStripeCheckout(stripe) {
     try {
         const sessionResponse = await fetch("/create-checkout-session");
         const sessionData = await sessionResponse.json();

@@ -5,7 +5,7 @@ import traceback
 from flask import session,current_app
 import os
 from smtplib import SMTPException, SMTPServerDisconnected, SMTPAuthenticationError
-
+from flask_assets import Bundle, Environment
 from reportlab.lib import colors
 from reportlab.lib.colors import HexColor
 from marshmallow import Schema, fields, ValidationError, validates, validates_schema
@@ -57,6 +57,12 @@ app.config.from_object(config("APP_SETTINGS"))
 csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
+
+
+js = Bundle('app.js','contact.js','functions.js','premium_modal.js','settings.js','stripe-handlers.js',output='gen/bundle.js')
+
+assets = Environment(app)
+assets.register('bundle__js',js)
 
 def versioned_url_for(endpoint, **values):
     if endpoint == 'static':
