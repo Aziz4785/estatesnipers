@@ -619,12 +619,17 @@ def get_area_details():
 
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
-
+            
             if(not is_premium_user):
-                # Get the first two (key, value) pairs
-                first_two_pairs = list(fetched_rows.items())[:2]
+                filtered_items = [
+                    item for item in fetched_rows.items()
+                    if item[1]['means'][0]['avg_meter_price_2013_2023'][-1] is not None
+                ]
+                # If filtered_items is empty, take the first two items from fetched_rows
+                # Otherwise, take the first two items from filtered_items
+                selected_items = filtered_items[:2] if filtered_items else list(fetched_rows.items())[:2]
                 # Initialize the new dictionary with the first two pairs
-                new_dict = dict(first_two_pairs)
+                new_dict = dict(selected_items)
                 # Replace all other keys with "locked project X:" and value 99
                 count = 1
                 while count<7:
