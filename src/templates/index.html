@@ -260,13 +260,7 @@
             </div>
             <div class="tab">
               <button class="tablinks active" onclick="openTab(event, 'Details')">Details</button>
-              {% if is_premium_user %}
-                  <button class="tablinks" onclick="openTab(event, 'ProjectsDemand')">Projects Demand</button>
-              {% else %}
-                  <button class="tablinks locked" onclick="showPremiumMessage()">Projects Demand <span id="lockIcon">
-                    <img src="static/lock_similar.svg" alt="Lock Icon" width="20" height="20">
-                </span></button>
-              {% endif %}
+              <button class="tablinks" onclick="openTab(event, 'ProjectsDemand')">Projects Demand</button>
           </div>
             <!-- Tab content -->
             <div id="Details" class="tabcontent">
@@ -321,7 +315,7 @@
               <div class="premium-header">PREMIUM</div>
               <ul class="prem-ul">
                 <li>Unlimited Project Details</li>
-                <li>Unlimited Report Downloads (<a href="{{ url_for('static', filename='example_report.pdf') }}" download="example_report.pdf">report example</a>)</li>
+                <li>Unlimited Report Downloads</li>
                 <li>Regularly Updated High-Quality Data</li>
                 <li>Dedicated Customer Support</li>
                 <li>Estate Snipers Community Membership</li>

@@ -282,10 +282,6 @@ function generatePDF(name) {
         })
     })
     .then(response => {
-        if (response.status === 403) {
-            openModal("Download as PDF is a premium feature");
-            throw new Error('Premium subscription required');
-        }
         if (!response.ok) {
             throw new Error('Server error');
         }

@@ -1253,13 +1253,6 @@ def generate_pdf():
         app.logger.info(f"Received payload size: {payload_size} bytes")
     
         is_premium_user = check_premium_user()
-
-        if not is_premium_user:
-            app.logger.warning('Non-premium user attempted to generate PDF')
-            response = jsonify({"error": "Premium subscription required"})
-            response.status_code = 403
-            app.logger.info('Sending 403 response')
-            return response
         
         hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
         if is_premium_user:   
@@ -1293,19 +1286,19 @@ def generate_pdf():
                 externalDemand_5Y = item['externalDemandYears']
                 break
 
+        # Create a PDF
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+
+        helper = PDFHelper(p, 720, 750, 100)
+
+        if hierarchy_keys[0]!="grouped_project":
+            section+= f" ({area_data['name']})"
+        helper.draw_Main_title(section,font_size=30)
+
     except Exception as e:
         app.logger.error(f'Error in generate_pdf: {str(e)}', exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
-    # Create a PDF
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-
-    helper = PDFHelper(p, 720, 750, 100)
-
-    if hierarchy_keys[0]!="grouped_project":
-        section+= f" ({area_data['name']})"
-    helper.draw_Main_title(section,font_size=30)
-
     # Print means data
     # Data for the table
     general_means=[]
@@ -1393,67 +1386,71 @@ def generate_pdf():
         units_repartition = create_land_type_pie_chart(rooms_count_pairs,data_key = 'rooms_en',title = 'Unit Type Distribution',legend_title='Types')
         p.drawImage(ImageReader(units_repartition), 50,  helper.y, width=500, height=300)
 
-        
-    for k in firstkeys:
-        if k !="means":
-            parent_name = section
-            render_pdf({k: data[k]},parent_name,helper,p)
+    if is_premium_user: 
+        for k in firstkeys:
+            if k !="means":
+                parent_name = section
+                render_pdf({k: data[k]},parent_name,helper,p)
 
-    helper.new_page()
+        helper.new_page()
 
-    #AREA SECTION 
-    # Set the font and size for the title
-    p.setFont("Helvetica-Bold", 24)
-    p.setFillColor(blue)
-    area_name = area_data["name"]
-    title = f"Area : {area_name}"
-    title_width = p.stringWidth(title, "Helvetica-Bold", 24)
-    page_width = letter[0]
-    title_x = (page_width - title_width) / 2
+        #AREA SECTION 
+        # Set the font and size for the title
+        p.setFont("Helvetica-Bold", 24)
+        p.setFillColor(blue)
+        area_name = area_data["name"]
+        title = f"Area : {area_name}"
+        title_width = p.stringWidth(title, "Helvetica-Bold", 24)
+        page_width = letter[0]
+        title_x = (page_width - title_width) / 2
 
-    # Draw the title
-    #p.drawString(title_x, 750, title)
-    helper.draw_Main_title(title,font_size=30)
-    # Move to next line for the table
-    p.setFont("Helvetica", 12)
-    p.setFillColor(colors.black)
+        # Draw the title
+        #p.drawString(title_x, 750, title)
+        helper.draw_Main_title(title,font_size=30)
+        # Move to next line for the table
+        p.setFont("Helvetica", 12)
+        p.setFillColor(colors.black)
 
-    # Data for the table
-    table_data = [
-        ['Metric', 'Value'],
-        ['Acquisition Demand 2023', f"{round_and_percentage(area_data['variableValues'][7])} %"],
-        ['Rental Demand 2023¹', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
-        ['Average Sale Price', f"{area_data['variableValues'][0]:,.2f} AED"],
-        ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['variableValues'][2]))+" %"],
-        ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['variableValues'][1]))+" %"],
-        ['Average Gross Rental Yield', str(round_and_percentage(area_data['variableValues'][3],2))+" %"],
-        ['Supply of Finished Projects', area_data['variableValues'][4]],
-        ['Supply of Off-Plan Projects', area_data['variableValues'][5]],
-        ['Supply of Lands', area_data['variableValues'][6]],
-    ]
-    footnotes = [
-        "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
-    # Create a table
-    table = Table(table_data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    ]))
+        # Data for the table
+        table_data = [
+            ['Metric', 'Value'],
+            ['Acquisition Demand 2023', f"{round_and_percentage(area_data['variableValues'][7])} %"],
+            ['Rental Demand 2023¹', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
+            ['Average Sale Price', f"{area_data['variableValues'][0]:,.2f} AED"],
+            ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['variableValues'][2]))+" %"],
+            ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['variableValues'][1]))+" %"],
+            ['Average Gross Rental Yield', str(round_and_percentage(area_data['variableValues'][3],2))+" %"],
+            ['Supply of Finished Projects', area_data['variableValues'][4]],
+            ['Supply of Off-Plan Projects', area_data['variableValues'][5]],
+            ['Supply of Lands', area_data['variableValues'][6]],
+        ]
+        footnotes = [
+            "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
+        # Create a table
+        table = Table(table_data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
 
-    # Build the table on canvas
-    table.wrapOn(p, 175, 500)
-    table.drawOn(p, 175, 500)
-    helper.draw_footnotes(footnotes)
-    helper.y -= 100
-    land_data=execute_land_query(area_data['area_id'])
-    img_buffer = create_land_type_pie_chart(land_data)
-    p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+        # Build the table on canvas
+        table.wrapOn(p, 175, 500)
+        table.drawOn(p, 175, 500)
+        helper.draw_footnotes(footnotes)
+        helper.y -= 100
+        land_data=execute_land_query(area_data['area_id'])
+        img_buffer = create_land_type_pie_chart(land_data)
+        p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+    else:
+        helper.new_page()
+        unlockpremiumtext = """The detailed report includes further insights on the project area and a detailed classification of units by property type and subtype.\n To access the full report, please upgrade to a Premium subscription.  """
+        helper.draw_paragraph(unlockpremiumtext, font_size=14, font_name='Helvetica-Bold')
     helper.new_page()
     helper.draw_contact_info()
     #p.showPage()
