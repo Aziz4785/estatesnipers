@@ -12,7 +12,9 @@
 </head>
 <body data-show-modal="{{ show_modal }}" data-message="{{ message }}" data-form="{{ form_to_show }}">
     <div id="dubaiMap"></div>
-    
+    <script>
+        var serverSideData = {{ dubai_areas_data | tojson | safe }};
+    </script>"
 {% if current_user.is_authenticated %}
     <div class="dropdown-container">
         <button id="profileButton" class="profile-button"></button>

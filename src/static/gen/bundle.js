@@ -167,36 +167,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
  function applyGeoJSONLayer(currentLegend) {
-    fetch('/dubai-areas')
-    .then(response => response.json())
-    .then(data => {
-        //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
-        const legends = data[0];
-        const units = data[2];
-        const features = data[1].map(item => ({
-            type: 'Feature',
-            properties: item, // Store all item properties directly
-            geometry: item.geometry
-        }));
-        const featureCollection = {
-            type: 'FeatureCollection',
-            features: features
-        };
+    const data = serverSideData;
+    //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
+    const legends = data[0];
+    const units = data[2];
+    const features = data[1].map(item => ({
+        type: 'Feature',
+        properties: item, // Store all item properties directly
+        geometry: item.geometry
+    }));
+    const featureCollection = {
+        type: 'FeatureCollection',
+        features: features
+    };
 
-        // Clear existing GeoJSON layer
-        if (window.geoJSONLayer) {
-            window.geoJSONLayer.remove();
-        }
-        
-        // Apply new GeoJSON layer with dynamic fill color
-        window.geoJSONLayer = L.geoJSON(featureCollection, {
-            style: feature => areaStyle(feature, getCurrentFillColor()),
-            onEachFeature: onEachFeature
-        }).addTo(map);
+    // Clear existing GeoJSON layer
+    if (window.geoJSONLayer) {
+        window.geoJSONLayer.remove();
+    }
+    
+    // Apply new GeoJSON layer with dynamic fill color
+    window.geoJSONLayer = L.geoJSON(featureCollection, {
+        style: feature => areaStyle(feature, getCurrentFillColor()),
+        onEachFeature: onEachFeature
+    }).addTo(map);
 
-        updateLegend(legends[currentLegend],units[currentLegend]);
-    })
-    .catch(error => console.log('Error:', error));
+    updateLegend(legends[currentLegend],units[currentLegend]);
 }
 
 // Add a click event listener to the close button outside the onEachFeature function

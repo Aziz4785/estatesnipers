@@ -1,12 +1,12 @@
-from flask import Blueprint, flash, redirect, render_template, request, url_for,session
+from flask import Blueprint, flash, redirect, render_template, request, url_for,session,current_app
 from flask_login import login_required,login_user,logout_user,current_user
-from flask import jsonify
+from flask import jsonify,current_app
 from src import bcrypt,db
 from src.accounts.models import User
 from .forms import LoginForm, RegisterForm
 
 accounts_bp = Blueprint("accounts", __name__)
-MAX_LOGIN_ATTEMPTS = 5
+MAX_LOGIN_ATTEMPTS = 15
 
 @accounts_bp.route("/register", methods=["GET", "POST"])
 def register():
@@ -19,7 +19,7 @@ def register():
         db.session.commit()
         login_user(user)
         return redirect(url_for("index"))
-    return render_template('index.html', login_form=LoginForm(), register_form=register_form,show_modal=True,form_to_show="register",form_errors=register_form.errors)
+    return render_template('index.html', dubai_areas_data=current_app.config['dubai_areas_data'],login_form=LoginForm(), register_form=register_form,show_modal=True,form_to_show="register",form_errors=register_form.errors)
 
 
 @accounts_bp.route("/login", methods=["GET", "POST"])
@@ -32,7 +32,7 @@ def login():
         # Check if the user is locked out
         if 'login_attempts' in session and session['login_attempts'] >= MAX_LOGIN_ATTEMPTS:
             error_message = 'Account locked. Please try again later.'
-            return render_template('index.html', login_form=login_form, register_form=RegisterForm(), show_modal=True, message=error_message)
+            return render_template('index.html',dubai_areas_data=current_app.config['dubai_areas_data'], login_form=login_form, register_form=RegisterForm(), show_modal=True, message=error_message)
 
 
         if user and bcrypt.check_password_hash(user.password, request.form["password"]):
@@ -45,7 +45,7 @@ def login():
         else:
            session['login_attempts'] = session.get('login_attempts', 0) + 1
            error_message = 'Invalid email or password.'
-           return render_template('index.html', login_form=login_form, register_form=RegisterForm(),show_modal=True,message=error_message)
+           return render_template('index.html', dubai_areas_data=current_app.config['dubai_areas_data'],login_form=login_form, register_form=RegisterForm(),show_modal=True,message=error_message)
     return redirect(url_for("index"))
 
 

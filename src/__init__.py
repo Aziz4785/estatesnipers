@@ -81,18 +81,6 @@ def add_header(response):
     response.headers['Expires'] = '-1'
     return response
 
-# Configuration for Flask-Mailman
-app.config['MAIL_SERVER'] = 'smtpout.secureserver.net'
-app.config['MAIL_PORT'] = 80#465
-app.config['MAIL_USE_SSL'] = True
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USERNAME'] = 'no_reply@estatesnipers.com'
-app.config['MAIL_PASSWORD'] = 'Snipers2024!'
-app.config['MAIL_DEFAULT_SENDER'] = 'no_reply@estatesnipers.com'
-
-mail = Mail(app)
-
-
 app.config.update(
     SESSION_COOKIE_SAMESITE='Lax', 
     SESSION_COOKIE_SECURE=True  # Ensure cookies are only sent over HTTPS
@@ -103,6 +91,9 @@ def add_header(response):
     return response
 
 bcrypt = Bcrypt(app)
+test_global_var = None
+dubai_areas_data = None
+
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 CORS(app)
@@ -118,17 +109,6 @@ app.register_blueprint(core_bp)
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 if not app.config["SECRET_KEY"]:
     raise ValueError("No SECRET_KEY set for Flask application. Did you follow the setup instructions?")
-
-# auth = HTTPBasicAuth()
-# users = {
-#     os.environ['ADMIN_USER']: os.environ['ADMIN_PASSWORD']
-# }
-
-# @auth.verify_password
-# def verify_password(username, password):
-#     if username in users and users[username] == password:
-#         return username
-
 
 from src.accounts.models import User,StripeCustomer
 
@@ -150,22 +130,9 @@ stripe_keys = {
 stripe.api_key = stripe_keys["secret_key"]
 
 
-# db_config = {
-#     'host': 'localhost',
-#     'user': 'root',
-#     'password': 'DubaiBelgiumAnalytics_123',
-#     'database': 'sniperdb'
-# }
-# db_config = {
-#     'host': 'localhost',
-#     'dbname': 'SNIPERDB',  # 'database' in MySQL is 'dbname' in PostgreSQL
-#     'user': 'postgres',
-#     'password': r'DubaiAnalytics_123',
-#     'port': '5432'  # Default PostgreSQL port
-# }
-#db_url = "postgres://uaovl716s190an:p785b9fb819ee0e2fa3fb5eaae6550ed481578e5f782c0287d2e8b5d846934059@ec2-52-7-195-158.compute-1.amazonaws.com:5432/df4dm8ak5du5r"
-#db_url = "postgresql://postgres:DubaiAnalytics_123@localhost:5432/SNIPERDB"
-
+def get_dubai_areas_data():
+    global dubai_areas_data
+    return dubai_areas_data
 
 def check_premium_user():
     if current_user.is_authenticated:
@@ -191,7 +158,7 @@ def index():
         stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
         if(stripe_customer):
             last_billing_period = stripe_customer.cancel_at_period_end
-    return render_template('index.html', modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period)
+    return render_template('index.html', dubai_areas_data= current_app.config['dubai_areas_data'],modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period)
 
 @app.route("/config")
 def get_publishable_key():
@@ -238,12 +205,12 @@ def create_checkout_session():
 @app.route("/success")
 def success():
     is_premium_user = check_premium_user()
-    return render_template("index.html",is_premium_user=is_premium_user)
+    return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'],is_premium_user=is_premium_user)
 
 
 @app.route("/cancel")
 def cancelled():
-    return render_template("index.html")
+    return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'])
 
 
 @app.route("/webhook", methods=["POST"])
@@ -865,210 +832,225 @@ def get_list_order():
     return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
     
+def fetch_dubai_areas_data():
+    is_premium_user = check_premium_user()
+    connection = get_db_connection()
+    #cursor = connection.cursor(dictionary=True) mysql
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
+    fetched_rows = cursor.fetchall() 
+
+    # Data processing functions for each key
+    # Each function is responsible for converting the row entry to the desired type
+    process_funcs = {
+        'average_sale_price': float,
+        'avg_ca_5': float,
+        'avg_ca_10': float,  
+        'avg_roi': float,
+        'supply_finished_pro': int,
+        'supply_offplan_pro': int,
+        'supply_lands': int,
+        'aquisitiondemand_2023' : float,
+        'rentaldemand_2023' : float
+    }
+
+    # Data storage dictionaries, keyed by type
+    data_stores = {
+        'average_sale_price': {},
+        'avg_ca_5': {},
+        'avg_ca_10': {},
+        'avg_roi': {},
+        'supply_finished_pro': {},
+        'supply_offplan_pro': {},
+        'supply_lands': {},
+        'aquisitiondemand_2023' : {},
+        'rentaldemand_2023' : {}
+    }
+
+    # Process all rows in one loop
+    for row in fetched_rows:
+        area_id = row['area_id']
+        for column, changetype in process_funcs.items():
+            if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
+                data_stores[column][area_id] = changetype(row[column])
+
+    valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
+    valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
+    valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
+    valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
+    valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
+    min_price, med_price, max_price = get_min_median_max(valid_prices)
+    min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
+    min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
+    min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
+    min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
+
+    legends = {
+        "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
+        "avgCA_5Y": [round((min_ca+med_ca)*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
+        "avg_roi": [custom_round((min_roi+med_roi)*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
+        "aquisitiondemand_2023" : [
+            custom_round((med_aqDemand+min_aqDemand)*100/2) if med_aqDemand is not None else 0,
+            custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
+            custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
+        ]
+    }
+
+    units = {
+        "averageSalePrice": "AED",
+        "avgCA_5Y": "%",
+        "avg_roi": "%",
+        "aquisitiondemand_2023" : "%"
+    }
+    
+    # Load the GeoJSON file
+    with open('areas_coordinates/dubaiAreas.geojson', 'r') as file:
+        geojson = json.load(file)
+
+    # Here is the order :
+    # average_sale_price
+    # avg_ca_5
+    # avgCA_10Y
+    # avg_roi
+    # supply_finished_pro
+    # supply_offplan_pro
+    # supply_lands
+    # aquisitiondemand_2023
+    # rentaldemand_2023
+
+    # Enrich GeoJSON with price data and calculate fill colors
+    for feature in geojson:
+        area_id = int(feature['area_id'])
+        variable_names = []
+        variable_values = []
+        variables_units = []
+        variables_special = []  #(variables that have speical info-card) 0 for no special, 1 for projects, 2 for lands
+
+        variable_names.append("Avg. Meter Sale Price:")
+        if area_id in data_stores['average_sale_price']:
+            price = data_stores['average_sale_price'][area_id]
+            variable_values.append(price)   
+            feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
+        else:
+            variable_values.append(None)
+            feature['fillColorPrice'] = 'rgb(95,95,95)'  # grey
+        variables_units.append('AED')
+        variables_special.append(0)
+
+        # Process avg_ca_5
+        variable_names.append("Avg. Capital Appr. 5Y:")
+        if area_id in data_stores['avg_ca_5']:
+            ca = data_stores['avg_ca_5'][area_id]
+            variable_values.append(ca)
+            feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
+        else:
+            variable_values.append(None)
+            feature['fillColorCA5'] = 'rgb(95,95,95)'  # grey
+        variables_units.append('%')
+        variables_special.append(0)
+
+        # Process avg_ca_10
+        variable_names.append("Avg. Capital Appr. 10Y:")
+        if area_id in data_stores['avg_ca_10']:
+            variable_values.append(data_stores['avg_ca_10'][area_id])
+        else:
+            variable_values.append(None)
+        variables_units.append('%')
+        variables_special.append(0)
+
+        # Process avg_roi
+        variable_names.append("Avg. Gross Rental Yield:")
+        if area_id in data_stores['avg_roi']:
+            
+            roi = data_stores['avg_roi'][area_id]
+            variable_values.append(roi)
+            feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
+        else:
+            variable_values.append(None)
+            feature['fillColorRoi'] = 'rgb(95,95,95)'
+        variables_units.append('%')
+        variables_special.append(0)
+
+        if is_premium_user:
+            # Process supply_finished_pro
+            variable_names.append("supply_finished_pro")
+            if area_id in data_stores['supply_finished_pro']:
+                variable_values.append(data_stores['supply_finished_pro'][area_id])
+            else:
+                variable_values.append(None)
+            variables_units.append('-')
+            variables_special.append(1)
+
+            # Process supply_offplan_pro
+            variable_names.append("supply_offplan_pro")
+            if area_id in data_stores['supply_offplan_pro']:
+                variable_values.append(data_stores['supply_offplan_pro'][area_id])
+            else:
+                variable_values.append(None)
+            variables_units.append('-')
+            variables_special.append(1)
+
+            # Process supply_lands
+            variable_names.append("supply_lands")
+            if area_id in data_stores['supply_lands']:
+                variable_values.append(data_stores['supply_lands'][area_id])
+            else:
+                variable_values.append(None)
+            variables_units.append('-')
+            variables_special.append(2)
+
+            # Process aquisitiondemand_2023
+            variable_names.append("Acquisition Demand 2023:")
+            if area_id in data_stores['aquisitiondemand_2023']:
+                ademand = data_stores['aquisitiondemand_2023'][area_id]
+                variable_values.append(ademand)
+                feature['fillColorAquDemand'] = get_color(ademand, min_aqDemand, med_aqDemand, max_asDemand)
+            else:
+                variable_values.append(None)
+                feature['fillColorAquDemand'] = 'rgb(95,95,95)'
+            variables_units.append('%')
+            variables_special.append(0)
+
+            # Process rentaldemand_2023
+            variable_names.append("Rental Demand 2023:")
+            if area_id in data_stores['rentaldemand_2023']:
+                rdemand = data_stores['rentaldemand_2023'][area_id]
+                variable_values.append(rdemand)
+                feature['fillColorrentDemand'] = get_color(rdemand, min_rentDemand, med_rentDemand, max_rentDemand)
+            else:
+                variable_values.append(None)
+                feature['fillColorrentDemand'] = 'rgb(95,95,95)'
+            variables_units.append('%')
+            variables_special.append(0)
+
+        feature["variableNames"] = variable_names
+        feature["variableValues"] = variable_values
+        feature["variableUnits"] = variables_units
+        feature["variableSpecial"] = variables_special
+
+    cursor.close()
+    connection.close()
+    return [legends, geojson, units]
+
+# @app.before_request
+# def initialize_dubai_areas_data():
+#     print("initialize_dubai_areas_data")
+#     global dubai_areas_data
+#     if dubai_areas_data is None:
+#         print("dubai_areas_data is none so we fatch it")
+#         dubai_areas_data = fetch_dubai_areas_data()
+
+@app.before_request
+def initialize_dubai_areas_data():
+    if 'dubai_areas_data' not in current_app.config:
+        current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
+
 @app.route('/dubai-areas')
 def dubai_areas():
     try:
         app.logger.info('we call dubai areas')
-        is_premium_user = check_premium_user()
-
-        connection = get_db_connection()
-        #cursor = connection.cursor(dictionary=True) mysql
-        cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-        cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
-        fetched_rows = cursor.fetchall() 
-
-        # Data processing functions for each key
-        # Each function is responsible for converting the row entry to the desired type
-        process_funcs = {
-            'average_sale_price': float,
-            'avg_ca_5': float,
-            'avg_ca_10': float,  
-            'avg_roi': float,
-            'supply_finished_pro': int,
-            'supply_offplan_pro': int,
-            'supply_lands': int,
-            'aquisitiondemand_2023' : float,
-            'rentaldemand_2023' : float
-        }
-
-        # Data storage dictionaries, keyed by type
-        data_stores = {
-            'average_sale_price': {},
-            'avg_ca_5': {},
-            'avg_ca_10': {},
-            'avg_roi': {},
-            'supply_finished_pro': {},
-            'supply_offplan_pro': {},
-            'supply_lands': {},
-            'aquisitiondemand_2023' : {},
-            'rentaldemand_2023' : {}
-        }
-
-        # Process all rows in one loop
-        for row in fetched_rows:
-            area_id = row['area_id']
-            for column, changetype in process_funcs.items():
-                if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
-                    data_stores[column][area_id] = changetype(row[column])
-
-        valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
-        valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
-        valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
-        valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
-        valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
-        min_price, med_price, max_price = get_min_median_max(valid_prices)
-        min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
-        min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
-        min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
-        min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
-
-        legends = {
-            "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
-            "avgCA_5Y": [round((min_ca+med_ca)*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
-            "avg_roi": [custom_round((min_roi+med_roi)*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
-            "aquisitiondemand_2023" : [
-                custom_round((med_aqDemand+min_aqDemand)*100/2) if med_aqDemand is not None else 0,
-                custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
-                custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
-            ]
-        }
-
-        units = {
-            "averageSalePrice": "AED",
-            "avgCA_5Y": "%",
-            "avg_roi": "%",
-            "aquisitiondemand_2023" : "%"
-        }
-        
-        # Load the GeoJSON file
-        with open('areas_coordinates/dubaiAreas.geojson', 'r') as file:
-            geojson = json.load(file)
-    
-        # Here is the order :
-        # average_sale_price
-        # avg_ca_5
-        # avgCA_10Y
-        # avg_roi
-        # supply_finished_pro
-        # supply_offplan_pro
-        # supply_lands
-        # aquisitiondemand_2023
-        # rentaldemand_2023
-
-        # Enrich GeoJSON with price data and calculate fill colors
-        for feature in geojson:
-            area_id = int(feature['area_id'])
-            variable_names = []
-            variable_values = []
-            variables_units = []
-            variables_special = []  #(variables that have speical info-card) 0 for no special, 1 for projects, 2 for lands
-
-            variable_names.append("Avg. Meter Sale Price:")
-            if area_id in data_stores['average_sale_price']:
-                price = data_stores['average_sale_price'][area_id]
-                variable_values.append(price)   
-                feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
-            else:
-                variable_values.append(None)
-                feature['fillColorPrice'] = 'rgb(95,95,95)'  # grey
-            variables_units.append('AED')
-            variables_special.append(0)
-
-            # Process avg_ca_5
-            variable_names.append("Avg. Capital Appr. 5Y:")
-            if area_id in data_stores['avg_ca_5']:
-                ca = data_stores['avg_ca_5'][area_id]
-                variable_values.append(ca)
-                feature['fillColorCA5'] = get_color(ca, min_ca, med_ca, max_ca)
-            else:
-                variable_values.append(None)
-                feature['fillColorCA5'] = 'rgb(95,95,95)'  # grey
-            variables_units.append('%')
-            variables_special.append(0)
-
-            # Process avg_ca_10
-            variable_names.append("Avg. Capital Appr. 10Y:")
-            if area_id in data_stores['avg_ca_10']:
-                variable_values.append(data_stores['avg_ca_10'][area_id])
-            else:
-                variable_values.append(None)
-            variables_units.append('%')
-            variables_special.append(0)
-
-            # Process avg_roi
-            variable_names.append("Avg. Gross Rental Yield:")
-            if area_id in data_stores['avg_roi']:
-                
-                roi = data_stores['avg_roi'][area_id]
-                variable_values.append(roi)
-                feature['fillColorRoi'] = get_color(roi, min_roi, med_roi, max_roi)
-            else:
-                variable_values.append(None)
-                feature['fillColorRoi'] = 'rgb(95,95,95)'
-            variables_units.append('%')
-            variables_special.append(0)
-
-            if is_premium_user:
-                # Process supply_finished_pro
-                variable_names.append("supply_finished_pro")
-                if area_id in data_stores['supply_finished_pro']:
-                    variable_values.append(data_stores['supply_finished_pro'][area_id])
-                else:
-                    variable_values.append(None)
-                variables_units.append('-')
-                variables_special.append(1)
-
-                # Process supply_offplan_pro
-                variable_names.append("supply_offplan_pro")
-                if area_id in data_stores['supply_offplan_pro']:
-                    variable_values.append(data_stores['supply_offplan_pro'][area_id])
-                else:
-                    variable_values.append(None)
-                variables_units.append('-')
-                variables_special.append(1)
-
-                # Process supply_lands
-                variable_names.append("supply_lands")
-                if area_id in data_stores['supply_lands']:
-                    variable_values.append(data_stores['supply_lands'][area_id])
-                else:
-                    variable_values.append(None)
-                variables_units.append('-')
-                variables_special.append(2)
-
-                # Process aquisitiondemand_2023
-                variable_names.append("Acquisition Demand 2023:")
-                if area_id in data_stores['aquisitiondemand_2023']:
-                    ademand = data_stores['aquisitiondemand_2023'][area_id]
-                    variable_values.append(ademand)
-                    feature['fillColorAquDemand'] = get_color(ademand, min_aqDemand, med_aqDemand, max_asDemand)
-                else:
-                    variable_values.append(None)
-                    feature['fillColorAquDemand'] = 'rgb(95,95,95)'
-                variables_units.append('%')
-                variables_special.append(0)
-
-                # Process rentaldemand_2023
-                variable_names.append("Rental Demand 2023:")
-                if area_id in data_stores['rentaldemand_2023']:
-                    rdemand = data_stores['rentaldemand_2023'][area_id]
-                    variable_values.append(rdemand)
-                    feature['fillColorrentDemand'] = get_color(rdemand, min_rentDemand, med_rentDemand, max_rentDemand)
-                else:
-                    variable_values.append(None)
-                    feature['fillColorrentDemand'] = 'rgb(95,95,95)'
-                variables_units.append('%')
-                variables_special.append(0)
-
-            feature["variableNames"] = variable_names
-            feature["variableValues"] = variable_values
-            feature["variableUnits"] = variables_units
-            feature["variableSpecial"] = variables_special
-
-        cursor.close()
-        connection.close()
-
-        return jsonify([legends, geojson, units])
+        data_received = fetch_dubai_areas_data()
+        return jsonify(data_received)
     except FileNotFoundError:
         return jsonify({'error': 'File not found'}), 404
     except Exception as e:
