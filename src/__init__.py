@@ -468,8 +468,12 @@ list_order_in_memory = []
 @app.route('/get-area-details')
 def get_area_details():
     try:
+        app.logger.info('we call get_area_details')
         is_premium_user = check_premium_user()
-
+        if(is_premium_user):
+            app.logger.info('the user is premium')
+        else:
+            app.logger.info('the user is not premium')
         hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
         if is_premium_user:   
             hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
@@ -1398,7 +1402,7 @@ def generate_pdf():
         # Move to next line for the table
         p.setFont("Helvetica", 12)
         p.setFillColor(colors.black)
-        
+
         # Data for the table
         table_data = [
             ['Metric', 'Value'],
