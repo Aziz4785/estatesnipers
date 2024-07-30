@@ -205,6 +205,7 @@ def create_checkout_session():
 @app.route("/success")
 def success():
     is_premium_user = check_premium_user()
+    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
     return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'],is_premium_user=is_premium_user)
 
 
@@ -1397,7 +1398,7 @@ def generate_pdf():
         # Move to next line for the table
         p.setFont("Helvetica", 12)
         p.setFillColor(colors.black)
-
+        
         # Data for the table
         table_data = [
             ['Metric', 'Value'],
