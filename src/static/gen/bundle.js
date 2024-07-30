@@ -301,7 +301,7 @@ function generatePDF(name) {
     });
 }
 
- function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title) {
+ function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title,label_of_point ='avg meter sale price') {
     if (!dataPoints || !dataPoints.length) return '';
 
     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
@@ -348,7 +348,7 @@ function generatePDF(name) {
     const xAxisY = padding + chartHeight;
     const yAxisX = padding;
 
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}','${label_of_point}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
             <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
             <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
@@ -403,7 +403,9 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) ? (value.avg_actual_worth).toFixed(2) : '-';
+                row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
+                ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
+                : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
@@ -422,7 +424,9 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
-                row.cells[4].innerText = (value.avg_actual_worth || value.avg_actual_worth === 0) && !isNaN(value.avg_actual_worth) ? (value.avg_actual_worth).toFixed(2) : '-';
+                row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
+                ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
+                : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
@@ -438,7 +442,8 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[1].innerText = '99';
                 row.cells[2].innerText = '99';
                 row.cells[3].innerText = '99'; 
-                row.cells[4].innerHTML = '<img src="static/lock_similar.svg" alt="Locked Chart" width="40" height="40">';
+                row.cells[4].innerText = '99'; 
+                row.cells[5].innerHTML = '<img src="static/lock_similar.svg" alt="Locked Chart" width="40" height="40">';
             }
         }
     });
@@ -545,192 +550,192 @@ function onEachFeature(feature, layer) {
     layer.on({
         click: function(e) {
             highlightFeature(e);
-            mainTableBody.innerHTML = ''; // Clear existing rows
-            setCurrentAreaId(feature.properties.area_id);
-            // Create a copy of feature.properties without the "geometry" property
-            const { geometry, ...propertiesWithoutGeometry } = feature.properties;
-            currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
-            
-            setCurrentAreaId(feature.properties.area_id);
-            const areaName = feature.properties.name;
-            const areaInfo = document.getElementById('area_info');
-            const areaTitleH2 = document.getElementById('area-title');
-            // Clear previous content and set up the areaName as a separate heading on top
-            areaTitleH2.innerHTML = areaName;// areaName as a separate top element
-
-            const variableNames = feature.properties.variableNames;
-            const variableValues = feature.properties.variableValues;
-            const variableunits = feature.properties.variableUnits;
-            const variableSpecial= feature.properties.variableSpecial;
-            const cards = document.querySelectorAll('.info-card');
-            let array_index = 0;
-            // Loop through each card and populate with the corresponding variable name and value
-            cards.forEach((card) => {
-                // Ensure we have a corresponding variable name and value
-                
-
-                if(card.id=='card5' && variableNames.length >5)
-                {
-                    const supplyCard = document.getElementById('card5');
-                    if (supplyCard) {
-                        supplyCard.querySelector('.title').textContent ='Supply of Projects:';
-                        const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[4] : "-";
-                        const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[5] : "-";
-                        supplyCard.querySelector('.finished-value').textContent = finishedValue;
-                        supplyCard.querySelector('.offplan-value').textContent = offplanValue;
-                        supplyCard.classList.remove('locked-card');  // Remove locked-card class
-                        array_index+=2;
-
-                        const wrapper = supplyCard.closest('.info-card-wrapper');
-                        // Remove the lock icon
-                        if(wrapper){
-                            const lockIcon = wrapper.querySelector('.lock-icon-card');
-                            if (lockIcon) {
-                                lockIcon.remove();
-                            }
-                            // Move the card outside of the wrapper
-                            wrapper.parentNode.insertBefore(supplyCard, wrapper);
-                            // Remove the empty wrapper
-                            wrapper.remove();
-                        }
-
-                    }
-                }
-                else if(card.id=='card6' && variableNames.length >5)
-                {
-                    const landsCard = document.getElementById('card6');
-                    if (landsCard) {
-                        landsCard.querySelector('.title').textContent ='Supply of Lands:';
-                        const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
-                        landsCard.querySelector('.value').textContent = landsValue;
-                        landsCard.classList.remove('locked-card');  // Remove locked-card class
-
-                        const landbutton = document.getElementById('land-chart-button');
-                        landbutton.addEventListener('click', function() {
-                                fetch(`/get-lands-stats?area_id=${getCurrentAreaId()}`)
-                                    .then(response => {
-                                        if (response.status === 204) {
-                                            // No content for non-premium users, do nothing
-                                            return null;
-                                        }
-                                        if (!response.ok) {
-                                            throw new Error('Network response was not ok');
-                                        }
-                                        return response.json();
-                                    })
-                                    .then(data => {
-                                        if (data) {
-                                            renderLandStatsChart(data);
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.log('Error fetching land stats:', error);
-                                    });
-                            });
-
-                        const wrapper = landsCard.closest('.info-card-wrapper');
-                        // Remove the lock icon
-                        if(wrapper){
-                            const lockIcon = wrapper.querySelector('.lock-icon-card');
-                            if (lockIcon) {
-                                lockIcon.remove();
-                            }
-                            // Move the card outside of the wrapper
-                            wrapper.parentNode.insertBefore(landsCard, wrapper);
-                            // Remove the empty wrapper
-                            wrapper.remove();
-                        }
-
-
-                        array_index++;
-                    }
-                    
-                }
-                else if(variableSpecial[array_index]==0)
-                {
-                    const title = variableNames[array_index];
-                    let value = variableValues[array_index];
-                    if(card.id=='card8')
-                    {
-                        const tooltipText = "Fraction of long-term rented units in the area";
-                        card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
-                    }
-                    else if(card.id=='card7')
-                    {
-                        const tooltipText = "Fraction of sold units in the area"
-                        card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
-                    }
-                    else
-                    {
-                        card.querySelector('.title').textContent = title;
-                    }
-                    
-                    if(variableunits[array_index]=="%")
-                    {
-                        card.querySelector('.value').textContent= `${(value * 100).toFixed(2)} %`;
-                    }
-                    else if(variableunits[array_index]=="AED")
-                    {
-                        card.querySelector('.value').textContent= `${value} AED`;
-                    }
-                    else{
-                        card.querySelector('.value').textContent = value;
-                    }
-                    
-                    card.classList.remove('locked-card');  // Remove locked-card class
-                    const wrapper = card.closest('.info-card-wrapper');
-                    // Remove the lock icon
-                    if(wrapper){
-                        const lockIcon = wrapper.querySelector('.lock-icon-card');
-                        if (lockIcon) {
-                            lockIcon.remove();
-                        }
-                        // Move the card outside of the wrapper
-                        wrapper.parentNode.insertBefore(card, wrapper);
-                        // Remove the empty wrapper
-                        wrapper.remove();
-                    }
-                
-
-                    array_index++;
-                }
-        });
-           
-            // Append the container of cards to the panel content
-            const statsContainer = document.getElementById('stats-container');
-            areaInfo.appendChild(statsContainer);
-
-            const panel = document.getElementById('info-panel');
-            panel.style.display = 'block';
-            
-            // Remove any existing error messages before fetching new data
-            const existingErrorMessage = document.getElementById('error-message');
-            if (existingErrorMessage) {
-                existingErrorMessage.remove();
-            }
-            
-            // Use the new fetchAreaDetails function
-            fetchAreaDetails(getCurrentAreaId());
-
-             // If ProjectsDemand tab is active, refetch data with new area_id
-
-            // Simulate a click on the "Details" button
-            var evt = new MouseEvent("click", {
-                view: window,
-                bubbles: true,
-                cancelable: true,
-                clientX: 20,
-            });
-
-            var detailsButton = document.querySelector(".tablinks.active");
-            detailsButton.dispatchEvent(evt);
-            const statsButtons = statsContainer.querySelectorAll('.stats-button');
-            
-
+            updateAreaInfo(feature);
         }
     });
 }
 
+function updateAreaInfo(feature) {
+    mainTableBody.innerHTML = ''; // Clear existing rows
+    setCurrentAreaId(feature.properties.area_id);
+    // Create a copy of feature.properties without the "geometry" property
+    const { geometry, ...propertiesWithoutGeometry } = feature.properties;
+    currentAreaData = propertiesWithoutGeometry; // Save as global variable for later
+    
+    setCurrentAreaId(feature.properties.area_id);
+    const areaName = feature.properties.name;
+    const areaInfo = document.getElementById('area_info');
+    const areaTitleH2 = document.getElementById('area-title');
+    // Clear previous content and set up the areaName as a separate heading on top
+    areaTitleH2.innerHTML = areaName;// areaName as a separate top element
+
+    const variableNames = feature.properties.variableNames;
+    const variableValues = feature.properties.variableValues;
+    const variableunits = feature.properties.variableUnits;
+    const variableSpecial= feature.properties.variableSpecial;
+    const cards = document.querySelectorAll('.info-card');
+    let array_index = 0;
+    // Loop through each card and populate with the corresponding variable name and value
+    cards.forEach((card) => {
+        // Ensure we have a corresponding variable name and value
+        
+
+        if(card.id=='card5' && variableNames.length >5)
+        {
+            const supplyCard = document.getElementById('card5');
+            if (supplyCard) {
+                supplyCard.querySelector('.title').textContent ='Supply of Projects:';
+                const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[4] : "-";
+                const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[5] : "-";
+                supplyCard.querySelector('.finished-value').textContent = finishedValue;
+                supplyCard.querySelector('.offplan-value').textContent = offplanValue;
+                supplyCard.classList.remove('locked-card');  // Remove locked-card class
+                array_index+=2;
+
+                const wrapper = supplyCard.closest('.info-card-wrapper');
+                // Remove the lock icon
+                if(wrapper){
+                    const lockIcon = wrapper.querySelector('.lock-icon-card');
+                    if (lockIcon) {
+                        lockIcon.remove();
+                    }
+                    // Move the card outside of the wrapper
+                    wrapper.parentNode.insertBefore(supplyCard, wrapper);
+                    // Remove the empty wrapper
+                    wrapper.remove();
+                }
+
+            }
+        }
+        else if(card.id=='card6' && variableNames.length >5)
+        {
+            const landsCard = document.getElementById('card6');
+            if (landsCard) {
+                landsCard.querySelector('.title').textContent ='Supply of Lands:';
+                const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
+                landsCard.querySelector('.value').textContent = landsValue;
+                landsCard.classList.remove('locked-card');  // Remove locked-card class
+
+                const landbutton = document.getElementById('land-chart-button');
+                landbutton.addEventListener('click', function() {
+                        fetch(`/get-lands-stats?area_id=${getCurrentAreaId()}`)
+                            .then(response => {
+                                if (response.status === 204) {
+                                    // No content for non-premium users, do nothing
+                                    return null;
+                                }
+                                if (!response.ok) {
+                                    throw new Error('Network response was not ok');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data) {
+                                    renderLandStatsChart(data);
+                                }
+                            })
+                            .catch(error => {
+                                console.log('Error fetching land stats:', error);
+                            });
+                    });
+
+                const wrapper = landsCard.closest('.info-card-wrapper');
+                // Remove the lock icon
+                if(wrapper){
+                    const lockIcon = wrapper.querySelector('.lock-icon-card');
+                    if (lockIcon) {
+                        lockIcon.remove();
+                    }
+                    // Move the card outside of the wrapper
+                    wrapper.parentNode.insertBefore(landsCard, wrapper);
+                    // Remove the empty wrapper
+                    wrapper.remove();
+                }
+
+
+                array_index++;
+            }
+            
+        }
+        else if(variableSpecial[array_index]==0)
+        {
+            const title = variableNames[array_index];
+            let value = variableValues[array_index];
+            if(card.id=='card8')
+            {
+                const tooltipText = "Fraction of long-term rented units in the area";
+                card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+            }
+            else if(card.id=='card7')
+            {
+                const tooltipText = "Fraction of sold units in the area"
+                card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+            }
+            else
+            {
+                card.querySelector('.title').textContent = title;
+            }
+            
+            if(variableunits[array_index]=="%")
+            {
+                card.querySelector('.value').textContent= `${(value * 100).toFixed(2)} %`;
+            }
+            else if(variableunits[array_index]=="AED")
+            {
+                card.querySelector('.value').textContent= `${value} AED`;
+            }
+            else{
+                card.querySelector('.value').textContent = value;
+            }
+            
+            card.classList.remove('locked-card');  // Remove locked-card class
+            const wrapper = card.closest('.info-card-wrapper');
+            // Remove the lock icon
+            if(wrapper){
+                const lockIcon = wrapper.querySelector('.lock-icon-card');
+                if (lockIcon) {
+                    lockIcon.remove();
+                }
+                // Move the card outside of the wrapper
+                wrapper.parentNode.insertBefore(card, wrapper);
+                // Remove the empty wrapper
+                wrapper.remove();
+            }
+        
+
+            array_index++;
+        }
+});
+    
+    // Append the container of cards to the panel content
+    const statsContainer = document.getElementById('stats-container');
+    areaInfo.appendChild(statsContainer);
+
+    const panel = document.getElementById('info-panel');
+    panel.style.display = 'block';
+    
+    // Remove any existing error messages before fetching new data
+    const existingErrorMessage = document.getElementById('error-message');
+    if (existingErrorMessage) {
+        existingErrorMessage.remove();
+    }
+    
+    // Use the new fetchAreaDetails function
+    fetchAreaDetails(getCurrentAreaId());
+
+        // If ProjectsDemand tab is active, refetch data with new area_id
+
+    // Simulate a click on the "Details" button
+    var evt = new MouseEvent("click", {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+    });
+
+    var detailsButton = document.querySelector(".tablinks.active");
+    detailsButton.dispatchEvent(evt);   
+}
 // Save settings button functionality
 document.getElementById("saveSettings").onclick = function() {
     const listOrder = getListOrderFromUI();
@@ -761,9 +766,7 @@ document.getElementById("saveSettings").onclick = function() {
 };
 
 function fetchAreaDetails(areaId) {
-   // const tableBody = document.getElementById('nestedTable').getElementsByTagName('tbody')[0];
     mainTableBody.innerHTML = ''; // Clear existing rows
-
     const loader = document.querySelector('.loader');
     loader.style.display = 'grid'; // Display loader
     
@@ -1107,7 +1110,7 @@ document.addEventListener("DOMContentLoaded", function() {
             cell.textContent = value;
             if (index === 3) { 
    
-                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand');
+                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand','External Demand');
                 chartDataMappings[row_id] = value; 
             } 
             else if(index > 0){
@@ -1332,7 +1335,7 @@ function clearData() {
 }
 
 
- function openChartModal(chartId, start_year, end_year,title) {
+ function openChartModal(chartId, start_year, end_year,title,label_of_point = 'avg meter sale price') {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];
     if (!dataset) {
@@ -1357,7 +1360,7 @@ function clearData() {
         data: {
             labels: labels, // Years from start_year to end_year
             datasets: [{
-                label: 'avg meter sale price', // Chart label
+                label: label_of_point, // Chart label
                 data: dataset, // The dataset array from the mapping
                 fill: false, // Determines whether the chart should be filled
                 borderColor: 'rgb(36, 22, 235)', // Line color for the main part
