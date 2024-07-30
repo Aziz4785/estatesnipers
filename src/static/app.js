@@ -25,6 +25,11 @@ let state = {
  function getCurrentFillColor() {
     return state.currentFillColor;
 }
+let allAreasData = null;
+function getAllAreasData() {
+    return allAreasData;
+}
+
 
  function getCurrentAreaId() {
     return state.currentAreaId;
@@ -167,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // load the .geojson file to display the areas
  function applyGeoJSONLayer(currentLegend) {
-    const data = serverSideData;
+    const data = allAreasData;
     //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
     const legends = data[0];
     const units = data[2];
@@ -967,6 +972,7 @@ function getCurrentJsonData() {
 function getCurrentAreaData() {
     return currentAreaData;
 }
+
 // Declare a variable outside of the function to hold the chart instance
 function renderLandStatsChart(data) {
     const ctx = document.getElementById('landStatsChart').getContext('2d');
@@ -1032,6 +1038,7 @@ function renderLandStatsChart(data) {
 // On document ready or when initializing your app
 // On document ready or when initializing your app
 document.addEventListener('DOMContentLoaded', () => {
+    allAreasData = serverSideData;
     applyGeoJSONLayer("averageSalePrice");
 });
 

@@ -158,6 +158,9 @@ def index():
         stripe_customer = StripeCustomer.query.filter_by(user_id=current_user.id).first()
         if(stripe_customer):
             last_billing_period = stripe_customer.cancel_at_period_end
+
+    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
+
     return render_template('index.html', dubai_areas_data= current_app.config['dubai_areas_data'],modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period)
 
 @app.route("/config")
