@@ -29,7 +29,7 @@
             cell.textContent = value;
             if (index === 3) { 
    
-                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand');
+                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand','External Demand');
                 chartDataMappings[row_id] = value; 
             } 
             else if(index > 0){
@@ -254,7 +254,7 @@ function clearData() {
 }
 
 
- function openChartModal(chartId, start_year, end_year,title) {
+ function openChartModal(chartId, start_year, end_year,title,label_of_point = 'avg meter sale price') {
     // Fetch the dataset based on the chartId or directly pass the dataset
     const dataset = chartDataMappings[chartId];
     if (!dataset) {
@@ -279,7 +279,7 @@ function clearData() {
         data: {
             labels: labels, // Years from start_year to end_year
             datasets: [{
-                label: 'avg meter sale price', // Chart label
+                label: label_of_point, // Chart label
                 data: dataset, // The dataset array from the mapping
                 fill: false, // Determines whether the chart should be filled
                 borderColor: 'rgb(36, 22, 235)', // Line color for the main part
