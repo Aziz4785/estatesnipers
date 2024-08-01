@@ -123,11 +123,11 @@ def replace_nan_with_none(value):
     else:
         return value
 
-def calculate_CA(row, year_diff):
+def calculate_CA(row, year_diff,last_year = 2023):
     # Capital Appreciattion calculation
     #calculate_CA(row, 5) to calculate the capital appr over 5 years
-    price_new = row[f'AVG_meter_price_2023']
-    price_old = row[f'AVG_meter_price_{2023-year_diff}']
+    price_new = row[f'AVG_meter_price_{last_year}']
+    price_old = row[f'AVG_meter_price_{last_year-year_diff}']
     if pd.notna(price_new) and pd.notna(price_old) and price_new != 0 and price_old != 0:
         return (price_new - price_old) / price_old
     else:

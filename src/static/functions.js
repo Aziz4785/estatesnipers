@@ -93,7 +93,7 @@
   }
 }
  function showPremiumMessage() {
-    openModal('Access all content today for $19.99');
+    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
 }
 
 function createInfoCard(title, value) {

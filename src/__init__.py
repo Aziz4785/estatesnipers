@@ -125,6 +125,7 @@ stripe_keys = {
     "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
     "price_id": os.environ["STRIPE_PRICE_ID"],
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"], #Stripe will now forward events to our endpoint
+    "price_promo_id": os.environ["STRIPE_PRICE_ID_PROMO"],
 }
 
 stripe.api_key = stripe_keys["secret_key"]
@@ -196,10 +197,15 @@ def create_checkout_session():
             mode="subscription",
             line_items=[
                 {
-                    "price": stripe_keys["price_id"],
+                    "price": stripe_keys["price_id"],  # Use your regular price ID
                     "quantity": 1,
                 }
-            ]
+            ],
+            discounts=[
+                {
+                    "coupon": stripe_keys["price_promo_id"],  # Replace with your actual coupon ID
+                }
+            ],
         )
         return jsonify({"sessionId": checkout_session["id"]})
     except Exception as e:
@@ -259,7 +265,6 @@ def stripe_webhook():
         subscription = event["data"]["object"]
         handle_subscription_deleted(subscription)
     return "Success", 200
-
 
 def handle_subscription_deleted(subscription):
     customer = StripeCustomer.query.filter_by(stripeSubscriptionId=subscription.id).first()
@@ -573,6 +578,7 @@ def get_area_details():
 
             final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
             final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
+            final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
 
             columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
             # Combine the columns : columns of the group + avg_cap_appreciation_columns

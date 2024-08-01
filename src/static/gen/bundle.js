@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         // User is not logged in, show login modal
                         document.getElementById("premiumModal").style.display = 'none';
-                        openLoginModal("Login to Upgrade", "login");
+                        openLoginModal("Login", "login");
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -173,8 +173,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // load the .geojson file to display the areas
  function applyGeoJSONLayer(currentLegend) {
     const data = allAreasData;
-    console.log("allAreasData : ")
-    console.log(allAreasData)
     //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
     const legends = data[0];
     const units = data[2];
@@ -255,7 +253,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     }
     //contentCell.classList.add('content-cell'); // Add a class for additional styling if needed
     // Creating placeholders for the other values
-    ['Capital Appreciation 2018', 'Capital Appreciation 2013', 'ROI', 'avg transaction value', 'avg_meter_price_2013_2023'].forEach(() => row.insertCell());
+    ['Capital Appreciation 2018', 'Capital Appreciation 2013', 'ROI', 'avg transaction value', 'avg_meter_price_2013_2023','Projected Capital Appreciation 5Y'].forEach(() => row.insertCell());
 
     return rowId;
 }
@@ -387,7 +385,9 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                               && !value.avgCapitalAppreciation2013
                               && !value.avg_roi
                               && !value.avg_actual_worth
-                              && !value.avg_meter_price_2013_2023;
+                              && !value.avg_meter_price_2013_2023
+                              && !value.avgCapitalAppreciation2013
+                              && !value.avgCapitalAppreciation2029;
             }
         }
         if (hasChildren) {
@@ -414,6 +414,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -435,6 +436,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(key.includes("locked project"))
@@ -896,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     document.getElementById("unlock-button-table").onclick = function() {
-        openModal('Unlock all projects Today for $19.99');
+        openModal('Unlock all projects Today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: smaller;">*</span>');
     };
 
 });
@@ -1183,7 +1185,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 }
  function showPremiumMessage() {
-    openModal('Access all content today for $19.99');
+    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: smaller;">*</span>');
 }
 
 function createInfoCard(title, value) {
@@ -1411,10 +1413,19 @@ function clearData() {
     // Show the modal
     document.getElementById('chartModal').style.display = 'block';
 }
-function openModal(title) {
+function openModal(title,footnote="Until 31/08/2024 then 19.99 $") {
     const modalTitle = document.querySelector('.modal-title');
     const premiumModal = document.getElementById('premiumModal');
-    modalTitle.textContent = title;
+    modalTitle.innerHTML = title;
+    const footnoteElement = document.querySelector('.modal-footnote');
+
+    if (footnote && footnote.trim() !== '') {
+        footnoteElement.textContent = footnote;
+        footnoteElement.style.display = 'block';
+    } else {
+        footnoteElement.style.display = 'none';
+    }
+
     premiumModal.style.display = 'block';
   }
 

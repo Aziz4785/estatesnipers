@@ -219,6 +219,11 @@
             font-size: 16px;
             margin-top: 15px;
 }
+.old-price {
+  text-decoration: line-through;
+  color: #888;
+  margin-right: 5px;
+}
 
 
 #last-updated {
@@ -562,7 +567,7 @@ tbody td {
 .modal-content {
   background-color: #ffffff;
   margin: 10% auto;
-  padding: 20px;
+  padding: 20px 20px 15px 20px;
   width: 40%; /* Better suited for a variety of devices */
   box-shadow: 0 4px 10px rgba(0,0,0,0.1); /* Softer shadow */
   border-radius: 8px; /* Subtly rounded corners */
@@ -570,6 +575,16 @@ tbody td {
   font-family: 'Roboto', sans-serif;
 }
 
+.modal-footer {
+  margin-top: 5px;
+}
+
+.modal-footnote {
+  font-size: 12px;
+  color: #666;
+  text-align: left;
+  margin-bottom: 1px;
+}
 .close-button {
   color: #767676;
   float: right;

@@ -282,6 +282,7 @@
                                 <th>Gross Rental Yield %</th>
                                 <th>Avg. Transaction value AED</th>
                                 <th>Meter Sale Price</th>
+                                <th>Projected Capital Appreciation 5Y %</th>
                             </tr>
                         </thead>
                         <tbody id="mainTableBody">
@@ -317,7 +318,7 @@
       <div id="premiumModal" class="modal">
         <div class="modal-content">
           <span class="close-button">&times;</span>
-          <h2 class="modal-title">Upgrade to Premium $19.99</h2>
+          <h2 class="modal-title">Upgrade to Premium <span class="old-price">$19.99</span> $9.99</h2>
           <div class="premium-box-container">
             <div class="premium-box">
               <div class="premium-header">PREMIUM</div>
@@ -332,6 +333,9 @@
             </div>
           </div>
           <button id = "upgradeButton" class="upgrade-button">Upgrade Now</button>
+          <div class="modal-footer">
+            <p class="modal-footnote">this is a footnote</p>
+          </div>
         </div>
       </div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
