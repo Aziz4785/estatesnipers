@@ -898,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     document.getElementById("unlock-button-table").onclick = function() {
-        openModal('Unlock all projects Today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: smaller;">*</span>');
+        openModal('Unlock all projects Today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
     };
 
 });
@@ -1185,7 +1185,7 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 }
  function showPremiumMessage() {
-    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: smaller;">*</span>');
+    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
 }
 
 function createInfoCard(title, value) {
