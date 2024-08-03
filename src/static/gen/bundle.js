@@ -300,9 +300,7 @@ function generatePDF(name) {
     })
     .catch(error => {
         console.error('Error:', error);
-        if (error.message !== 'Premium subscription required') {
-            alert("An error occurred while generating the PDF. Please try again later.");
-        }
+        alert("An error occurred while generating the PDF. Please try again later.");
     });
 }
 

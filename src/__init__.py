@@ -1168,23 +1168,28 @@ def create_histogram(data):
     # Extract the year from the instance_date
     df['year'] = df['instance_date'].dt.year
     
+    # Create a new figure
+    fig, ax = plt.subplots(figsize=(18, 8))
+    #plt.rcParams.update({'font.size': 26})
+
     # Plotting
-    plt.figure(figsize=(14, 7))
-    fig, ax = plt.subplots()
     df['year'].value_counts().sort_index().plot(kind='bar', ax=ax, color='skyblue')
-    plt.title('Number of Transactions per Year')
-    plt.xlabel('Year')
-    plt.ylabel('Number of Transactions')
-    plt.xticks(rotation=45)
+    plt.title('Number of Transactions per Year',fontsize=26)
+    plt.xlabel('Year',fontsize=20)
+    plt.ylabel('Number of Transactions',fontsize=22)
+    plt.xticks(rotation=45,fontsize=20)
+    plt.yticks(fontsize=20)
     plt.grid(True)
     plt.tight_layout()
-
+    
+    # Save the figure to a buffer
     img_buffer = io.BytesIO()
     FigureCanvas(fig).print_png(img_buffer)
     img_buffer.seek(0)
-
-    plt.close(fig)  # Close the figure to free up memory
-
+    
+    # Close the figure
+    plt.close(fig)
+    
     return img_buffer
 
 def create_scatterplot(data):
