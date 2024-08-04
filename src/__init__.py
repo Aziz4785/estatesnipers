@@ -565,7 +565,7 @@ def get_area_details():
             for year in range(2025, 2030):
                 avg_meter_prices[f'AVG_meter_price_{year}'] = weighted_avg(df_prediction, group, year).rename(f'AVG_meter_price_{year}')
             
-            avg_roi = df[df['instance_year'] == 2023].groupby(group)['roi'].mean().rename('avg_roi')
+            avg_roi = df[df['instance_year'] >= 2023].groupby(group)['roi'].mean().rename('avg_roi')
             avg_transaction_value = df[df['instance_year'] >= 2023].groupby(group)['actual_worth'].mean().rename('avg_actual_worth')
             
             final_df = pd.concat([*avg_meter_prices.values(), avg_roi,avg_transaction_value], axis=1).reset_index()

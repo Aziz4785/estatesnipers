@@ -192,7 +192,7 @@
 437,Al Kheeran,25.21593,55.35985
 438,Al Ttay,25.23799407,55.54248695
 441,Jumeirah Village Circle (JVC)
-442,Al Barsha South Fifth
+442,Al Barsha South Fifth / Jumeirah Village Triangle
 443,Barsha Heights,25.0987035,55.1725124
 444,Motor City,25.04998492,55.23894687
 445,Al Furjan,25.03192836,55.14232708
