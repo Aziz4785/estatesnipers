@@ -275,9 +275,8 @@ function generatePDF(name) {
     if (!currentAreaData || typeof currentAreaData !== 'object' || Object.keys(currentAreaData).length === 0) {
         console.error('Invalid or empty currentAreaData');
         alert('Error: Area data is not available. Please try again.');
-        return;
     }
-    
+
     fetch('/generate-pdf', {
         method: 'POST',
         headers: {
