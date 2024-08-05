@@ -1127,6 +1127,8 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
     ax.set_ylabel(y_axis)
     ax.grid(True)
 
+    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+    
     img_buffer = io.BytesIO()
     FigureCanvas(fig).print_png(img_buffer)
     img_buffer.seek(0)
@@ -1249,6 +1251,12 @@ def send_email(message,mail_server='smtp.gmail.com',sender ="estatesniperhosting
     #s.sendmail(sender_email, [receiver_email], msg.as_string())
 
 
+def safe_get(dictionary, key, index, default="N/A"):
+    try:
+        return dictionary[key][index]
+    except (KeyError, IndexError):
+        return default
+    
 @app.route('/generate-pdf', methods=['POST'])
 @csrf.exempt
 def generate_pdf():
@@ -1417,18 +1425,21 @@ def generate_pdf():
         p.setFont("Helvetica", 12)
         p.setFillColor(colors.black)
 
+        app.logger.info(f"length of area_data[variableValues] = {len(area_data['variableValues'])}")
+
+
         # Data for the table
         table_data = [
             ['Metric', 'Value'],
-            ['Acquisition Demand 2023', f"{round_and_percentage(area_data['variableValues'][7])} %"],
-            ['Rental Demand 2023¹', str(round_and_percentage(area_data['variableValues'][8]))+" %"],
-            ['Average Sale Price', f"{area_data['variableValues'][0]:,.2f} AED"],
-            ['Average Capital Appreciation 10Y', str(round_and_percentage(area_data['variableValues'][2]))+" %"],
-            ['Average Capital Appreciation 5Y', str(round_and_percentage(area_data['variableValues'][1]))+" %"],
-            ['Average Gross Rental Yield', str(round_and_percentage(area_data['variableValues'][3],2))+" %"],
-            ['Supply of Finished Projects', area_data['variableValues'][4]],
-            ['Supply of Off-Plan Projects', area_data['variableValues'][5]],
-            ['Supply of Lands', area_data['variableValues'][6]],
+            ['Acquisition Demand 2023', f"{round_and_percentage(safe_get(area_data, 'variableValues', 7))} %"],
+            ['Rental Demand 2023¹', str(round_and_percentage(safe_get(area_data, 'variableValues', 8)))+" %"],
+            ['Average Sale Price', f"{safe_get(area_data, 'variableValues', 0, 0):,.2f} AED"],
+            ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 2)))+" %"],
+            ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 1)))+" %"],
+            ['Average Gross Rental Yield', str(round_and_percentage(safe_get(area_data, 'variableValues', 3),2))+" %"],
+            ['Supply of Finished Projects', safe_get(area_data, 'variableValues', 4)],
+            ['Supply of Off-Plan Projects', safe_get(area_data, 'variableValues', 5)],
+            ['Supply of Lands', safe_get(area_data, 'variableValues', 6)],
         ]
         footnotes = [
             "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
