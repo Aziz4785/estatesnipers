@@ -126,13 +126,20 @@ def replace_nan_with_none(value):
 def calculate_CA(row, year_diff,last_year = 2023):
     # Capital Appreciattion calculation
     #calculate_CA(row, 5) to calculate the capital appr over 5 years
-    price_new = row[f'AVG_meter_price_{last_year}']
-    price_old = row[f'AVG_meter_price_{last_year-year_diff}']
-    if pd.notna(price_new) and pd.notna(price_old) and price_new != 0 and price_old != 0:
-        return (price_new - price_old) / price_old
-    else:
-        return np.nan
 
+    price_new_key = f'AVG_meter_price_{last_year}'
+    price_old_key = f'AVG_meter_price_{last_year-year_diff}'
+
+    if price_new_key in row and price_old_key in row:
+        price_new = row[price_new_key]
+        price_old = row[price_old_key]
+        if pd.notna(price_new) and pd.notna(price_old) and price_new != 0 and price_old != 0:
+            return (price_new - price_old) / price_old
+        else:
+            return np.nan
+    else:
+        # If one or both keys are missing, return NaN
+        return np.nan
 
     
 def calculate_CA_from_array(row, year_diff):
@@ -217,12 +224,10 @@ def conditional_avg(df, group,year, threshold=5):
 def weighted_avg(df, group, year):
     # Filter the DataFrame
     filtered_df = df[(df['instance_year'] == year) & df['meter_sale_price'].notnull()]
-    
     # Calculate the weighted average of 'meter_sale_price' using 'total_rows' as weights
     result = filtered_df.groupby(group, dropna=False).apply(
         lambda x: (x['meter_sale_price'] * x['total_rows']).sum() / x['total_rows'].sum()
     )
-    
     return result
 
 def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5):

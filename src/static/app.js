@@ -569,6 +569,7 @@ function onEachFeature(feature, layer) {
 }
 
 function updateAreaInfo(feature) {
+    console.log("feature : ",feature)
     mainTableBody.innerHTML = ''; // Clear existing rows
     setCurrentAreaId(feature.properties.area_id);
     // Create a copy of feature.properties without the "geometry" property
@@ -587,19 +588,24 @@ function updateAreaInfo(feature) {
     const variableunits = feature.properties.variableUnits;
     const variableSpecial= feature.properties.variableSpecial;
     const cards = document.querySelectorAll('.info-card');
+    console.log("card : ")
+    console.log(cards)
+    console.log("variableNames : ",variableNames)
+    console.log("variableValues : ",variableValues)
     let array_index = 0;
     // Loop through each card and populate with the corresponding variable name and value
     cards.forEach((card) => {
         // Ensure we have a corresponding variable name and value
         
-
-        if(card.id=='card5' && variableNames.length >5)
+        console.log("we process card ",card.id)
+        if(card.id=='card5' && variableNames.length >8)
         {
             const supplyCard = document.getElementById('card5');
             if (supplyCard) {
+                console.log("this is project card ")
                 supplyCard.querySelector('.title').textContent ='Supply of Projects:';
-                const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[4] : "-";
-                const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[5] : "-";
+                const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[7] : "-";
+                const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[8] : "-";
                 supplyCard.querySelector('.finished-value').textContent = finishedValue;
                 supplyCard.querySelector('.offplan-value').textContent = offplanValue;
                 supplyCard.classList.remove('locked-card');  // Remove locked-card class
@@ -620,12 +626,13 @@ function updateAreaInfo(feature) {
 
             }
         }
-        else if(card.id=='card6' && variableNames.length >5)
+        else if(card.id=='card6' && variableNames.length >8)
         {
             const landsCard = document.getElementById('card6');
             if (landsCard) {
+                console.log(" this is the land card")
                 landsCard.querySelector('.title').textContent ='Supply of Lands:';
-                const landsValue = variableNames.includes('supply_lands') ? variableValues[6] : "-";
+                const landsValue = variableNames.includes('supply_lands') ? variableValues[9] : "-";
                 landsCard.querySelector('.value').textContent = landsValue;
                 landsCard.classList.remove('locked-card');  // Remove locked-card class
 
@@ -655,6 +662,7 @@ function updateAreaInfo(feature) {
                 const wrapper = landsCard.closest('.info-card-wrapper');
                 // Remove the lock icon
                 if(wrapper){
+                    console.log("we will remove the wrapper o the lands card")
                     const lockIcon = wrapper.querySelector('.lock-icon-card');
                     if (lockIcon) {
                         lockIcon.remove();
@@ -672,6 +680,7 @@ function updateAreaInfo(feature) {
         }
         else if(variableSpecial[array_index]==0)
         {
+            console.log("variable special is 0")
             const title = variableNames[array_index];
             let value = variableValues[array_index];
             if(card.id=='card8')
@@ -684,8 +693,19 @@ function updateAreaInfo(feature) {
                 const tooltipText = "Fraction of sold units in the area"
                 card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
             }
+            else if(card.id=='card9')
+            {
+                const tooltipText = "Number of sales contracts in the last 12 months"
+                card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+            }
+            else if(card.id =='card10')
+            {
+                const tooltipText = "Total value of all sales transactions within the last 12 months in millions AED"
+                card.querySelector('.title').innerHTML = `${title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+            }
             else
             {
+                console.log("we fill the title of that card : ",title)
                 card.querySelector('.title').textContent = title;
             }
             
@@ -697,14 +717,21 @@ function updateAreaInfo(feature) {
             {
                 card.querySelector('.value').textContent= `${value} AED`;
             }
+            else if(variableunits[array_index] == "m AED")
+            {
+                card.querySelector('.value').textContent= `${value.toFixed(2)} M AED`;
+            }
             else{
+                console.log("we fill the value of that card : ",value)
                 card.querySelector('.value').textContent = value;
             }
             
+            console.log("we remove the lock for this card")
             card.classList.remove('locked-card');  // Remove locked-card class
             const wrapper = card.closest('.info-card-wrapper');
             // Remove the lock icon
             if(wrapper){
+                console.log("this card contains a wrapper so we will remove it")
                 const lockIcon = wrapper.querySelector('.lock-icon-card');
                 if (lockIcon) {
                     lockIcon.remove();

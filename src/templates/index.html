@@ -142,11 +142,7 @@
           <div onclick="changeLegendTitle('Average meter price')">Average meter price</div>
           <div onclick="changeLegendTitle('Capital Appreciation')">Capital appreciation 5Y</div>
           <div onclick="changeLegendTitle('Gross Rental Yield')">Gross Rental Yield</div>
-          {% if is_premium_user %}
-            <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
-            {% else %}
-                <div class="locked-legend" onclick="showPremiumMessage()">Acquisition Demand <span id="lockIcon">🔒</span></div>
-            {% endif %}
+          <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
         </div>
         <div id="legend">
           <div id="legendContent"></div>
@@ -166,13 +162,8 @@
             <h2>Settings</h2>
             <div class="settings-section">
                 <h3>Default Hierarchy</h3>
-                {% if is_premium_user %}
-                  <p>Drag and drop to rearrange the hierarchy:</p>
-                {% else %}
-                <p>Drag and drop to rearrange the hierarchy<span id="lockIcon">🔒 <span class="premium-text">(premium)</span></span>:</p>
-                {% endif %}
-
-                <ul id="hierarchyList" class="hierarchy-list {% if not is_premium_user %} locked-ul{% endif %}">
+                <p>Drag and drop to rearrange the hierarchy:</p>
+                <ul id="hierarchyList" class="hierarchy-list">
                     <li draggable="true" data-id = "2"><span class="drag-handle">■</span> Project</li>
                     <li draggable="true" data-id = "3"><span class="drag-handle">■</span> Usage (residential, commercial ...)</li>
                     <li draggable="true" data-id = "1"><span class="drag-handle">■</span> Type (flat, villa ,shop ...)</li>
@@ -198,7 +189,7 @@
             <button id="close-panel">x</button>
             <div id = "area_info">
                 <h2 id="area-title"></h2>
-                <div id="last-updated">Last updated: 2024-08-04</div>
+                <div id="last-updated">Last updated: 2024-08-10</div>
                 <div id="stats-container" style="display: flex; overflow-x: auto;">
                 <div class="info-card locked-card" id="card1">
                     <div class="title">Locked</div>
@@ -216,7 +207,18 @@
                     <div class="title">Locked</div>
                     <div class="value">99</div>
                   </div>
-
+                  <div class="info-card locked-card" id="card9">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+                  <div class="info-card locked-card" id="card10">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
+                  <div class="info-card locked-card" id="card11">
+                    <div class="title">Locked</div>
+                    <div class="value">99</div>
+                  </div>
                   <div class="info-card-wrapper">
                       <div class="info-card supply-projects locked-card" id="card5">
                         <div class="title">Locked</div>
@@ -235,14 +237,14 @@
                         <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
                     </div>
                   </div>
-                    <div class="info-card-wrapper">
-                      <div class="info-card locked-card" id="card6">
-                        <div class="title">Locked lock</div>
-                        <div class="value"></div>
-                        <button id = "land-chart-button" class="stats-button"><i class="fas fa-chart-pie"></i></button>
-                      </div>
-                      <div class="lock-icon-card">
-                        <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                  <div class="info-card-wrapper">
+                    <div class="info-card locked-card" id="card6">
+                      <div class="title">Locked lock</div>
+                      <div class="value"></div>
+                      <button id = "land-chart-button" class="stats-button"><i class="fas fa-chart-pie"></i></button>
+                    </div>
+                    <div class="lock-icon-card">
+                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
                     </div>
                   </div>
                   <div class="info-card-wrapper">
@@ -262,8 +264,9 @@
                     </div>
                     <div class="lock-icon-card">
                       <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                    </div>
                   </div>
-                </div>
+                  
                 </div>
             </div>
             <div class="tab">
@@ -289,18 +292,6 @@
                             <!-- Rows will be inserted here using JavaScript -->
                         </tbody>
                     </table>
-                    {% if not is_premium_user %}
-                    <div id="unlock-Overlay">
-                      <img id="locked-icon" src="static/unlock.svg" alt="Locked Icon">
-                        <p>Unlock all projects for <span style="text-decoration: line-through;">$19.99</span> $9.99</p>
-                        <button id="unlock-button-table">Unlock</button>
-                    </div>
-                      <table id="nestedTable">
-                        <tbody id="unlockTableBody">
-                            <!-- Last 3 rows will be inserted here -->
-                        </tbody>
-                      </table>
-                      {% endif %}
                     <div class="loader-container">
                         <div class="loader"></div>
                     </div>

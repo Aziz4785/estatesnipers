@@ -58,6 +58,7 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
 login_manager.init_app(app) 
 
+PREMIUM_FOR_ALL_exPDF = True
 
 js = Bundle('app.js','contact.js','functions.js','premium_modal.js','settings.js','stripe-handlers.js',output='gen/bundle.js')
 
@@ -477,7 +478,7 @@ list_order_in_memory = []
 def get_area_details():
     try:
         app.logger.info('we call get_area_details')
-        is_premium_user = check_premium_user()
+        is_premium_user = check_premium_user() or PREMIUM_FOR_ALL_exPDF
         if(is_premium_user):
             app.logger.info('the user is premium')
         else:
@@ -498,7 +499,7 @@ def get_area_details():
             return jsonify({'error': 'Database connection URL not found'}), 500
 
         engine = create_engine(connection_url)
-        
+        print("engine created")
         sql_query = text("""
         SELECT 
             pst.property_sub_type_en, 
@@ -561,9 +562,12 @@ def get_area_details():
             for year in range(2013, 2024):
                 avg_meter_prices[f'AVG_meter_price_{year}'] = conditional_avg(df, group, year).rename(f'AVG_meter_price_{year}')
             avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
-
             for year in range(2025, 2030):
-                avg_meter_prices[f'AVG_meter_price_{year}'] = weighted_avg(df_prediction, group, year).rename(f'AVG_meter_price_{year}')
+                avg_result = weighted_avg(df_prediction, group, year)
+                if avg_result.empty:
+                    avg_meter_prices[f'AVG_meter_price_{year}'] = None  # or you can use an empty DataFrame, 0, etc.
+                else:
+                    avg_meter_prices[f'AVG_meter_price_{year}'] = avg_result.rename(f'AVG_meter_price_{year}')
             
             avg_roi = df[df['instance_year'] >= 2023].groupby(group)['roi'].mean().rename('avg_roi')
             avg_transaction_value = df[df['instance_year'] >= 2023].groupby(group)['actual_worth'].mean().rename('avg_actual_worth')
@@ -571,13 +575,20 @@ def get_area_details():
             final_df = pd.concat([*avg_meter_prices.values(), avg_roi,avg_transaction_value], axis=1).reset_index()
 
             #concat the columns into an array : 
-            final_df['avg_meter_price_2013_2023'] = final_df.apply(lambda row: [replace_nan_with_none(row[col]) for col in avg_meter_prices.keys()], axis=1)
+            final_df['avg_meter_price_2013_2023'] = final_df.apply(
+                lambda row: [
+                    replace_nan_with_none(row[col]) if col in row else None
+                    for col in avg_meter_prices.keys()
+                ],
+                axis=1
+            )
 
             #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
             #avergae capital apperication calculation for that group:
 
             final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
             final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
+
             final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
 
             columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
@@ -595,8 +606,6 @@ def get_area_details():
                 final_df = final_df.dropna(subset=['grouped_project'])
 
             update_nested_dict(final_df, nested_dicts, group)
-
-        is_premium_user = check_premium_user()
 
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
@@ -737,7 +746,7 @@ JOIN
     projects p ON t.project_number = p.project_number
 WHERE 
     t.area_id = %s
-    AND p.no_of_units > 80
+    AND p.no_of_units > 60
 GROUP BY 
     t.project_number, p.no_of_units, no_of_villas,p.project_name_en;
     """
@@ -851,7 +860,7 @@ def fetch_dubai_areas_data():
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023 FROM areas')
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023,s_volume_last_12m,s_value_last_12m,r_volume_last_12m FROM areas')
     fetched_rows = cursor.fetchall() 
 
     # Data processing functions for each key
@@ -865,7 +874,10 @@ def fetch_dubai_areas_data():
         'supply_offplan_pro': int,
         'supply_lands': int,
         'aquisitiondemand_2023' : float,
-        'rentaldemand_2023' : float
+        'rentaldemand_2023' : float,
+        's_volume_last_12m' : int,
+        's_value_last_12m' : float,
+        'r_volume_last_12m' : int
     }
 
     # Data storage dictionaries, keyed by type
@@ -878,7 +890,10 @@ def fetch_dubai_areas_data():
         'supply_offplan_pro': {},
         'supply_lands': {},
         'aquisitiondemand_2023' : {},
-        'rentaldemand_2023' : {}
+        'rentaldemand_2023' : {},
+        's_volume_last_12m' : {},
+        's_value_last_12m' : {},
+        'r_volume_last_12m' : {}
     }
 
     # Process all rows in one loop
@@ -926,6 +941,9 @@ def fetch_dubai_areas_data():
     # avg_ca_5
     # avgCA_10Y
     # avg_roi
+    # s_volume_last_12m
+    # s_value_last_12m
+    # r_volume_last_12m
     # supply_finished_pro
     # supply_offplan_pro
     # supply_lands
@@ -985,7 +1003,37 @@ def fetch_dubai_areas_data():
         variables_units.append('%')
         variables_special.append(0)
 
-        if is_premium_user:
+        # Process Sales vvolume
+        variable_names.append("Sales Volume in last 12 months:")
+        if area_id in data_stores['s_volume_last_12m']:
+            svol = data_stores['s_volume_last_12m'][area_id]
+            variable_values.append(svol)
+        else:
+            variable_values.append(None)
+        variables_units.append('-')
+        variables_special.append(0)
+
+        # Process Sales vvolume
+        variable_names.append("Sales Value in last 12 months:")
+        if area_id in data_stores['s_value_last_12m']:
+            sval = data_stores['s_value_last_12m'][area_id]
+            variable_values.append(sval/1000000.0)
+        else:
+            variable_values.append(None)
+        variables_units.append('m AED')
+        variables_special.append(0)
+
+        # Process Sales vvolume
+        variable_names.append("Rental Volume in last 12 months:")
+        if area_id in data_stores['r_volume_last_12m']:
+            rvol = data_stores['r_volume_last_12m'][area_id]
+            variable_values.append(rvol)
+        else:
+            variable_values.append(None)
+        variables_units.append('-')
+        variables_special.append(0)
+
+        if is_premium_user or PREMIUM_FOR_ALL_exPDF:
             # Process supply_finished_pro
             variable_names.append("supply_finished_pro")
             if area_id in data_stores['supply_finished_pro']:
@@ -1037,11 +1085,16 @@ def fetch_dubai_areas_data():
             variables_units.append('%')
             variables_special.append(0)
 
+        
+        
+
         feature["variableNames"] = variable_names
         feature["variableValues"] = variable_values
         feature["variableUnits"] = variables_units
         feature["variableSpecial"] = variables_special
 
+        if(area_id == 410):
+            print(feature)
     cursor.close()
     connection.close()
     return [legends, geojson, units]
