@@ -847,6 +847,7 @@ def get_list_order():
 
 
 @app.route('/generate-area-pdf', methods=['POST'])
+@csrf.exempt
 def generate_area_pdf():
     area_data = request.json['areaData']
     is_premium_user = check_premium_user()
