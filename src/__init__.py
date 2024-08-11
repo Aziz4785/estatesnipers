@@ -815,7 +815,7 @@ def execute_unitsbyRooms_query(proejct_name):
 
 @app.route('/get-lands-stats')
 def get_lands_stats():
-    is_premium_user = check_premium_user()
+    is_premium_user = check_premium_user() or PREMIUM_FOR_ALL_exPDF
     if is_premium_user:
         area_id = request.args.get('area_id')
         fetched_rows = execute_land_query(area_id)

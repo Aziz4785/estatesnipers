@@ -1030,6 +1030,7 @@ function getCurrentAreaData() {
 
 // Declare a variable outside of the function to hold the chart instance
 function renderLandStatsChart(data) {
+    console.log("renderLandStatsChart(data = ",data)
     const ctx = document.getElementById('landStatsChart').getContext('2d');
 
     // If there's an existing chart instance, destroy it
