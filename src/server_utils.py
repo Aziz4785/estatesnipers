@@ -8,7 +8,13 @@ from datetime import datetime
 from scipy.interpolate import PchipInterpolator
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import io
+from io import BytesIO
 import smtplib
+import os
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import psycopg2
 from flask_mailman import EmailMessage
 from flask import render_template_string,url_for
 # Function to safely convert string to float or None
@@ -229,6 +235,156 @@ def weighted_avg(df, group, year):
         lambda x: (x['meter_sale_price'] * x['total_rows']).sum() / x['total_rows'].sum()
     )
     return result
+
+from datetime import datetime, timedelta
+
+from calendar import monthrange
+from psycopg2.extras import RealDictCursor
+def get_monthly_transaction_counts(connection, area_id):
+    # Get the last day of the previous month
+    today = datetime.now().date()
+    first_of_this_month = today.replace(day=1)
+    last_of_previous_month = first_of_this_month - timedelta(days=1)
+    
+    cursor = connection.cursor(cursor_factory=RealDictCursor)
+    
+    results = []
+    for i in range(12):
+        year, month = (last_of_previous_month.year, last_of_previous_month.month)
+        _, last_day = monthrange(year, month)
+        
+        start_date = datetime(year, month, 1).date()
+        end_date = datetime(year, month, last_day).date()
+        
+        query = """
+        SELECT COUNT(*) as count
+        FROM transactions
+        WHERE area_id = %s
+          AND instance_date >= %s
+          AND instance_date <= %s
+        """
+        
+        cursor.execute(query, (area_id, start_date, end_date))
+        count = cursor.fetchone()['count']
+        
+        results.append({
+            'month': start_date.strftime('%Y-%m'),
+            'count': count,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+        
+        # Move to the previous month
+        last_of_previous_month = start_date - timedelta(days=1)
+    
+    cursor.close()
+    return results[::-1]  # Reverse the list to have the oldest month first
+
+
+def get_monthly_rents_counts(connection, area_id):
+    # Get the last day of the previous month
+    today = datetime.now().date()
+    first_of_this_month = today.replace(day=1)
+    last_of_previous_month = first_of_this_month - timedelta(days=1)
+    
+    cursor = connection.cursor(cursor_factory=RealDictCursor)
+    
+    results = []
+    for i in range(12):
+        year, month = (last_of_previous_month.year, last_of_previous_month.month)
+        _, last_day = monthrange(year, month)
+        
+        start_date = datetime(year, month, 1).date()
+        end_date = datetime(year, month, last_day).date()
+        
+        query = """
+        SELECT COUNT(*) as count
+        FROM rentcontracts
+        WHERE area_id = %s
+          AND contract_start_date >= %s
+          AND contract_start_date <= %s
+        """
+        
+        cursor.execute(query, (area_id, start_date, end_date))
+        count = cursor.fetchone()['count']
+        
+        results.append({
+            'month': start_date.strftime('%Y-%m'),
+            'count': count,
+            'start_date': start_date,
+            'end_date': end_date
+        })
+        
+        # Move to the previous month
+        last_of_previous_month = start_date - timedelta(days=1)
+    
+    cursor.close()
+    return results[::-1]  # Reverse the list to have the oldest month first
+
+def get_db_connection():
+    #connection = mysql.connector.connect(**db_config)
+    #connection = psycopg2.connect(**db_config)
+    #connection = psycopg2.connect(db_url) #here we use an url
+    #DATABASE_URL = db_url #local database
+    DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')  # Fetch the correct environment variable
+    connection = psycopg2.connect(DATABASE_URL)
+    return connection
+
+def execute_monthly_transaction_counts(area_id):
+    connection = get_db_connection()  # Assuming you have this function defined
+    try:
+        monthly_counts = get_monthly_transaction_counts(connection, area_id)
+        return monthly_counts
+    finally:
+        connection.close()
+
+def execute_monthly_RENTS_counts(area_id):
+    connection = get_db_connection()  # Assuming you have this function defined
+    try:
+        monthly_counts = get_monthly_rents_counts(connection, area_id)
+        return monthly_counts
+    finally:
+        connection.close()
+
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+def create_transaction_chart(data, title,chart_type='bar'):
+    # Extract dates and counts
+    dates = [datetime.strptime(item['month'], '%Y-%m') for item in data]
+    counts = [item['count'] for item in data]
+
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Plot data
+    if chart_type == 'bar':
+        ax.bar(dates, counts, width=20, align='center')
+    elif chart_type == 'line':
+        ax.plot(dates, counts, marker='o')
+    else:
+        raise ValueError("Invalid chart type. Choose 'bar' or 'line'.")
+
+    # Customize the chart
+    ax.set_title(title, fontsize=16)
+    ax.set_xlabel('Month', fontsize=12)
+    ax.set_ylabel('Count', fontsize=12)
+
+    # Format x-axis
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+    plt.xticks(rotation=45, ha='right')
+
+    # Add grid for better readability
+    ax.grid(True, linestyle='--', alpha=0.7)
+    plt.tight_layout()
+
+    img_buffer = io.BytesIO()
+    FigureCanvas(fig).print_png(img_buffer)
+    img_buffer.seek(0)
+
+    plt.close(fig)  # Close the figure to free up memory
+
+    return img_buffer
+
 
 def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5):
     """

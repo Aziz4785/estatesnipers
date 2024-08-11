@@ -21,7 +21,7 @@ from flask_login import LoginManager
 from flask_wtf import FlaskForm, CSRFProtect
 from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
-import psycopg2
+
 from flask import jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -31,8 +31,6 @@ from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter
 from flask_login import login_required,current_user
 from reportlab.pdfgen import canvas
-import io
-from io import BytesIO
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -462,14 +460,7 @@ def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
         return ""
     return datetime.utcfromtimestamp(value).strftime(format)
 
-def get_db_connection():
-    #connection = mysql.connector.connect(**db_config)
-    #connection = psycopg2.connect(**db_config)
-    #connection = psycopg2.connect(db_url) #here we use an url
-    #DATABASE_URL = db_url #local database
-    DATABASE_URL = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')  # Fetch the correct environment variable
-    connection = psycopg2.connect(DATABASE_URL)
-    return connection
+
 
 
 list_order_in_memory = []
@@ -499,7 +490,7 @@ def get_area_details():
             return jsonify({'error': 'Database connection URL not found'}), 500
 
         engine = create_engine(connection_url)
-        print("engine created")
+
         sql_query = text("""
         SELECT 
             pst.property_sub_type_en, 
@@ -854,7 +845,127 @@ def get_list_order():
     hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
     return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
+
+@app.route('/generate-area-pdf', methods=['POST'])
+def generate_area_pdf():
+    area_data = request.json['areaData']
+    is_premium_user = check_premium_user()
+
+    # Generate your PDF using area_data
+    # Create a file-like buffer to receive PDF data
+    buffer = BytesIO()
     
+    p = canvas.Canvas(buffer, pagesize=letter)
+    helper = PDFHelper(p, 720, 750, 100)
+
+    
+
+    #AREA SECTION 
+    # Set the font and size for the title
+    p.setFont("Helvetica-Bold", 24)
+    p.setFillColor(blue)
+    area_name = area_data["name"]
+    title = f"Area : {area_name}"
+    title_width = p.stringWidth(title, "Helvetica-Bold", 24)
+    page_width = letter[0]
+    title_x = (page_width - title_width) / 2
+
+    # Draw the title
+    #p.drawString(title_x, 750, title)
+    helper.draw_Main_title(title,font_size=30)
+    # Move to next line for the table
+    p.setFont("Helvetica", 12)
+    p.setFillColor(colors.black)
+
+    app.logger.info(f"length of area_data[variableValues] = {len(area_data['variableValues'])}")
+
+
+    # Here is the order :
+    # average_sale_price
+    # avg_ca_5
+    # avgCA_10Y
+    # avg_roi
+    # s_volume_last_12m
+    # s_value_last_12m
+    # r_volume_last_12m
+    # supply_finished_pro
+    # supply_offplan_pro
+    # supply_lands
+    # aquisitiondemand_2023
+    # rentaldemand_2023
+
+    # Data for the table
+    table_data = [
+        ['Metric', 'Value'],
+        ['Acquisition Demand 2023', f"{round_and_percentage(safe_get(area_data, 'variableValues', 10))} %"],
+        ['Rental Demand 2023¹', str(round_and_percentage(safe_get(area_data, 'variableValues', 11)))+" %"],
+        ['Average Sale Price', f"{safe_get(area_data, 'variableValues', 0, 0):,.2f} AED"],
+        ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 2)))+" %"],
+        ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 1)))+" %"],
+        ['Average Gross Rental Yield', str(round_and_percentage(safe_get(area_data, 'variableValues', 3),2))+" %"],
+        ['Supply of Finished Projects', safe_get(area_data, 'variableValues', 7)],
+        ['Supply of Off-Plan Projects', safe_get(area_data, 'variableValues', 8)],
+        ['Supply of Lands', safe_get(area_data, 'variableValues', 9)],
+    ]
+    footnotes = [
+        "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
+    # Create a table
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ]))
+
+    # Build the table on canvas
+    table.wrapOn(p, 175, 500)
+    table.drawOn(p, 175, 500)
+    helper.draw_footnotes(footnotes)
+    helper.y -= 100
+    land_data=execute_land_query(area_data['area_id'])
+    img_buffer = create_land_type_pie_chart(land_data)
+    p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+
+    if is_premium_user: 
+        monthly_trans_counts = execute_monthly_transaction_counts(area_data['area_id'])
+        monthly_RENT_counts = execute_monthly_RENTS_counts(area_data['area_id'])
+        helper.new_page()
+        trans_count_buffer = create_transaction_chart(monthly_trans_counts, title = 'Sales volume',chart_type='bar')
+        helper.y -= 300
+        p.drawImage(ImageReader(trans_count_buffer), 150,  helper.y, width=350, height=250)
+        # Close the PDF object cleanly
+
+        rent_count_buffer = create_transaction_chart(monthly_RENT_counts, title = 'Rental Volume', chart_type='bar')
+        helper.y -= 300
+        p.drawImage(ImageReader(rent_count_buffer), 150,  helper.y, width=350, height=250)
+
+    else:
+        helper.new_page()
+        unlockpremiumtext = """The detailed report includes further insights on the area.\n To access the full report, please upgrade to a Premium subscription.  """
+        helper.draw_paragraph(unlockpremiumtext, font_size=14, font_name='Helvetica-Bold')
+    helper.new_page()
+    helper.draw_contact_info()
+
+
+    p.showPage()
+    p.save()
+
+    # File to be sent
+    buffer.seek(0)
+    
+    # Send the PDF as a file
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='area.pdf',
+        mimetype='application/pdf'
+    )
+
 def fetch_dubai_areas_data():
     is_premium_user = check_premium_user()
     connection = get_db_connection()
@@ -1093,8 +1204,6 @@ def fetch_dubai_areas_data():
         feature["variableUnits"] = variables_units
         feature["variableSpecial"] = variables_special
 
-        if(area_id == 410):
-            print(feature)
     cursor.close()
     connection.close()
     return [legends, geojson, units]
@@ -1309,7 +1418,7 @@ def safe_get(dictionary, key, index, default="N/A"):
         return dictionary[key][index]
     except (KeyError, IndexError):
         return default
-    
+     
 @app.route('/generate-pdf', methods=['POST'])
 @csrf.exempt
 def generate_pdf():
@@ -1336,6 +1445,7 @@ def generate_pdf():
         avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
         avg_roi = means_data.get('avg_roi', 'N/A')
         avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
+        projected_ca = means_data.get('avgCapitalAppreciation2029', 'N/A')
         project_demand_data = execute_project_demand_query(area_data['area_id'])
         firstkeys = list(data.keys())
         if hierarchy_keys[0]=="grouped_project":
@@ -1394,13 +1504,13 @@ def generate_pdf():
         if project_data[0]['percent_completed'] >0:
             general_means.append(["Percent Completed: ", str(project_data[0]['percent_completed'])+" %"])
 
-
         general_means.extend([
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
             ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
-            ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"]
+            ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"],
+            ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
         ])
 
         footnotes = [
@@ -1412,7 +1522,8 @@ def generate_pdf():
             ["Description", "Value"],
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
-            ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"]
+            ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
+            ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
         ]
     
     helper.y+=10
@@ -1459,64 +1570,9 @@ def generate_pdf():
                 parent_name = section
                 render_pdf({k: data[k]},parent_name,helper,p)
 
-        helper.new_page()
+        #helper.new_page()
 
-        #AREA SECTION 
-        # Set the font and size for the title
-        p.setFont("Helvetica-Bold", 24)
-        p.setFillColor(blue)
-        area_name = area_data["name"]
-        title = f"Area : {area_name}"
-        title_width = p.stringWidth(title, "Helvetica-Bold", 24)
-        page_width = letter[0]
-        title_x = (page_width - title_width) / 2
-
-        # Draw the title
-        #p.drawString(title_x, 750, title)
-        helper.draw_Main_title(title,font_size=30)
-        # Move to next line for the table
-        p.setFont("Helvetica", 12)
-        p.setFillColor(colors.black)
-
-        app.logger.info(f"length of area_data[variableValues] = {len(area_data['variableValues'])}")
-
-
-        # Data for the table
-        table_data = [
-            ['Metric', 'Value'],
-            ['Acquisition Demand 2023', f"{round_and_percentage(safe_get(area_data, 'variableValues', 7))} %"],
-            ['Rental Demand 2023¹', str(round_and_percentage(safe_get(area_data, 'variableValues', 8)))+" %"],
-            ['Average Sale Price', f"{safe_get(area_data, 'variableValues', 0, 0):,.2f} AED"],
-            ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 2)))+" %"],
-            ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 1)))+" %"],
-            ['Average Gross Rental Yield', str(round_and_percentage(safe_get(area_data, 'variableValues', 3),2))+" %"],
-            ['Supply of Finished Projects', safe_get(area_data, 'variableValues', 4)],
-            ['Supply of Off-Plan Projects', safe_get(area_data, 'variableValues', 5)],
-            ['Supply of Lands', safe_get(area_data, 'variableValues', 6)],
-        ]
-        footnotes = [
-            "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
-        # Create a table
-        table = Table(table_data)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ]))
-
-        # Build the table on canvas
-        table.wrapOn(p, 175, 500)
-        table.drawOn(p, 175, 500)
-        helper.draw_footnotes(footnotes)
-        helper.y -= 100
-        land_data=execute_land_query(area_data['area_id'])
-        img_buffer = create_land_type_pie_chart(land_data)
-        p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+        
     else:
         helper.new_page()
         unlockpremiumtext = """The detailed report includes further insights on the project area and a detailed classification of units by property type and subtype.\n To access the full report, please upgrade to a Premium subscription.  """
@@ -1539,6 +1595,7 @@ def render_pdf(node,parent_name,helper,p):
     avg_capital_appreciation_2013 = means_data2.get('avgCapitalAppreciation2013', 'N/A')
     avg_capital_appreciation_2018 = means_data2.get('avgCapitalAppreciation2018', 'N/A')
     avg_roi = means_data2.get('avg_roi', 'N/A')
+    projected_ca = means_data2.get('avgCapitalAppreciation2029', 'N/A')
     avg_meter_price = means_data2.get('avg_meter_price_2013_2023', [])
     # helper.draw_info_line("Average Capital Appreciation 10Y:", round(avg_capital_appreciation_2013 * 100, 2)if avg_capital_appreciation_2013 is not None else None)
     # helper.draw_info_line("Average Capital Appreciation 5Y :", round(avg_capital_appreciation_2018 * 100, 2)if avg_capital_appreciation_2018 is not None else None)
@@ -1547,7 +1604,8 @@ def render_pdf(node,parent_name,helper,p):
         ["Description", "Value"],
         ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
         ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
-        ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"]
+        ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
+        ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
     ]
     helper.draw_table(general_means)
     img_buffer = create_price_chart(avg_meter_price)

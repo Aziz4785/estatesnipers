@@ -90,6 +90,39 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
     panel.classList.toggle('fullscreen'); 
 });
 
+document.getElementById('area-pdf-icon').addEventListener('click', function() {
+    const currentAreaData = getCurrentAreaData();
+
+    // Make an AJAX request to the server
+    fetch('/generate-area-pdf', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ areaData: currentAreaData })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        // Create a new Blob object using the response data
+        var url = window.URL.createObjectURL(blob);
+        
+        // Create a link element
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'area.pdf';
+        
+        // Append to the document body
+        document.body.appendChild(link);
+        
+        // Programmatically click the link to trigger the download
+        link.click();
+        
+        // Clean up
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(link);
+    })
+    .catch(error => console.error('Error:', error));
+});
 let currentJsonData = null;
 let currentAreaData = null;
 
@@ -237,7 +270,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     // Add PDF icon if the row is a root row (i.e., it has no parent)
     if (!parentRowId && fake_line==false ) {
         //contentCellHtml += ` <a href="#" class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></a>`;
-        contentCellHtml += `<button class="pdf-icon"><img src="static/download.svg" alt="PDF" class="pdf-icon-img"></button>`;
+        contentCellHtml += `<button class="pdf-icon"><img src="static/pdf-icon2_black.svg" alt="PDF" class="pdf-icon-img"></button>`;
     }
     if (fake_line) {
         row.classList.add('blurry-row');
@@ -569,7 +602,6 @@ function onEachFeature(feature, layer) {
 }
 
 function updateAreaInfo(feature) {
-    console.log("feature : ",feature)
     mainTableBody.innerHTML = ''; // Clear existing rows
     setCurrentAreaId(feature.properties.area_id);
     // Create a copy of feature.properties without the "geometry" property
@@ -588,21 +620,16 @@ function updateAreaInfo(feature) {
     const variableunits = feature.properties.variableUnits;
     const variableSpecial= feature.properties.variableSpecial;
     const cards = document.querySelectorAll('.info-card');
-    console.log("card : ")
-    console.log(cards)
-    console.log("variableNames : ",variableNames)
-    console.log("variableValues : ",variableValues)
+
     let array_index = 0;
     // Loop through each card and populate with the corresponding variable name and value
     cards.forEach((card) => {
         // Ensure we have a corresponding variable name and value
         
-        console.log("we process card ",card.id)
         if(card.id=='card5' && variableNames.length >8)
         {
             const supplyCard = document.getElementById('card5');
             if (supplyCard) {
-                console.log("this is project card ")
                 supplyCard.querySelector('.title').textContent ='Supply of Projects:';
                 const finishedValue = variableNames.includes('supply_finished_pro') ? variableValues[7] : "-";
                 const offplanValue = variableNames.includes('supply_offplan_pro') ? variableValues[8] : "-";
@@ -630,7 +657,6 @@ function updateAreaInfo(feature) {
         {
             const landsCard = document.getElementById('card6');
             if (landsCard) {
-                console.log(" this is the land card")
                 landsCard.querySelector('.title').textContent ='Supply of Lands:';
                 const landsValue = variableNames.includes('supply_lands') ? variableValues[9] : "-";
                 landsCard.querySelector('.value').textContent = landsValue;
@@ -662,7 +688,6 @@ function updateAreaInfo(feature) {
                 const wrapper = landsCard.closest('.info-card-wrapper');
                 // Remove the lock icon
                 if(wrapper){
-                    console.log("we will remove the wrapper o the lands card")
                     const lockIcon = wrapper.querySelector('.lock-icon-card');
                     if (lockIcon) {
                         lockIcon.remove();
@@ -680,7 +705,6 @@ function updateAreaInfo(feature) {
         }
         else if(variableSpecial[array_index]==0)
         {
-            console.log("variable special is 0")
             const title = variableNames[array_index];
             let value = variableValues[array_index];
             if(card.id=='card8')
@@ -705,7 +729,6 @@ function updateAreaInfo(feature) {
             }
             else
             {
-                console.log("we fill the title of that card : ",title)
                 card.querySelector('.title').textContent = title;
             }
             
@@ -722,16 +745,13 @@ function updateAreaInfo(feature) {
                 card.querySelector('.value').textContent= `${value.toFixed(2)} M AED`;
             }
             else{
-                console.log("we fill the value of that card : ",value)
                 card.querySelector('.value').textContent = value;
             }
             
-            console.log("we remove the lock for this card")
             card.classList.remove('locked-card');  // Remove locked-card class
             const wrapper = card.closest('.info-card-wrapper');
             // Remove the lock icon
             if(wrapper){
-                console.log("this card contains a wrapper so we will remove it")
                 const lockIcon = wrapper.querySelector('.lock-icon-card');
                 if (lockIcon) {
                     lockIcon.remove();

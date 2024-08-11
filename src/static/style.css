@@ -70,7 +70,18 @@
   padding: 0;
 }
 
-
+#area-pdf-icon{
+  position: absolute; 
+  right: 115px; 
+  color: #aaaaaa;
+  background: transparent;
+  font-size: 24px;
+  border: none; 
+  cursor: pointer;
+  font-weight: bold;
+  line-height: 1;
+  padding: 0;
+}
 #toggle-fullscreen {
   position: absolute; 
   right: 45px; 
