@@ -24,6 +24,7 @@ class PDFHelper:
         self.page_height = page_height
         self.min_y = min_y
         self.styles = getSampleStyleSheet()
+        self.new_page_setup()
 
     def draw_string(self, x, text, y_reduction):
         if self.y <= self.min_y:
@@ -54,6 +55,13 @@ class PDFHelper:
         width, height = letter
         table.wrapOn(self.p, width, height)
         table.drawOn(self.p, 50, self.y - len(data) * 20 - 30)
+
+    def draw_website_url(self):
+        self.p.saveState()
+        self.p.setFont("Helvetica", 8)
+        self.p.setFillColor(colors.grey)
+        self.p.drawString(30, self.page_height - 30, "www.estatesnipers.com")
+        self.p.restoreState()
 
     def draw_disclaimer(self, disclaimer):
         # Create a custom style for the disclaimer
@@ -245,6 +253,13 @@ class PDFHelper:
         # Reset font and color for new page
         self.p.setFont("Helvetica", 12)
         self.p.setFillColor(black)
+
+        # Draw website URL
+        self.p.saveState()
+        self.p.setFont("Helvetica", 8)
+        self.p.setFillColor(colors.grey)
+        self.p.drawString(25, self.page_height+10, "www.estatesnipers.com")
+        self.p.restoreState()
 
 def create_price_chart(avg_meter_price):
     years = list(range(2013, 2013 + len(avg_meter_price)))
