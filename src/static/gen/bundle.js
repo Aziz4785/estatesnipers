@@ -279,17 +279,86 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     if (isParent || fake_line) {
         row.classList.add('expandable');
     }
+    else if(!isParent)
+    {
+        contentCellHtml += `<button class="recent_trans_icon"><img src="static/table.svg" alt="list" class="recent_trans_icon_img"></button>`;
+    }
     const contentCell = row.insertCell();
     contentCell.innerHTML = contentCellHtml;
     if (!parentRowId) {
+        contentCell.classList.add('root-cell');
+    }
+    else if(!isParent){
         contentCell.classList.add('content-cell');
     }
-    //contentCell.classList.add('content-cell'); // Add a class for additional styling if needed
+    //contentCell.classList.add('root-cell'); // Add a class for additional styling if needed
     // Creating placeholders for the other values
     ['Capital Appreciation 2018', 'Capital Appreciation 2013', 'ROI', 'avg transaction value', 'avg_meter_price_2013_2023','Projected Capital Appreciation 5Y'].forEach(() => row.insertCell());
 
     return rowId;
 }
+
+// Event delegation for recent transactions clicks
+document.addEventListener('click', function(event) {
+    const listIcon = event.target.closest('.recent_trans_icon');
+    if (listIcon) {
+        event.preventDefault();
+
+        //show modal:
+        const modalv2 = document.getElementById('myModal_v2');
+        modalv2.style.display = 'block';
+        // Automatically click the "Sales" tab button when the modal is displayed
+        document.querySelector('.tablink[onclick="openTab_v2(event, \'Sales\')"]').click();
+
+        let currentRow = listIcon.closest('tr');
+        
+        let data = {};
+
+        while (currentRow) {
+            let rowType = currentRow.getAttribute('type');
+            let rowName = currentRow.getAttribute('data-name');
+            
+            // Add the type and its value to the JSON object
+            if (rowType && rowName) {
+                data[rowType] = rowName;
+            }
+
+            // Move to the parent row
+            let parentRowId = currentRow.getAttribute('data-parent-id');
+            if (!parentRowId) break; // No more parents, exit the loop
+            currentRow = document.querySelector(`tr[data-row-id="${parentRowId}"]`);
+        }
+
+         // Fetch both sales and rents data
+         Promise.all([
+            fetch('/get-recent-transactions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            }).then(response => response.json()),
+
+            fetch('/get-recent-rents', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            }).then(response => response.json())
+        ])
+        .then(([salesData, rentsData]) => {
+            // Populate Sales tab
+            populateTabContent('Sales', salesData.result);
+            // Populate Rents tab
+            populateTabContent('Rents', rentsData.result);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+});
+
 // Event delegation for PDF icon clicks
 document.addEventListener('click', function(event) {
     const pdfIcon = event.target.closest('.pdf-icon');
@@ -300,6 +369,7 @@ document.addEventListener('click', function(event) {
         generatePDF(name);
     }
 });
+
 
 function generatePDF(name) {
     const currentData = getCurrentJsonData();
@@ -435,6 +505,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             // Leaf node, add price values
             if(key == "means")
             {
+                console.log("the key is means")
                 const row = mainTableBody.querySelector(`[data-row-id="${parentRowId}"]`);
                 if(value == null)
                 {
@@ -444,6 +515,11 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 {
                     value = value[0]
                 }
+                const attributeName = value && typeof value === 'object' && typeof value.type === 'string'
+                ? value.type
+                : 'defaultAttribute';
+                row.setAttribute("type", attributeName);
+
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
@@ -456,6 +532,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             }
             else if(value.hasOwnProperty('means'))
             {
+                console.log("the key is not means")
                 const currentRowId = addRow(key, level, hasChildren, parentRowId);
                 const row = mainTableBody.querySelector(`[data-row-id="${currentRowId}"]`);
                 if(value == null)
@@ -466,6 +543,11 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 {
                     value = value.means[0]
                 }
+                const attributeName = value && typeof value === 'object' && typeof value.type === 'string'
+                ? value.type
+                : 'defaultAttribute';
+                row.setAttribute("type", attributeName);
+                
                 row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
                 row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
@@ -1235,8 +1317,90 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 }
+
+function closeModal_v2() {
+    const modalv2 = document.getElementById('myModal_v2');
+    modalv2.style.display = 'none';
+}
+function populateTabContent(tabId, data) {
+    // Get the tab content div
+    const tabContentDiv = document.getElementById(tabId);
+    
+    // Clear any existing content
+    tabContentDiv.innerHTML = `<h3> Recent ${tabId} Contracts </h3>`;
+    
+    // Create a wrapper div for horizontal scrolling
+    let scrollDiv = document.createElement('div');
+    scrollDiv.style.overflowX = 'auto'; // Enable horizontal scrolling
+    scrollDiv.style.width = '100%'; // Make sure it takes the full width
+
+    // Create a table
+    let table = document.createElement('table');
+    table.border = '1';
+    table.style.width = '100%';
+
+    // Create table header
+    let thead = document.createElement('thead');
+    let headerRow = document.createElement('tr');
+    
+    // Assuming all rows have the same keys
+    if (data.length > 0) {
+        Object.keys(data[0]).forEach(key => {
+            let th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
+        });
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Create table body
+    let tbody = document.createElement('tbody');
+    data.forEach(row => {
+        let tr = document.createElement('tr');
+        Object.values(row).forEach(value => {
+            let td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    // Append the table to the scrollable div
+    scrollDiv.appendChild(table);
+
+    // Append the scrollable div to the tab content div
+    tabContentDiv.appendChild(scrollDiv);
+}
+function openTab_v2(evt, tabName) {
+    var i, tabcontent, tablinks;
+    
+    // Hide all tab contents
+    tabcontent = document.getElementsByClassName("tabcontent_modalv2");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    
+    // Remove the active class from all tab links
+    tablinks = document.getElementsByClassName("tablink");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    
+    // Show the current tab content and add an "active" class to the clicked tab
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+
  function showPremiumMessage() {
     openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+}
+
+// Helper function to get the parent row attribute based on the parent row ID
+function getParentRowAttribute(currentRow, parentRowId, attributeName) {
+    let parentRow = document.querySelector(`tr[data-row-id="${parentRowId}"]`);
+    return parentRow ? parentRow.getAttribute(attributeName) : null;
 }
 
 function createInfoCard(title, value) {

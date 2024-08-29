@@ -968,17 +968,20 @@ tbody td {
 
 
 
-
 .content-cell {
   position: relative;
   padding-right: 25px;
 }
-.pdf-icon-img {
+.root-cell {
+  position: relative;
+  padding-right: 25px;
+}
+.pdf-icon-img{
   width: 16px;  /* Set the desired width */
   height: auto; /* Adjust the height proportionally */
   vertical-align: middle;
 }
-.pdf-icon {
+.pdf-icon{
   background: none;
   border: none;
   padding: 0;
@@ -987,6 +990,21 @@ tbody td {
   right: 5px; /* Adjust as needed */
   top: 50%;
   transform: translateY(-50%);
+}
+.recent_trans_icon {
+  background: none;
+  border: none;
+  padding: 0;
+  position: absolute;
+  cursor: pointer;
+  right: 5px; /* Adjust as needed */
+  top: 50%;
+  transform: translateY(-50%);
+}
+.recent_trans_icon_img {
+  width: 16px;  /* Set the desired width */
+  height: auto; /* Adjust the height proportionally */
+  vertical-align: middle;
 }
 
 
@@ -1133,4 +1151,81 @@ tbody td {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/*RECENT TRANSACTIONS*/
+.modal_v2 {
+  display: none; /* Hidden by default */
+  position: fixed; 
+  z-index: 1060; 
+  left: 0;
+  top: 0;
+  width: 100%; 
+  height: 100%; 
+  overflow: auto; 
+  background-color: rgba(0, 0, 0, 0.4); 
+}
+
+.modal-content_v2 {
+  background-color: #fefefe;
+  margin: 15% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 50%; 
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+/* Close button */
+.close_v2 {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close_v2:hover,
+.close_v2:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Tab container */
+.tab-container {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+/* Tab links */
+.tablink {
+  background-color: #f1f1f1;
+  color: black;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  width: 50%;
+  text-align: center;
+  font-size: 18px;
+  transition: background-color 0.3s;
+}
+
+.tablink:hover {
+  background-color: #ddd;
+}
+
+.tablink.active {
+  background-color: #ccc;
+}
+
+/* Tab content */
+.tabcontent_modalv2 {
+  display: none;
+  animation: fadeEffect 0.5s;
+}
+
+@keyframes fadeEffect {
+  from {opacity: 0;}
+  to {opacity: 1;}
 }

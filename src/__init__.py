@@ -596,6 +596,8 @@ def get_area_details():
             if 'grouped_project' in final_df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
                 final_df = final_df.dropna(subset=['grouped_project'])
 
+            #NEW :
+            final_df["type"]=group[-1]
             update_nested_dict(final_df, nested_dicts, group)
 
         if(nested_dicts):
@@ -780,6 +782,27 @@ def execute_land_query(area_id):
     fetched_rows = cursor.fetchall()
     return fetched_rows
 
+def get_all_projects_in_area(area_id):
+    connection = get_db_connection()
+    cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+
+    query = """
+    SELECT project_name_en
+    FROM projects
+    WHERE area_id = %s
+    UNION 
+    SELECT project_name_en
+    FROM transactions
+    WHERE area_id = %s
+    UNION
+    SELECT project_name_en
+    FROM units
+    WHERE area_id = %s;
+    """
+    cursor.execute(query, (area_id, area_id, area_id)) 
+    fetched_rows = cursor.fetchall()
+    return fetched_rows
+
 def execute_projectInfo_query(proejct_name):
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
@@ -944,6 +967,44 @@ def generate_area_pdf():
         rent_count_buffer = create_transaction_chart(monthly_RENT_counts, title = 'Rental Volume', chart_type='bar')
         helper.y -= 300
         p.drawImage(ImageReader(rent_count_buffer), 150,  helper.y, width=350, height=250)
+        helper.new_page()
+        helper.draw_section_title("Projects : ")
+        projects_list = get_all_projects_in_area(area_data['area_id'])
+        
+        project_names = [[project['project_name_en']] for project in projects_list if project['project_name_en'] is not None]
+
+        # Define the maximum number of projects per page
+        max_projects_per_page = 20
+
+        # Split the project names into chunks based on the max projects per page
+        chunks = [project_names[i:i + max_projects_per_page] for i in range(0, len(project_names), max_projects_per_page)]
+
+        for i, chunk in enumerate(chunks):
+            if i > 0:  # For chunks beyond the first, create a new page
+                helper.new_page()
+                helper.draw_section_title("Projects (continued) :")
+
+            # Create a Table object for the current chunk
+            table = Table(chunk, colWidths=[500])
+            
+            # Add the same style to the table
+            style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ])
+            
+            table.setStyle(style)
+            
+            # Calculate the position where the table will be drawn
+            y_position = 500 - 16 * len(chunk)
+            
+            # Draw the table on the PDF
+            table.wrapOn(p, 500, 600)
+            table.drawOn(p, 50, y_position)
 
     else:
         helper.new_page()
@@ -1299,6 +1360,104 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
     plt.close(fig)  # Close the figure to free up memory
 
     return img_buffer
+
+@app.route('/get-recent-transactions', methods=['POST'])
+def handle_request():
+    data = request.get_json()
+    connection = get_db_connection()
+    cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
+    base_query = """
+    SELECT t.instance_date, t.grouped_project, t.property_type_en, pst.property_sub_type_en, 
+           t.property_usage_en, t.rooms_en, t.building_name_en, t.meter_sale_price
+    FROM transactions t
+    JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
+    WHERE 
+    """
+    conditions = []
+    values = []
+
+    for key, value in data.items():
+        if key == 'property_sub_type_en':
+            conditions.append("pst.property_sub_type_en = %s")
+        else:
+            conditions.append(f"t.{key} = %s")
+        values.append(value)
+
+    conditions.append("t.instance_date >= NOW() - INTERVAL '6 months'")
+
+    query = base_query + " AND ".join(conditions)
+    query+=" LIMIT 50;"
+    cursor.execute(query, tuple(values))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+
+    renamed_rows = []
+    for row in fetched_rows:
+        renamed_row = {
+            'Date': row['instance_date'].strftime('%Y-%m-%d'),
+            'Project': row['grouped_project'],
+            'Property type': row['property_type_en'],
+            'Type': row['property_sub_type_en'],
+            'Usage': row['property_usage_en'],
+            'Sub Type': row['rooms_en'],
+            'Building': row['building_name_en'],
+            'Meter Sale Price (AED)': row['meter_sale_price']
+        }
+        renamed_rows.append(renamed_row)
+
+    result = [dict(row) for row in renamed_rows]
+    connection.close()
+
+    return jsonify({'status': 'success', 'result': result})
+
+
+@app.route('/get-recent-rents', methods=['POST'])
+def recent_rent_contracts():
+    data = request.get_json()
+    connection = get_db_connection()
+    cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
+    base_query = """
+    SELECT t.contract_start_date, t.ejari_bus_property_type_en, t.rooms_en, pst.property_sub_type_en, 
+           t.property_usage_en, t.project_name_en, t.roi*100 AS roi
+    FROM rentcontracts t
+    JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
+    WHERE 
+    """
+    conditions = []
+    values = []
+
+    for key, value in data.items():
+        if key == 'property_sub_type_en':
+            conditions.append("pst.property_sub_type_en = %s")
+        else:
+            conditions.append(f"t.{key} = %s")
+        values.append(value)
+
+    conditions.append("t.contract_start_date >= NOW() - INTERVAL '6 months'")
+
+    query = base_query + " AND ".join(conditions)
+    query+=" LIMIT 50;"
+    cursor.execute(query, tuple(values))
+    
+    # Fetch and format the results
+    fetched_rows = cursor.fetchall()
+    renamed_rows = []
+    for row in fetched_rows:
+        renamed_row = {
+            'Contract Start Date': row['contract_start_date'].strftime('%Y-%m-%d'),
+            'Property type': row['ejari_bus_property_type_en'],
+            'Sub Type': row['rooms_en'],
+            'Type': row['property_sub_type_en'],
+            'Usage': row['property_usage_en'],
+            'Sub Type': row['project_name_en'],
+            'Gross Rental Yield %': row['roi']
+        }
+        renamed_rows.append(renamed_row)
+    result = [dict(row) for row in renamed_rows]
+    connection.close()
+
+    return jsonify({'status': 'success', 'result': result})
 
 def create_rooms_count_doughnut_chart(rooms_count_pairs):
     # Extract room types and counts from the query results

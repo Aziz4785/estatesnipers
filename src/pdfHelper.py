@@ -159,8 +159,10 @@ class PDFHelper:
     def draw_section_title(self, text):
         if self.y <= self.min_y:
             self.new_page()
+        text_width = self.p.stringWidth(text, "Helvetica-Bold", 16)
+        x = (A4[0] - text_width) / 2
         self.p.setFont("Helvetica-Bold", 16)
-        self.p.drawString(50, self.y, text)
+        self.p.drawString(x, self.y, text)
         self.y -= 30
         self.p.setFont("Helvetica", 12)
 

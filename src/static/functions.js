@@ -92,8 +92,90 @@
     }
   }
 }
+
+function closeModal_v2() {
+    const modalv2 = document.getElementById('myModal_v2');
+    modalv2.style.display = 'none';
+}
+function populateTabContent(tabId, data) {
+    // Get the tab content div
+    const tabContentDiv = document.getElementById(tabId);
+    
+    // Clear any existing content
+    tabContentDiv.innerHTML = `<h3> Recent ${tabId} Contracts </h3>`;
+    
+    // Create a wrapper div for horizontal scrolling
+    let scrollDiv = document.createElement('div');
+    scrollDiv.style.overflowX = 'auto'; // Enable horizontal scrolling
+    scrollDiv.style.width = '100%'; // Make sure it takes the full width
+
+    // Create a table
+    let table = document.createElement('table');
+    table.border = '1';
+    table.style.width = '100%';
+
+    // Create table header
+    let thead = document.createElement('thead');
+    let headerRow = document.createElement('tr');
+    
+    // Assuming all rows have the same keys
+    if (data.length > 0) {
+        Object.keys(data[0]).forEach(key => {
+            let th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
+        });
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Create table body
+    let tbody = document.createElement('tbody');
+    data.forEach(row => {
+        let tr = document.createElement('tr');
+        Object.values(row).forEach(value => {
+            let td = document.createElement('td');
+            td.textContent = value;
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    // Append the table to the scrollable div
+    scrollDiv.appendChild(table);
+
+    // Append the scrollable div to the tab content div
+    tabContentDiv.appendChild(scrollDiv);
+}
+function openTab_v2(evt, tabName) {
+    var i, tabcontent, tablinks;
+    
+    // Hide all tab contents
+    tabcontent = document.getElementsByClassName("tabcontent_modalv2");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    
+    // Remove the active class from all tab links
+    tablinks = document.getElementsByClassName("tablink");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    
+    // Show the current tab content and add an "active" class to the clicked tab
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+
  function showPremiumMessage() {
     openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+}
+
+// Helper function to get the parent row attribute based on the parent row ID
+function getParentRowAttribute(currentRow, parentRowId, attributeName) {
+    let parentRow = document.querySelector(`tr[data-row-id="${parentRowId}"]`);
+    return parentRow ? parentRow.getAttribute(attributeName) : null;
 }
 
 function createInfoCard(title, value) {
