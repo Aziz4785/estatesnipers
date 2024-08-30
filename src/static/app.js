@@ -505,7 +505,6 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             // Leaf node, add price values
             if(key == "means")
             {
-                console.log("the key is means")
                 const row = mainTableBody.querySelector(`[data-row-id="${parentRowId}"]`);
                 if(value == null)
                 {
@@ -532,7 +531,6 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             }
             else if(value.hasOwnProperty('means'))
             {
-                console.log("the key is not means")
                 const currentRowId = addRow(key, level, hasChildren, parentRowId);
                 const row = mainTableBody.querySelector(`[data-row-id="${currentRowId}"]`);
                 if(value == null)
