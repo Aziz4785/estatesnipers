@@ -1360,6 +1360,7 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
     return img_buffer
 
 @app.route('/get-recent-transactions', methods=['POST'])
+@csrf.exempt
 def handle_request():
     data = request.get_json()
     connection = get_db_connection()
@@ -1410,6 +1411,7 @@ def handle_request():
 
 
 @app.route('/get-recent-rents', methods=['POST'])
+@csrf.exempt
 def recent_rent_contracts():
     data = request.get_json()
     connection = get_db_connection()
