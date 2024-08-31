@@ -109,18 +109,79 @@ def replace_emptyAndNone_inList(list_of_dicts):
     return list_of_dicts
 
 
+# def remove_lonely_dash(d):
+#     """
+#     For each key in the dictionary d, if the value corresponding to the key is a dictionary
+#     that contains only one key and that key is "-", update the value of the key to be the value
+#     corresponding to "-".
+#     """
+#     for key, value in list(d.items()): 
+#         if isinstance(value, dict):
+#             remove_lonely_dash(value)
+#         if isinstance(value, dict) and (len(value) == 1 or (len(value)==2 and 'means' in value)) and "-" in value:
+#             d[key] = value["-"]
+#     return d
+
+
 def remove_lonely_dash(d):
-    """
-    For each key in the dictionary d, if the value corresponding to the key is a dictionary
-    that contains only one key and that key is "-", update the value of the key to be the value
-    corresponding to "-".
-    """
+    if "-" in d.keys() and len(d.keys())>2:
+        del d['-']
+    elif "-" in d.keys():
+        while(len(d.keys())==2 and "-" in d.keys()) :# while it is 'means' and '-'
+            if(len(d['-'])==1 ):
+                del d['-']
+            elif(len(d['-'])>2 and  "-" in d['-']):
+                for c in d['-']:
+                    if c != '-' and c !='means':
+                        d[c]=d['-'][c]
+                del d['-'] #now that we have some A type in the children we need to get rid of '-'
+            else:
+                for c in d['-']:
+                    if c =='-' or c!= 'means':
+                        d[c]=d['-'][c]
+                        if c!='-':
+                            del d['-']  
     for key, value in list(d.items()): 
-        if isinstance(value, dict):
+        if isinstance(value, dict) and key != 'means':
             remove_lonely_dash(value)
-        if isinstance(value, dict) and (len(value) == 1 or (len(value)==2 and 'means' in value)) and "-" in value:
-            d[key] = value["-"]
     return d
+
+# def remove_lonely_dash_old(d):
+#     if d =={}:
+#         return d
+#     dash_present = any("-" in v for v in d.values())
+#     first_layer_key = next(iter(d))  # Get the first key in the outermost dictionary
+#     first_layer_keys = d[first_layer_key].keys()
+#     if dash_present and len(first_layer_keys) > 2: # if '-' coexist with other node type
+#         del d[first_layer_key]['-']
+#         for key, value in d[first_layer_key].items():
+#             if key != 'means':
+#                 remove_lonely_dash({key: value})
+#     elif dash_present: #if there is only a dash and a means in the children of the roo
+#         while(len(first_layer_keys)==2 and "-" in first_layer_keys) :# while it is 'means' and '-'
+#             if(len(d[first_layer_key]['-'])==1 ):
+#                 del d[first_layer_key]['-']
+#             elif(len(d[first_layer_key]['-'])>2 and  "-" in d[first_layer_key]['-']):
+#                 for c in d[first_layer_key]['-']:
+#                     if c != '-' and c !='means':
+#                         d[first_layer_key][c]=d[first_layer_key]['-'][c]
+#                 del d[first_layer_key]['-'] #now that we have some A type in the children we need to get rid of '-'
+#             else:
+#                 for c in d[first_layer_key]['-']:
+#                     if c =='-' or c!= 'means':
+#                         d[first_layer_key][c]=d[first_layer_key]['-'][c]
+#                         if c!='-':
+#                             del d[first_layer_key]['-']  
+#                 first_layer_keys = d[first_layer_key].keys()
+#         for key, value in d[first_layer_key].items():
+#             if key != 'means':
+#                 remove_lonely_dash({key: value}) 
+#     else:
+#         for key, value in d[first_layer_key].items():
+#             if key != 'means':
+#                 remove_lonely_dash({key: value})  
+#     return d
+
 
 # Function to replace NaN with None
 def replace_nan_with_none(value):

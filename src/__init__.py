@@ -46,7 +46,7 @@ from flask_mailman import Mail
 # Load environment variables from .env file
 #load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
-#pd.set_option('display.max_columns', None)
+pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
 #pd.set_option('display.max_colwidth', None)
 
@@ -597,12 +597,14 @@ def get_area_details():
                 final_df = final_df.dropna(subset=['grouped_project'])
 
             #NEW :
+            
             final_df["type"]=group[-1]
             update_nested_dict(final_df, nested_dicts, group)
 
+
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
-            
+
             if(not is_premium_user):
                 filtered_items = [
                     item for item in fetched_rows.items()
@@ -793,13 +795,9 @@ def get_all_projects_in_area(area_id):
     UNION 
     SELECT project_name_en
     FROM transactions
-    WHERE area_id = %s
-    UNION
-    SELECT project_name_en
-    FROM units
     WHERE area_id = %s;
     """
-    cursor.execute(query, (area_id, area_id, area_id)) 
+    cursor.execute(query, (area_id, area_id)) 
     fetched_rows = cursor.fetchall()
     return fetched_rows
 
@@ -1375,7 +1373,6 @@ def handle_request():
     """
     conditions = []
     values = []
-
     for key, value in data.items():
         if key == 'property_sub_type_en':
             conditions.append("pst.property_sub_type_en = %s")
