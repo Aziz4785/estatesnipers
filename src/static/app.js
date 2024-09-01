@@ -92,8 +92,60 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
     panel.classList.toggle('fullscreen'); 
 });
 
+// document.getElementById('area-pdf-icon').addEventListener('click', function() {
+//     const currentAreaData = getCurrentAreaData();
+
+//     // Make an AJAX request to the server
+//     fetch('/generate-area-pdf', {
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({ areaData: currentAreaData })
+//     })
+//     .then(response => response.blob())
+//     .then(blob => {
+//         // Create a new Blob object using the response data
+//         var url = window.URL.createObjectURL(blob);
+        
+//         // Create a link element
+//         var link = document.createElement('a');
+//         link.href = url;
+//         link.download = 'area.pdf';
+        
+//         // Append to the document body
+//         document.body.appendChild(link);
+        
+//         // Programmatically click the link to trigger the download
+//         link.click();
+        
+//         // Clean up
+//         window.URL.revokeObjectURL(url);
+//         document.body.removeChild(link);
+//     })
+//     .catch(error => console.error('Error:', error));
+// });
+
 document.getElementById('area-pdf-icon').addEventListener('click', function() {
     const currentAreaData = getCurrentAreaData();
+    
+    // Create and show loading bar
+    const loadingBar = document.createElement('div');
+    loadingBar.style.width = '0%';
+    loadingBar.style.height = '5px';
+    loadingBar.style.backgroundColor = 'blue';
+    loadingBar.style.position = 'fixed';
+    loadingBar.style.top = '0';
+    loadingBar.style.left = '0';
+    loadingBar.style.transition = 'width 0.5s';
+    document.body.appendChild(loadingBar);
+
+    // Simulate progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        loadingBar.style.width = `${Math.min(progress, 90)}%`;
+    }, 500);
 
     // Make an AJAX request to the server
     fetch('/generate-area-pdf', {
@@ -122,9 +174,22 @@ document.getElementById('area-pdf-icon').addEventListener('click', function() {
         // Clean up
         window.URL.revokeObjectURL(url);
         document.body.removeChild(link);
+        
+        // Complete the loading bar
+        loadingBar.style.width = '100%';
+        setTimeout(() => {
+            document.body.removeChild(loadingBar);
+            clearInterval(progressInterval);
+        }, 500);
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        // Remove loading bar on error
+        document.body.removeChild(loadingBar);
+        clearInterval(progressInterval);
+    });
 });
+
 let currentJsonData = null;
 let currentAreaData = null;
 

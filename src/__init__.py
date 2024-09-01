@@ -787,16 +787,106 @@ def execute_land_query(area_id):
 def get_all_projects_in_area(area_id):
     connection = get_db_connection()
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-
-    query = """
-    SELECT project_name_en
-    FROM projects
-    WHERE area_id = %s
-    UNION 
-    SELECT project_name_en
-    FROM transactions
-    WHERE area_id = %s;
+    
+    #alternative query :
     """
+        SELECT 
+        project_name_en,
+        CASE 
+            WHEN p.percent_completed = 100 THEN 'finished'
+            WHEN p.percent_completed < 100 AND p.percent_completed IS NOT NULL AND p.project_status NOT IN ('STOPPED','CANCELLED') THEN 'off-plan'
+            ELSE 'unknown'
+        END AS project_status
+    FROM 
+        projects p
+    WHERE 
+        p.area_id = %s AND p.project_name_en IS NOT NULL
+
+    UNION 
+    SELECT 
+        t.project_name_en,
+        'unknown' AS project_status
+    FROM 
+        transactions t
+    WHERE 
+        t.area_id = %s AND t.project_name_en IS NOT NULL
+        AND NOT EXISTS (
+            SELECT 1 
+            FROM projects p 
+            WHERE p.project_number = t.project_number
+        );
+
+    """
+    query = """
+    SELECT 
+        project_name_en,
+        CASE
+            WHEN percent_completed = 100 THEN 'finished'
+            WHEN percent_completed < 100 AND percent_completed IS NOT NULL AND project_status NOT IN ('STOPPED', 'CANCELLED') THEN 'off-plan'
+            ELSE 'unknown'
+        END AS project_status
+    FROM 
+        projects
+    WHERE 
+        area_id = %s AND project_name_en IS NOT NULL
+    UNION
+    SELECT 
+        t.project_name_en,
+        CASE
+            WHEN p.percent_completed = 100 THEN 'finished'
+            WHEN p.percent_completed < 100 AND p.percent_completed IS NOT NULL AND p.project_status NOT IN ('STOPPED', 'CANCELLED') THEN 'off-plan'
+            WHEN p.project_name_en IS NULL THEN 'unknown'
+            ELSE 'unknown'
+        END AS project_status
+    FROM 
+        transactions t
+    LEFT JOIN 
+        projects p ON t.project_number = p.project_number
+    WHERE 
+        t.area_id = %s AND t.project_name_en IS NOT NULL;
+    """
+
+    query ="""
+        WITH recent_transactions AS (
+            SELECT project_number, COUNT(*) AS num_transactions
+            FROM transactions
+            WHERE instance_date >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY project_number
+        )
+        SELECT 
+            p.project_name_en,
+            CASE
+                WHEN p.percent_completed = 100 THEN 'finished'
+                WHEN p.percent_completed < 100 AND p.percent_completed IS NOT NULL AND p.project_status NOT IN ('STOPPED', 'CANCELLED') THEN 'off-plan'
+                ELSE 'unknown'
+            END AS project_status,
+            COALESCE(rt.num_transactions, 0) AS number_of_trans
+        FROM 
+            projects p
+        LEFT JOIN
+            recent_transactions rt ON p.project_number = rt.project_number
+        WHERE 
+            p.area_id = %s AND p.project_name_en IS NOT NULL
+
+        UNION
+
+        SELECT 
+            t.project_name_en,
+            CASE
+                WHEN p.percent_completed = 100 THEN 'finished'
+                WHEN p.percent_completed < 100 AND p.percent_completed IS NOT NULL AND p.project_status NOT IN ('STOPPED', 'CANCELLED') THEN 'off-plan'
+                WHEN p.project_name_en IS NULL THEN 'unknown'
+                ELSE 'unknown'
+            END AS project_status,
+            COALESCE(rt.num_transactions, 0) AS number_of_trans
+        FROM 
+            transactions t
+        LEFT JOIN 
+            projects p ON t.project_number = p.project_number
+        LEFT JOIN
+            recent_transactions rt ON t.project_number = rt.project_number
+        WHERE 
+            t.area_id = %s AND t.project_name_en IS NOT NULL;"""
     cursor.execute(query, (area_id, area_id)) 
     fetched_rows = cursor.fetchall()
     return fetched_rows
@@ -969,7 +1059,7 @@ def generate_area_pdf():
         helper.draw_section_title("Projects : ")
         projects_list = get_all_projects_in_area(area_data['area_id'])
         
-        project_names = [[project['project_name_en']] for project in projects_list if project['project_name_en'] is not None]
+        project_names = [(project['project_name_en'], project['project_status'],project['number_of_trans'])for project in projects_list if project['project_name_en'] is not None]
 
         # Define the maximum number of projects per page
         max_projects_per_page = 20
@@ -982,15 +1072,18 @@ def generate_area_pdf():
                 helper.new_page()
                 helper.draw_section_title("Projects (continued) :")
 
+            chunk.insert(0, ["Project Name", "Status", "Number of sales \n (last 30 days)"])
             # Create a Table object for the current chunk
-            table = Table(chunk, colWidths=[500])
-            
+            #table = Table(chunk, colWidths=[200])
+            table = Table(chunk, colWidths=[300, 100,100])
             # Add the same style to the table
             style = TableStyle([
                 ('BACKGROUND', (0, 0), (-1, -1), colors.white),
                 ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),  # Reduce font size for the body
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
                 ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ])
