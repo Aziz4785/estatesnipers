@@ -3,12 +3,14 @@
  var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Dubai
 
 // Add a base layer to the map (OpenStreetMap tiles)
-/*L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap contributors'
-}).addTo(map);*/
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors, © CARTO',
+
+// L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+//     attribution: '© OpenStreetMap contributors, © CARTO',
+//     maxZoom: 19
+// }).addTo(map);
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 19
 }).addTo(map);
 
@@ -618,10 +620,10 @@ document.addEventListener('click', function(e) {
 function areaStyle(feature, fillColorProperty) {
     return {
         fillColor: feature.properties[fillColorProperty], // Dynamic fill color based on the property
-        weight: 0,
+        weight: 2,
         opacity: 1,
-        color: 'white',
-        fillOpacity: 0.7
+        color: 'black',
+        fillOpacity: 0.4
     }; 
 }
 
@@ -1280,7 +1282,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Set the style for the clicked layer
     layer.setStyle({
-        weight: 3,
+        weight: 4,
         color: 'white',
         dashArray: '',
         fillOpacity: 0.7
@@ -1426,10 +1428,10 @@ function createSupplyCard(finishedValue, offplanValue) {
     const legendContent = document.getElementById('legendContent');
     legendContent.innerHTML = ''; // Clear previous contents
     const colors = [
-        { color: 'rgb(192, 0, 0)', label: `> ${averageSalePrice[2]} ${unit}` },
-        { color: 'rgb(223, 82, 82)', label: `${averageSalePrice[2]} ${unit} - ${averageSalePrice[1]} ${unit}` },
-        { color: 'rgb(82, 82, 223)', label: `${averageSalePrice[1]} ${unit} - ${averageSalePrice[0]} ${unit}` },
-        { color: 'rgb(0, 0, 192)', label: `< ${averageSalePrice[0]} ${unit}` }
+        { color: 'rgb(192, 0, 0, 0.7)', label: `> ${averageSalePrice[2]} ${unit}` },
+        { color: 'rgb(223, 82, 82, 0.7)', label: `${averageSalePrice[2]} ${unit} - ${averageSalePrice[1]} ${unit}` },
+        { color: 'rgb(82, 82, 223, 0.7)', label: `${averageSalePrice[1]} ${unit} - ${averageSalePrice[0]} ${unit}` },
+        { color: 'rgb(0, 0, 192, 0.7)', label: `< ${averageSalePrice[0]} ${unit}` }
     ];
 
     colors.forEach(col => {
