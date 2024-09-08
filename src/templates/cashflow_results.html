@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashflow Results</title>
+    <style>
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px;
+        }
+        h1 {
+            color: #032c58;
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #032c58;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: right;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Property Investment Analysis</h1>
+    <div class="table-container">
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th>Metric</th>
+                {% for year in data.keys() if year != '0' %}
+                    <th>Year {{ year }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for metric in data[1].keys() %}
+                <tr>
+                    <td>{{ metric }}</td>
+                    {% for year in data.keys() if year != '0' %}
+                    <td>
+                        <span id="{{ metric }}_{{ year }}" class="editable" contenteditable="false">
+                            {{ "%.2f"|format(data[year][metric]) }}
+                        </span>
+                        <button class="edit-button" onclick="toggleEdit('{{ metric }}_{{ year }}')">Edit</button>
+                    </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <script>
+        function toggleEdit(id) {
+            const element = document.getElementById(id);
+            const button = element.nextElementSibling;
+            
+            if (element.contentEditable === 'true') {
+                // Save changes
+                element.contentEditable = 'false';
+                button.textContent = 'Edit';
+                updateValue(element);
+            } else {
+                // Enable editing
+                element.contentEditable = 'true';
+                element.focus();
+                button.textContent = 'Save';
+            }
+        }
+
+        function updateValue(element) {
+            let newValue = parseFloat(element.innerText);
+            if (!isNaN(newValue)) {
+                element.innerText = newValue.toFixed(2);
+                // Here you would typically send an AJAX request to update the server-side data
+                console.log(`Updated ${element.id} to ${newValue.toFixed(2)}`);
+            } else {
+                // If the input is not a valid number, revert to the original value
+                element.innerText = parseFloat(element.innerText).toFixed(2);
+            }
+        }
+
+        // Add event listener for the Enter key
+        document.querySelectorAll('.editable').forEach(cell => {
+            cell.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.blur();
+                    toggleEdit(this.id);
+                }
+            });
+        });
+    </script>
+    <!--<button onclick="window.location.href='/cashflow_calc'">Back to Form</button>-->
+</body>
+</html>

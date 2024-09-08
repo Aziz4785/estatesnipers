@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Investment Analysis Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #032c58;
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #032c58;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        form {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #032c58; 
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 30px; 
+        }
+        button:hover {
+            background-color: #003d82; 
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-field {
+            flex-grow: 1;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .unit-select {
+            width: auto;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 480px) {
+            .input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .unit-select {
+                width: 100%;
+                margin-top: 5px;
+            }
+        }
+
+
+
+        .hidden {
+            display: none;
+        }
+        .fee-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        #addFeeBtn {
+            background-color: #008CBA;
+            margin-top: 10px;
+        }
+        #addFeeBtn:hover {
+            background-color: #007B9A;
+        }
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .radio-group label {
+            display: inline;
+        }
+        .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-top: 0;
+    }
+    .checkbox-group label {
+        display: inline;
+        margin-top: 0;
+    }
+
+
+    .plan-fieldset {
+        position: relative;
+        padding: 20px 20px 20px 1px;
+        margin-top: 15px;
+        border: none;
+        border-top: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .remove-button {
+        position: absolute;
+        top: 0px;
+        right: 0px;
+        background-color: #c13029;
+        color: white;
+        width: 24px;
+        height: 24px;
+        font-size: 18px;
+        line-height: 20px;
+        text-align: center;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+    }
+
+    .remove-button:hover {
+        background-color: #d0342b;
+    }
+
+    label[for="instalment_plans-0"] {
+        display: none;
+    }
+    .inline-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .inline-group label {
+        flex: 0 0 200px; /* Adjust this width as needed */
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .inline-group input {
+        flex: 1 1 auto;
+        max-width: 150px;
+    }
+    </style>
+</head>
+
+<body>
+    <h1>Property Investment Analysis Form</h1>
+    <form id="propertyForm" method="POST">
+        {{ form.csrf_token }}
+        
+        <label for="currency">{{ form.currency.label }}</label>
+        {{ form.currency(id="currency") }}
+
+        <label for="projectName">{{ form.project_name.label }}</label>
+        {{ form.project_name(required=true) }}
+        
+        <label for="propertyUsage">{{ form.property_usage.label }}</label>
+        {{ form.property_usage(required=true) }}
+        
+        <label for="propertyType">{{ form.property_type.label }}</label>   
+        {{ form.property_type(required=true) }}
+
+        <label for="propertySubType">{{ form.property_sub_type.label }}</label>
+        {{ form.property_sub_type(required=true) }}
+
+       <!-- <label for="propertyArea">{{ form.property_area.label }}</label>
+        {{ form.property_area(required=true, min=0, step=0.01, id="propertyArea") }}
+        {{ form.area_unit(id="AreaUnit") }}-->
+        
+        <div class="input-group">
+            <label for="propertyArea">{{ form.property_area.label }}</label>
+            <div class="input-wrapper">
+                {{ form.property_area(required=true, min=0, step=0.01, id="propertyArea", class="input-field") }}
+                {{ form.area_unit(id="AreaUnit", class="unit-select") }}
+            </div>
+        </div>
+
+        <label for="askingPrice">{{ form.asking_price.label }}</label>
+        {{ form.asking_price(required=true, min=0, step=0.01, id="askingPrice") }}
+
+        <label for="requiresRepair">{{ form.requires_repair.label }}</label>
+        {{ form.requires_repair(required=true, id="requiresRepair") }}
+
+        <div id="repairFields" class="hidden">
+            <label for="repairFees">{{ form.repair_fees.label }}</label>
+            {{ form.repair_fees(min=0, step=0.01, id="repairFees") }}
+
+            <label for="valueAfterRepair">{{ form.value_after_repair.label }}</label>
+            {{ form.value_after_repair(min=0, step=0.01, id="valueAfterRepair") }}
+        </div>
+
+        <!--<label for="grossRentalYield">{{ form.gross_rental_yield.label }}</label>
+        {{ form.gross_rental_yield(required=true, min=0, step=0.01, id="grossRentalYield", type="number") }}
+        {{ form.gross_rental_yield_unit(id="GrossRentalYieldUnit") }}-->
+
+        <div class="input-group">
+            <label for="grossRentalYield">{{ form.gross_rental_yield.label }}</label>
+            <div class="input-wrapper">
+                {{ form.gross_rental_yield(required=true, min=0, step=0.01, id="grossRentalYield", type="number", class="input-field") }}
+                {{ form.gross_rental_yield_unit(id="GrossRentalYieldUnit", class="unit-select") }}
+            </div>
+        </div>
+
+        <label for="annualIncrease">{{ form.annual_increase.label }}</label>
+        {{ form.annual_increase(required=true, min=0, step=0.01, id="annualIncrease",type="number") }}
+        
+        <!--<label for="annualOpExpenses">{{ form.annual_op_expenses.label }}</label>
+        {{ form.annual_op_expenses(required=true, min=0, step=0.01, id="annualOpExpenses",type="number") }}
+        {{ form.annual_op_expenses_unit(id="AnnualOpExpensesUnit") }}-->
+
+        <div class="input-group">
+            <label for="annualOpExpenses">{{ form.annual_op_expenses.label }}</label>
+            <div class="input-wrapper">
+                {{ form.annual_op_expenses(required=true, min=0, step=0.01, id="annualOpExpenses",type="number", class="input-field") }}
+                {{ form.annual_op_expenses_unit(id="AnnualOpExpensesUnit", class="unit-select") }}
+            </div>
+        </div>
+
+        <!--<label for="onetimeAcqFee">{{ form.onetime_acq_fee.label }}</label>
+        {{ form.onetime_acq_fee(required=true, min=0, step=0.01, id="onetimeAcqFee",type="number") }}
+        {{ form.fee_unit(id="FeeUnit") }}-->
+
+        <div class="input-group">
+            <label for="onetimeAcqFee">{{ form.onetime_acq_fee.label }}</label>
+            <div class="input-wrapper">
+                {{ form.onetime_acq_fee(required=true, min=0, step=0.01, id="onetimeAcqFee",type="number", class="input-field") }}
+                {{ form.fee_unit(id="FeeUnit", class="unit-select") }}
+            </div>
+        </div>
+
+
+        <!-- Financing Options -->
+        <h3>{{ form.financing_option.label }}</h3>
+        <div class="radio-group">
+            {% for subfield in form.financing_option %}
+            <label>
+                {{ subfield }}
+                {{ subfield.label.text }}
+            </label>
+            {% endfor %}
+        </div>
+        
+        <div id="mortgageFields" class="hidden">
+            <label for="mortgageAnnualIR">{{ form.mortgage_annual_ir.label }}</label>
+            {{ form.mortgage_annual_ir(min=0, step=0.01, id="mortgageAnnualIR" ,type="number") }}
+            <!-- Add other mortgage-related fields here -->
+            <!-- <label for="mortgageDownpayment">{{ form.mortgage_downpayment.label }}</label>
+             {{ form.mortgage_downpayment(min=0, step=0.01, id="mortgageDownpayment",type="number") }}
+             {{ form.mortgage_downpayment_unit(id="MortgageDownpaymentUnit") }}-->
+
+            <div class="input-group">
+                <label for="mortgageDownpayment">{{ form.mortgage_downpayment.label }}</label>
+                <div class="input-wrapper">
+                    {{ form.mortgage_downpayment(min=0, step=0.01, id="mortgageDownpayment",type="number", class="input-field") }}
+                    {{ form.mortgage_downpayment_unit(id="MortgageDownpaymentUnit", class="unit-select") }}
+                </div>
+            </div>
+    
+             <!-- <label for="mortgageLength">{{ form.mortgage_length.label }}</label>
+             {{ form.mortgage_length(min=0, id="mortgageLength",type="number") }}
+             {{ form.mortgage_length_unit(id="MortgageLengthUnit") }}-->
+
+             <div class="input-group">
+                <label for="mortgageLength">{{ form.mortgage_length.label }}</label>
+                <div class="input-wrapper">
+                    {{ form.mortgage_length(min=0, id="mortgageLength",type="number", class="input-field") }}
+                    {{ form.mortgage_length_unit(id="MortgageLengthUnit", class="unit-select") }}
+                </div>
+            </div>
+
+        </div>
+        
+        <div id="paymentPlanFields" class="hidden">
+            <!-- Add payment plan related fields here -->
+            <!--<label for="planDownpayment">{{ form.plan_downpayment.label }}</label>
+            {{ form.plan_downpayment(min=0, step=0.01, id="planDownpayment",type="number") }}
+            {{ form.plan_downpayment_unit(id="PlanDownpaymentUnit") }}-->
+
+            <div class="input-group">
+                <label for="planDownpayment">{{ form.plan_downpayment.label }}</label>
+                <div class="input-wrapper">
+                    {{ form.plan_downpayment(min=0, step=0.01, id="planDownpayment",type="number",class="input-field") }}
+                    {{ form.plan_downpayment_unit(id="PlanDownpaymentUnit", class="unit-select") }}
+                </div>
+            </div>
+
+            <label for="instalmentPlans">{{ form.instalment_plans.label }}</label>
+            {{ form.instalment_plans(min_entries=1, id="instalmentPlans") }}
+            <button type="button" id="addInstalmentPlan">Add Another Instalment Plan</button>
+            <div class="checkbox-group">
+                <label for="settlementOnHandover">
+                    {{ form.settlement_on_handover(id="settlementOnHandover") }}
+                    {{ form.settlement_on_handover.label }}
+                </label>
+            </div>
+
+            <div id="settlementOnHandoverDetails" style="display: none;">
+                <h3>Settlement On Handover:</h3>
+                <div>
+                    <label for="settlementPercentage">{{ form.settlement_percentage.label }}</label>
+                    {{ form.settlement_percentage(min=0, max=100, step=0.01, id="settlementPercentage") }}
+                </div>
+                <div>
+                    <label for="settlementDuration">{{ form.settlement_duration.label }}</label>
+                    {{ form.settlement_duration(min=1, id="settlementDuration") }}
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <label for="postHandover">
+                    {{ form.post_handover(id="postHandover") }}
+                    {{ form.post_handover.label }}
+                </label>
+            </div>
+
+            <div id="postHandoverDetails" style="display: none;">
+                <h3>Post Handover Payment Plan:</h3>
+                <div>
+                    <label for="postHandoverPercentage">{{ form.post_handover_percentage.label }}</label>
+                    {{ form.post_handover_percentage(min=0, max=100, step=0.01, id="postHandoverPercentage") }}
+                </div>
+                <div>
+                    <label for="postHandoverDuration">{{ form.post_handover_duration.label }}</label>
+                    {{ form.post_handover_duration(min=1, id="postHandoverDuration") }}
+                </div>
+            </div>
+
+            
+        </div>
+        
+        <label for ="cashflowAnalysisPeriod">{{ form.cashflow_analysis_period.label }}</label>
+        {{ form.cashflow_analysis_period(required=true, min=1, step=1, id="cashflowAnalysisPeriod") }}
+
+        <label for ="annualCapitalAppreciation">{{ form.annual_capital_appreciation.label }}</label>
+        {{ form.annual_capital_appreciation(required=true, min=1, step=1, id="annualCapitalAppreciation") }}
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+        // You can keep your existing JavaScript for dynamic form behavior
+        // But remove the part that handles form submission
+        const requiresRepair = document.getElementById('requiresRepair');
+        const repairFields = document.getElementById('repairFields');
+        const financingOptions = document.getElementsByName('financing_option');
+        const mortgageFields = document.getElementById('mortgageFields');
+        const paymentPlanFields = document.getElementById('paymentPlanFields');
+        const addButton = document.getElementById('addInstalmentPlan');
+        const instalmentPlansContainer = document.getElementById('instalmentPlans');
+        const settlementPercentage = document.getElementById('settlementPercentage');
+        const settlementDuration = document.getElementById('settlementDuration');
+        const settlementCheckbox = document.getElementById('settlementOnHandover');
+        const detailsDiv = document.getElementById('settlementOnHandoverDetails');
+        const settlementFields = detailsDiv.querySelectorAll('input');
+        const postHandoverCheckbox = document.getElementById('postHandover');
+        const postHandoverDetails = document.getElementById('postHandoverDetails');
+        const postHandoverFields = postHandoverDetails.querySelectorAll('input');
+
+        let planCount = instalmentPlansContainer.children.length;
+
+        var currencySelect = document.getElementById('currency');
+        var fieldsToUpdate = ['MortgageDownpaymentUnit', 'PlanDownpaymentUnit', 'FeeUnit','AnnualOpExpensesUnit','GrossRentalYieldUnit'];
+
+        function updateCurrencyOptions() {
+            var selectedCurrency = currencySelect.value;
+            fieldsToUpdate.forEach(function(fieldId) {
+                var select = document.getElementById(fieldId);
+                var currencyOption = select.querySelector('option[value="currency"]');
+
+                if (currencyOption) {
+                    currencyOption.textContent = selectedCurrency;
+                }
+            });
+        }
+
+        currencySelect.addEventListener('change', updateCurrencyOptions);
+        updateCurrencyOptions(); // Call once to set initial state
+
+        financingOptions.forEach(option => {
+            option.addEventListener('change', function() {
+                mortgageFields.classList.toggle('hidden', this.value !== 'mortgage');
+                paymentPlanFields.classList.toggle('hidden', this.value !== 'paymentPlan');
+            });
+        });
+
+        requiresRepair.addEventListener('change', function() {
+            repairFields.classList.toggle('hidden', this.value !== 'yes');
+        });
+
+        addButton.addEventListener('click', function() {
+            planCount++;
+            console.log("planCount", planCount);
+            const newPlan = document.createElement('li');
+            newPlan.innerHTML = `
+                <fieldset class="plan-fieldset">
+                    <div class="input-group inline-group">
+                        <label for="instalment_plans-${planCount-1}-percentage">In Percentage of asking price:</label>
+                        <input id="instalment_plans-${planCount-1}-percentage" name="instalment_plans-${planCount-1}-percentage" type="number">
+                    </div>
+                    <div class="input-group inline-group">
+                        <label for="instalment_plans-${planCount-1}-duration">Duration (months):</label>
+                        <input id="instalment_plans-${planCount-1}-duration" name="instalment_plans-${planCount-1}-duration" type="number">
+                    </div>
+                    <button type="button" class="remove-button">×</button>
+                </fieldset>
+            `;
+            
+            /*const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.type = 'button';
+            removeButton.addEventListener('click', function() {
+                instalmentPlansContainer.removeChild(newPlan);
+            });
+            
+            newPlan.appendChild(removeButton);
+            instalmentPlansContainer.appendChild(newPlan);*/
+            const removeButton = newPlan.querySelector('.remove-button');
+            removeButton.addEventListener('click', function() {
+                instalmentPlansContainer.removeChild(newPlan);
+            });
+    
+            instalmentPlansContainer.appendChild(newPlan);
+        });
+        
+        /* settlement on handover */
+        function toggleSettlementFields() {
+            const isChecked = settlementCheckbox.checked;
+            detailsDiv.style.display = isChecked ? 'block' : 'none';
+            settlementFields.forEach(field => {
+                field.disabled = !isChecked;
+                field.required = isChecked;
+            });
+        }
+        settlementCheckbox.addEventListener('change', toggleSettlementFields);
+        toggleSettlementFields();
+
+        /* post handover */
+        function togglePostHandoverFields() {
+            const isChecked = postHandoverCheckbox.checked;
+            postHandoverDetails.style.display = isChecked ? 'block' : 'none';
+            postHandoverFields.forEach(field => {
+                field.disabled = !isChecked;
+                field.required = isChecked;
+            });
+        }
+        postHandoverCheckbox.addEventListener('change', togglePostHandoverFields);
+        togglePostHandoverFields();
+        
+
+        /*document.getElementById('propertyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            console.log(formData);
+            fetch('/cashflow_calc', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Handle the response data here
+                console.log(data);
+                // Update the UI with the calculation results
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });*/
+    </script>
+</body>
+</html>

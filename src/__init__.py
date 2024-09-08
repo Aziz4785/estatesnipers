@@ -4,6 +4,7 @@ import json
 import traceback
 from flask import session,current_app
 import os
+from flask_wtf.csrf import generate_csrf
 from smtplib import SMTPException, SMTPServerDisconnected, SMTPAuthenticationError
 from flask_assets import Bundle, Environment
 from reportlab.lib import colors
@@ -21,7 +22,7 @@ from flask_login import LoginManager
 from flask_wtf import FlaskForm, CSRFProtect
 from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
-
+from .forms import CashflowCalcForm
 from flask import jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -1551,6 +1552,25 @@ def recent_rent_contracts():
 
     return jsonify({'status': 'success', 'result': result})
 
+@app.route('/cashflow_calc', methods=['GET', 'POST'])
+def cashflow_calc():
+    form = CashflowCalcForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            property_obj = form.create_object()
+            # You can access form data like this: form.project_name.data
+            #print(property_obj)
+            response_data = calculate_cashflow(property_obj) 
+            return render_template('cashflow_results.html', data=response_data)
+        else:
+            # If form validation fails, return error messages
+            return jsonify({'errors': form.errors}), 400
+    return render_template('cashflow_calc.html', form=form)
+
+def calculate_cashflow(property_obj):
+    res = property_obj.compute()
+    return res
+    
 def create_rooms_count_doughnut_chart(rooms_count_pairs):
     # Extract room types and counts from the query results
     room_types = [row['rooms_en'] for row in rooms_count_pairs]
