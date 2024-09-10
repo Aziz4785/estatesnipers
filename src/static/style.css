@@ -485,6 +485,11 @@ th, td {
 tr:hover {
   background-color: #f1f1f1;
 }
+.premium-only {
+  color: red;
+  cursor: pointer;
+  font-size: 0.8em;
+}
 .blurry-row {
   filter: blur(3px);
   -webkit-filter: blur(3px); /* For Safari */

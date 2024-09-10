@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
         style: feature => areaStyle(feature, getCurrentFillColor()),
         onEachFeature: onEachFeature
     }).addTo(map);
-    console.log("updateLegend("+legends[currentLegend]+","+units[currentLegend]+")");
+
     updateLegend(legends[currentLegend],units[currentLegend]);
 }
 

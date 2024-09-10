@@ -294,7 +294,17 @@
                                 <th>Gross Rental Yield %</th>
                                 <th>Avg. Transaction value AED</th>
                                 <th>Meter Sale Price</th>
+                                {% if is_premium_user %}
                                 <th>Projected Capital Appreciation 5Y %</th>
+                                {% else %}
+                                <th>
+                                    Projected Capital Appreciation 5Y %
+                                    <br>
+                                    <span class="premium-only" onclick="openModal('Unlock all details Today for $19.99')">
+                                        (premium only)
+                                    </span>
+                                </th>
+                                {% endif %}
                             </tr>
                         </thead>
                         <tbody id="mainTableBody">
