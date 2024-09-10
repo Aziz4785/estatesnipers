@@ -108,6 +108,27 @@
   padding: 0;
 }
 
+/*style for the yield calculator button*/
+#yieldCalculatorButton {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background-color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  color: #032c58;
+  cursor: pointer;
+  z-index: 1000; /* Ensure it stays above other elements */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#yieldCalculatorButton:hover {
+  background-color: #f0f0f0;
+}
 
 /* Style for the login button */
 .hidden {
@@ -471,7 +492,16 @@ tr:hover {
 th:first-child, td:first-child {
   padding-left: 25px; /* Increase padding for a more modern feel */
 }
-
+.blurred-content {
+  filter: blur(4px);
+  -webkit-filter: blur(4px);
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  color: transparent;
+  text-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
 
 th:last-child, td:last-child {
   padding-right: 25px; /* Symmetrical padding for aesthetic balance */

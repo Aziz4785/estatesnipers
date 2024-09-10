@@ -543,6 +543,7 @@ document.querySelector('.close').addEventListener('click', function() {
  let chartDataMappings = {};
 
 function processDictionary(dictionary, level = 0, parentRowId = null) {
+    isPremiumUser = false;
     Object.entries(dictionary).forEach(([key, value]) => {
         //if the value is a dict with a single key "means", it is a leaf node
 
@@ -593,7 +594,12 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
-                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                
+                if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
+                    row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
+                } else {
+                    row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                }
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -620,7 +626,11 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
-                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
+                    row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
+                } else {
+                    row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                }
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(key.includes("locked project"))
@@ -683,6 +693,15 @@ document.addEventListener('click', function(e) {
 
 // Function to style the GeoJSON layers
 function areaStyle(feature, fillColorProperty) {
+    if (fillColorProperty == "blank") {
+        return {
+            fillColor: 'transparent',
+            weight: 2,
+            opacity: 1,
+            color: 'black',
+            fillOpacity: 0.4
+        }; 
+    }
     return {
         fillColor: feature.properties[fillColorProperty], // Dynamic fill color based on the property
         weight: 2,
@@ -1019,6 +1038,14 @@ window.onclick = function(event) {
     }
 }
 document.addEventListener('DOMContentLoaded', function() {
+    const yieldCalcbutton = document.getElementById('yieldCalculatorButton');
+    if(yieldCalcbutton)
+    {
+        yieldCalcbutton.addEventListener('click', function() {
+            window.location.href = '/cashflow_calc';
+        });
+    }
+
     var loginmodal = document.getElementById("loginModal");
     var btn = document.getElementById("loginButton");
     var span = document.getElementsByClassName("close")[0];
@@ -1075,28 +1102,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to close a modal
     function closeModal(modal) {
-        modal.style.display = "none";
+        if (modal) {
+            modal.style.display = "none";
+        }
     }
-    // Get all modals and close buttons
+
+    // Get all modals
     const modals = document.querySelectorAll('.modal');
-    const closeButtons = document.querySelectorAll('.close-button');
-    // Attach event listeners to each close button
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            closeModal(modal);
-        });
-    });
-    // Optional: Close the modal if the user clicks outside of the modal content
-    window.addEventListener('click', function(event) {
-        modals.forEach(modal => {
+
+    // Attach event listeners to each modal
+    modals.forEach(modal => {
+        // Find the close button within this modal
+        const closeButton = modal.querySelector('.close-button');
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                closeModal(modal);
+            });
+        }
+
+        // Close the modal if the user clicks outside of the modal content
+        modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 closeModal(modal);
             }
         });
     });
+
     document.getElementById("unlock-button-table").onclick = function() {
-        openModal('Unlock all projects Today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+        openModal('Unlock all projects Today for $19.99');
     };
 
 });

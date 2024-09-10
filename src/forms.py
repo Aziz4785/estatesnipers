@@ -3,7 +3,7 @@ from wtforms import StringField, FloatField, IntegerField, SelectField,RadioFiel
 from wtforms.validators import DataRequired, Optional
 from enum import Enum
 from dataclasses import dataclass
-
+import math
 class FinancingOption(Enum):
     MORTGAGE = 'mortgage'
     PAYMENT_PLAN = 'paymentPlan'
@@ -95,6 +95,7 @@ class Property:
                 'Cumulative_CF': None, #cumulative cashflow
                 'ROI': None, #return on investment
                 'OM': None, #outstanding mortgage
+                'OP': None, #outstanding payment
                 'Equity_currency': None, #equity in currency
                 'Equity_percent': None, #equity in percentage
                 'ROE': None, #return on equity
@@ -137,13 +138,15 @@ class Property:
             elif self.mortgage_length_unit == 'months':
                 mortgage_length_in_years = self.mortgage_length / 12
             principle = self.asking_price - downpayment_currency
-            monthly_interest_rate = self.mortgage_annual_ir / 12
+            monthly_interest_rate = self.mortgage_annual_ir / (12*100)
             total_number_of_payments = mortgage_length_in_years * 12
             #monthly_mortgage_payment = principle * monthly_interest_rate / (1 - (1 + monthly_interest_rate) ** -total_number_of_payments)
             monthly_mortgage_payment = principle * monthly_interest_rate * (1 + monthly_interest_rate) ** total_number_of_payments / ((1 + monthly_interest_rate) ** total_number_of_payments - 1)
+            print(f"monthly_mortgage_payment = {principle}* {monthly_interest_rate} * {(1 + monthly_interest_rate) ** total_number_of_payments} / {(1 + monthly_interest_rate) ** total_number_of_payments - 1}")
+            print(f" yearly_mortgage_payment = {monthly_mortgage_payment} * 12")
             yearly_mortgage_payment = monthly_mortgage_payment * 12
 
-
+        print("monthly_mortgage_payment",monthly_mortgage_payment)
         OTF_currency = None
         if self.fee_unit == 'percent':
             OTF_currency = self.onetime_acq_fee * self.asking_price / 100
@@ -160,21 +163,35 @@ class Property:
 
 
         total_instalment_duration = 0
+        total_processed_instalment_duration = 0
         start_i = 0
         residual = 0
         for year in range(1,self.cashflow_analysis_period + 1):
             sum_instalment_percentage = 0
-            if year == 1:
-                table[year]['gross_rental_yield'] = None
-                if self.gross_rental_yield_unit == 'percent':
-                    table[year]['gross_rental_yield'] = self.gross_rental_yield * self.asking_price / 100;
-                    if self.requires_repair == 'yes':
-                        table[year]['gross_rental_yield'] = self.gross_rental_yield * self.value_after_repair / 100;
-                elif self.gross_rental_yield_unit == 'usd' or self.gross_rental_yield_unit == 'aed':
-                    table[year]['gross_rental_yield'] = self.gross_rental_yield
-
+            if self.financing_option == FinancingOption.PAYMENT_PLAN:
+                if year <= math.ceil(self.settlement_duration/12):  
+                    table[year]['gross_rental_yield'] = 0
+                elif year == math.ceil(self.settlement_duration/12) + 1:
+                    if self.gross_rental_yield_unit == 'percent':
+                        table[year]['gross_rental_yield'] = self.gross_rental_yield * self.asking_price / 100;
+                        if self.requires_repair == 'yes':
+                            table[year]['gross_rental_yield'] = self.gross_rental_yield * self.value_after_repair / 100;
+                    elif self.gross_rental_yield_unit == 'usd' or self.gross_rental_yield_unit == 'aed':
+                        table[year]['gross_rental_yield'] = self.gross_rental_yield
+                else:
+                    table[year]['gross_rental_yield'] = table[year-1]['gross_rental_yield']*(1+avg_annual_increase_percentage/100)
             else:
-                table[year]['gross_rental_yield'] = table[year-1]['gross_rental_yield']*(1+avg_annual_increase_percentage/100)
+                if year == 1:
+                    table[year]['gross_rental_yield'] = None
+                    if self.gross_rental_yield_unit == 'percent':
+                        table[year]['gross_rental_yield'] = self.gross_rental_yield * self.asking_price / 100;
+                        if self.requires_repair == 'yes':
+                            table[year]['gross_rental_yield'] = self.gross_rental_yield * self.value_after_repair / 100;
+                    elif self.gross_rental_yield_unit == 'usd' or self.gross_rental_yield_unit == 'aed':
+                        table[year]['gross_rental_yield'] = self.gross_rental_yield
+
+                else:
+                    table[year]['gross_rental_yield'] = table[year-1]['gross_rental_yield']*(1+avg_annual_increase_percentage/100)
 
             #OPEX(Y)
             table[year]['OPEX']  = None
@@ -188,33 +205,68 @@ class Property:
             #AP(Y) = A * sum(Xi * Ni) 
             # (for i iterating through periods that are partially or fully part of Y) and Ni = number of months of period i in Y
             if self.financing_option == FinancingOption.PAYMENT_PLAN:
+                print(f"for year : {year} we need to calculate the sum of (instatlemnt percentages * instalment duration)")
+                print(f"initially, sum_instalment_percentage = {sum_instalment_percentage}")
+                print(f"also total_instalment_duration which is the sum of all processed instalment = {total_instalment_duration}")
                 for i in range(start_i,len(self.instalment_plans)):
+                    print(f"for instalment plan {i} : {self.instalment_plans[i]}")
+                    
                     if total_instalment_duration>(year-1)*12: #if there is a residual
+                        print(f"total_instalment_duration = {total_instalment_duration})")
                         ni = total_instalment_duration - (year-1)*12
+                        free_time_in_year = year*12 - total_instalment_duration
+                        print(f"we have some {ni} months left from the previous instalment period   ")
+                        if free_time_in_year < 0:
+                            print(f"it is not possible to process all these month in year {year}")
+                            ni = 12
+                            print(f"so we add only 12 months to sum_instalment_percentage")
+                        total_processed_instalment_duration+=ni
+                        print("now, total_processed_instalment_duration = ",total_processed_instalment_duration)
                         sum_instalment_percentage += (self.instalment_plans[i].percentage * ni)
+                        if(total_processed_instalment_duration ==total_instalment_duration):
+                            start_i = i+1
+                        print(f"so now sum_instalment_percentage += {self.instalment_plans[i].percentage} * {ni} = {sum_instalment_percentage}")
                     else :
                         if total_instalment_duration + self.instalment_plans[i].duration < year*12:
+                            print(f"this instalment plan {i} is  fully included in year {year}")
                             total_instalment_duration+=self.instalment_plans[i].duration
                             sum_instalment_percentage += (self.instalment_plans[i].percentage * self.instalment_plans[i].duration)
+                            total_processed_instalment_duration+=self.instalment_plans[i].duration
+                            print(f"so now sum_instalment_percentage += {self.instalment_plans[i].percentage} * {self.instalment_plans[i].duration} = {sum_instalment_percentage}")
                         elif total_instalment_duration + self.instalment_plans[i].duration == year*12:
+                            print(f"the end of this instalment plan {i} corresponds to the end of year {year}")
                             total_instalment_duration+=self.instalment_plans[i].duration
                             sum_instalment_percentage += (self.instalment_plans[i].percentage * self.instalment_plans[i].duration)
+                            total_processed_instalment_duration+=self.instalment_plans[i].duration
+                            print("now, total_processed_instalment_duration = ",total_processed_instalment_duration)
+                            print(f"so now sum_instalment_percentage += {self.instalment_plans[i].percentage} * {self.instalment_plans[i].duration} = {sum_instalment_percentage}")
                             start_i = i+1
                             break
                         else:
+                            print(f"this instalment plan {i} is too big year {year}")
                             ni = year*12 - total_instalment_duration
+                            print(f"only {ni} months of this instalment plan {i} are included in year {year}")
                             total_instalment_duration+=self.instalment_plans[i].duration
                             sum_instalment_percentage += self.instalment_plans[i].percentage * ni
+                            total_processed_instalment_duration+=ni
+                            print(f"so now sum_instalment_percentage += {self.instalment_plans[i].percentage} * {ni} = {sum_instalment_percentage}")
                             start_i = i
                             break
+
+                    if self.instalment_plans[i].duration>=year*12:
+                        print(f"this instalment plan {i} is too big so we will not process the rest of instalment plans")
+                        break
                 if self.settlement_on_handover == True and ((year == self.settlement_duration/12 +1 and self.settlement_duration%12 != 0) 
                                                             or (year == self.settlement_duration/12 and self.settlement_duration%12 == 0)):
                     sum_instalment_percentage += self.settlement_percentage
+                    print(f"we have a settlement on handover, so sum_instalment_percentage += {self.settlement_percentage}")
                 if self.post_handover == True:
                     total_duration = sum(plan.duration for plan in self.instalment_plans)
                     if year>total_duration/12 and year <= (total_duration+self.post_handover_duration)/12:
-                        sum_instalment_percentage += self.post_handover_percentage
+                        print(f"we have a post handover payment plan, so sum_instalment_percentage += {self.post_handover_percentage}")
+                        sum_instalment_percentage += (self.post_handover_percentage*self.post_handover_duration)
                 table[year]['AP'] = self.asking_price * sum_instalment_percentage/100
+                print(f"table[year]['AP'] = {self.asking_price} * {sum_instalment_percentage}/100 = {table[year]['AP']}")
                 if year == 1:
                     table[year]['cumulative_AP'] = table[year]['AP']
                 else:
@@ -257,7 +309,7 @@ class Property:
                 table[year]['Cumulative_CF'] = table[year]['CF'] + table[year-1]['Cumulative_CF']
 
             #Return on investment
-            table[year]['ROI'] = table[year]['Cumulative_CF'] + CA/100 * table[year-1]['V']/total_cash_invested*100
+            table[year]['ROI'] = (table[year]['Cumulative_CF'] + CA/100 * table[year-1]['V'])/total_cash_invested*100
 
             if self.financing_option == FinancingOption.MORTGAGE:
                 table[year]['OM'] = monthly_mortgage_payment * 12 * (mortgage_length_in_years - year)
@@ -266,7 +318,9 @@ class Property:
                 #Equity in percentage
                 table[year]['Equity_percent'] = (table[year]['V'] - table[year]['OM'])/table[year]['V']*100
             elif self.financing_option == FinancingOption.PAYMENT_PLAN:
-                table[year]['Equity_currency'] = self.asking_price - downpayment_currency - table[year]['cumulative_AP']
+                table[year]['OP'] = self.asking_price - downpayment_currency - table[year]['cumulative_AP']
+                table[year]['Equity_currency'] = table[year]['V'] - table[year]['OP']
+                table[year]['Equity_percent'] = (table[year]['V'] - table[year]['OP'])/table[year]['V']*100
             else:
                 table[year]['Equity_currency'] = table[year]['V']
             #Return on equity
@@ -276,8 +330,7 @@ class Property:
         del table[0]
 
         table = customize(table)
-        print("table")
-        print(table)
+
         return table
 
 def customize(table):
@@ -306,6 +359,7 @@ def customize(table):
         'cumulative_AP': 'Cumulative Annual Payment Plan',
         'ROI': 'Return on Investment',
         'OM': 'Outstanding Mortgage',
+        'OP': 'Outstanding Payment',
         'Equity_currency': 'Equity in currency',
         'Equity_percent': 'Equity in percentage',
         'ROE': 'Return on Equity',

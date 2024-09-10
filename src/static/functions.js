@@ -169,7 +169,7 @@ function openTab_v2(evt, tabName) {
 }
 
  function showPremiumMessage() {
-    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+    openModal('Access all content today for $19.99');
 }
 
 // Helper function to get the parent row attribute based on the parent row ID
@@ -256,21 +256,25 @@ function toggleMenu() {
     setCurrentLegend("averageSalePrice");
     switch (title) {
         case 'Average meter price':
-        setCurrentFillColor("fillColorPrice");
-        setCurrentLegend("averageSalePrice");
-        break;
+            setCurrentFillColor("fillColorPrice");
+            setCurrentLegend("averageSalePrice");
+            break;
         case 'Capital Appreciation':
-        setCurrentFillColor("fillColorCA5");
-        setCurrentLegend("avgCA_5Y");
-        break;
+            setCurrentFillColor("fillColorCA5");
+            setCurrentLegend("avgCA_5Y");
+            break;
         case 'Gross Rental Yield':
-        setCurrentFillColor("fillColorRoi");
-        setCurrentLegend("avg_roi");
-        break;
+            setCurrentFillColor("fillColorRoi");
+            setCurrentLegend("avg_roi");
+            break;
         case 'Acquisition Demand':
-        setCurrentFillColor("fillColorAquDemand");
-        setCurrentLegend("aquisitiondemand_2023");
-        break;
+            setCurrentFillColor("fillColorAquDemand");
+            setCurrentLegend("aquisitiondemand_2023");
+            break;
+        case 'Remove Filers':
+            setCurrentFillColor("blank");
+            setCurrentLegend("blank");
+            break;
     }
 
     applyGeoJSONLayer(getCurrentLegend());
@@ -337,69 +341,83 @@ function clearData() {
 
 
  function openChartModal(chartId, start_year, end_year,title,label_of_point = 'avg meter sale price') {
-    // Fetch the dataset based on the chartId or directly pass the dataset
-    const dataset = chartDataMappings[chartId];
-    if (!dataset) {
-        console.error('Dataset not found for chartId:', chartId);
-        return;
-    }
+    fetch('/check_premium')
+    .then(response => response.json())
+    .then(data => {
+        if (data.isPremium) {
 
-    // Labels for the x-axis
-    const labels = Array.from({ length: end_year - start_year + 1 }, (v, i) => i + start_year);
-
-    // Ensure the canvas context is clear before drawing a new chart
-    const ctx = document.getElementById('landStatsChart').getContext('2d');
-
-    // If there's an existing chart instance, destroy it to avoid overlay issues
-    if (window.myChartInstance) {
-        window.myChartInstance.destroy();
-    }
-
-    // Create a new chart instance
-    window.myChartInstance = new Chart(ctx, {
-        type: 'line', // Define the type of chart you want
-        data: {
-            labels: labels, // Years from start_year to end_year
-            datasets: [{
-                label: label_of_point, // Chart label
-                data: dataset, // The dataset array from the mapping
-                fill: false, // Determines whether the chart should be filled
-                borderColor: 'rgb(36, 22, 235)', // Line color for the main part
-                tension: 0.2, // Line smoothness
-                segment: {
-                    borderColor: ctx => {
-                        // Change the last 5 points to red
-                        const dataIndex = ctx.p0DataIndex;
-                        if (dataIndex >= dataset.length - (end_year-2023)) {
-                            return 'rgb(255, 0, 0)'; // Red color
-                        }
-                        return 'rgb(36, 22, 235)'; // Original color
-                    }
-                }
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    display: false // Disable legend
-                },
-                title: {
-                    display: true, // Enable title
-                    text: title, // Title text
-                    color: 'black', // Title color
-                    font: {
-                        size: 16 // Title font size
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true // Ensures the y-axis starts at 0
-                }
+            // Fetch the dataset based on the chartId or directly pass the dataset
+            const dataset = chartDataMappings[chartId];
+            if (!dataset) {
+                console.error('Dataset not found for chartId:', chartId);
+                return;
             }
-        }
-    });
 
-    // Show the modal
-    document.getElementById('chartModal').style.display = 'block';
+            // Labels for the x-axis
+            const labels = Array.from({ length: end_year - start_year + 1 }, (v, i) => i + start_year);
+
+            // Ensure the canvas context is clear before drawing a new chart
+            const ctx = document.getElementById('landStatsChart').getContext('2d');
+
+            // If there's an existing chart instance, destroy it to avoid overlay issues
+            if (window.myChartInstance) {
+                window.myChartInstance.destroy();
+            }
+
+            // Create a new chart instance
+            window.myChartInstance = new Chart(ctx, {
+                type: 'line', // Define the type of chart you want
+                data: {
+                    labels: labels, // Years from start_year to end_year
+                    datasets: [{
+                        label: label_of_point, // Chart label
+                        data: dataset, // The dataset array from the mapping
+                        fill: false, // Determines whether the chart should be filled
+                        borderColor: 'rgb(36, 22, 235)', // Line color for the main part
+                        tension: 0.2, // Line smoothness
+                        segment: {
+                            borderColor: ctx => {
+                                // Change the last 5 points to red
+                                const dataIndex = ctx.p0DataIndex;
+                                if (dataIndex >= dataset.length - (end_year-2023)) {
+                                    return 'rgb(255, 0, 0)'; // Red color
+                                }
+                                return 'rgb(36, 22, 235)'; // Original color
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false // Disable legend
+                        },
+                        title: {
+                            display: true, // Enable title
+                            text: title, // Title text
+                            color: 'black', // Title color
+                            font: {
+                                size: 16 // Title font size
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true // Ensures the y-axis starts at 0
+                        }
+                    }
+                }
+            });
+
+            // Show the modal
+            document.getElementById('chartModal').style.display = 'block';
+        }
+        else{
+            openModal('Get access to future meter sale price chart by upgrading to premium');
+        }
+    }).catch(error => {
+        console.error('Error checking premium status:', error);
+        // In case of error, default to non-premium behavior
+        openModal('Get access to future meter sale price chart by upgrading to premium');
+    });
 }

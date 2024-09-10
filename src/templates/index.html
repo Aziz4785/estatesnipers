@@ -34,6 +34,7 @@
     </div>
     {% else %}
 <button id="loginButton">Login/Sign up</button>
+<!--<button id="yieldCalculatorButton">Yield Calculator</button>-->
 
 <div id="loginModal" class="modal" {% if show_modal %}style="display:block;"{% endif %}>
 <div class="modal-content">
@@ -142,7 +143,12 @@
           <div onclick="changeLegendTitle('Average meter price')">Average meter price</div>
           <div onclick="changeLegendTitle('Capital Appreciation')">Capital appreciation 5Y</div>
           <div onclick="changeLegendTitle('Gross Rental Yield')">Gross Rental Yield</div>
+          {% if is_premium_user %}
           <div onclick="changeLegendTitle('Acquisition Demand')">Acquisition Demand</div>
+          {% else %}
+              <div class="locked-legend" onclick="showPremiumMessage()">Acquisition Demand <span id="lockIcon">🔒</span></div>
+          {% endif %}
+          <div onclick="changeLegendTitle('Remove Filers')">Remove Filers</div>
         </div>
         <div id="legend">
           <div id="legendContent"></div>
@@ -237,7 +243,7 @@
                         </div>
                       </div>
                       <div class="lock-icon-card">
-                        <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                        <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for $19.99');" style="cursor: pointer;">
                     </div>
                   </div>
                   <div class="info-card-wrapper">
@@ -247,7 +253,7 @@
                       <button id = "land-chart-button" class="stats-button"><i class="fas fa-chart-pie"></i></button>
                     </div>
                     <div class="lock-icon-card">
-                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for $19.99');" style="cursor: pointer;">
                     </div>
                   </div>
                   <div class="info-card-wrapper">
@@ -256,7 +262,7 @@
                       <div class="value">99</div>
                     </div>
                     <div class="lock-icon-card">
-                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for $19.99');" style="cursor: pointer;">
                   </div>
                   </div>
                   <div class="info-card-wrapper">
@@ -266,7 +272,7 @@
                       <div class="value">99</div>
                     </div>
                     <div class="lock-icon-card">
-                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for <span class=\'old-price\'>$19.99</span> $9.99 <span style=\'font-size: 0.7em;\'>*</span>');" style="cursor: pointer;">
+                      <img src="static/lock_similar.svg" alt="Lock Icon" width="40" height="40" onclick="openModal('Unlock all details Today for $19.99');" style="cursor: pointer;">
                     </div>
                   </div>
                   
@@ -332,7 +338,7 @@
       <div id="premiumModal" class="modal">
         <div class="modal-content">
           <span class="close-button">&times;</span>
-          <h2 class="modal-title">Upgrade to Premium <span class="old-price">$19.99</span> $9.99</h2>
+          <h2 class="modal-title">Upgrade to Premium $19.99</h2>
           <div class="premium-box-container">
             <div class="premium-box">
               <div class="premium-header">PREMIUM</div>

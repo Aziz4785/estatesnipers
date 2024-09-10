@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
         style: feature => areaStyle(feature, getCurrentFillColor()),
         onEachFeature: onEachFeature
     }).addTo(map);
-
+    console.log("updateLegend("+legends[currentLegend]+","+units[currentLegend]+")");
     updateLegend(legends[currentLegend],units[currentLegend]);
 }
 
@@ -543,6 +543,7 @@ document.querySelector('.close').addEventListener('click', function() {
  let chartDataMappings = {};
 
 function processDictionary(dictionary, level = 0, parentRowId = null) {
+    isPremiumUser = false;
     Object.entries(dictionary).forEach(([key, value]) => {
         //if the value is a dict with a single key "means", it is a leaf node
 
@@ -593,7 +594,12 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
-                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                
+                if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
+                    row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
+                } else {
+                    row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                }
                 chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(value.hasOwnProperty('means'))
@@ -620,7 +626,11 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
                 row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
-                row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
+                    row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
+                } else {
+                    row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
+                }
                 chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
             }
             else if(key.includes("locked project"))
@@ -683,6 +693,15 @@ document.addEventListener('click', function(e) {
 
 // Function to style the GeoJSON layers
 function areaStyle(feature, fillColorProperty) {
+    if (fillColorProperty == "blank") {
+        return {
+            fillColor: 'transparent',
+            weight: 2,
+            opacity: 1,
+            color: 'black',
+            fillOpacity: 0.4
+        }; 
+    }
     return {
         fillColor: feature.properties[fillColorProperty], // Dynamic fill color based on the property
         weight: 2,
@@ -1019,6 +1038,14 @@ window.onclick = function(event) {
     }
 }
 document.addEventListener('DOMContentLoaded', function() {
+    const yieldCalcbutton = document.getElementById('yieldCalculatorButton');
+    if(yieldCalcbutton)
+    {
+        yieldCalcbutton.addEventListener('click', function() {
+            window.location.href = '/cashflow_calc';
+        });
+    }
+
     var loginmodal = document.getElementById("loginModal");
     var btn = document.getElementById("loginButton");
     var span = document.getElementsByClassName("close")[0];
@@ -1075,28 +1102,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to close a modal
     function closeModal(modal) {
-        modal.style.display = "none";
+        if (modal) {
+            modal.style.display = "none";
+        }
     }
-    // Get all modals and close buttons
+
+    // Get all modals
     const modals = document.querySelectorAll('.modal');
-    const closeButtons = document.querySelectorAll('.close-button');
-    // Attach event listeners to each close button
-    closeButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            closeModal(modal);
-        });
-    });
-    // Optional: Close the modal if the user clicks outside of the modal content
-    window.addEventListener('click', function(event) {
-        modals.forEach(modal => {
+
+    // Attach event listeners to each modal
+    modals.forEach(modal => {
+        // Find the close button within this modal
+        const closeButton = modal.querySelector('.close-button');
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                closeModal(modal);
+            });
+        }
+
+        // Close the modal if the user clicks outside of the modal content
+        modal.addEventListener('click', function(event) {
             if (event.target === modal) {
                 closeModal(modal);
             }
         });
     });
+
     document.getElementById("unlock-button-table").onclick = function() {
-        openModal('Unlock all projects Today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+        openModal('Unlock all projects Today for $19.99');
     };
 
 });
@@ -1459,7 +1492,7 @@ function openTab_v2(evt, tabName) {
 }
 
  function showPremiumMessage() {
-    openModal('Access all content today for <span class="old-price">$19.99</span> $9.99 <span style="font-size: 0.7em;">*</span>');
+    openModal('Access all content today for $19.99');
 }
 
 // Helper function to get the parent row attribute based on the parent row ID
@@ -1546,21 +1579,25 @@ function toggleMenu() {
     setCurrentLegend("averageSalePrice");
     switch (title) {
         case 'Average meter price':
-        setCurrentFillColor("fillColorPrice");
-        setCurrentLegend("averageSalePrice");
-        break;
+            setCurrentFillColor("fillColorPrice");
+            setCurrentLegend("averageSalePrice");
+            break;
         case 'Capital Appreciation':
-        setCurrentFillColor("fillColorCA5");
-        setCurrentLegend("avgCA_5Y");
-        break;
+            setCurrentFillColor("fillColorCA5");
+            setCurrentLegend("avgCA_5Y");
+            break;
         case 'Gross Rental Yield':
-        setCurrentFillColor("fillColorRoi");
-        setCurrentLegend("avg_roi");
-        break;
+            setCurrentFillColor("fillColorRoi");
+            setCurrentLegend("avg_roi");
+            break;
         case 'Acquisition Demand':
-        setCurrentFillColor("fillColorAquDemand");
-        setCurrentLegend("aquisitiondemand_2023");
-        break;
+            setCurrentFillColor("fillColorAquDemand");
+            setCurrentLegend("aquisitiondemand_2023");
+            break;
+        case 'Remove Filers':
+            setCurrentFillColor("blank");
+            setCurrentLegend("blank");
+            break;
     }
 
     applyGeoJSONLayer(getCurrentLegend());
@@ -1627,73 +1664,87 @@ function clearData() {
 
 
  function openChartModal(chartId, start_year, end_year,title,label_of_point = 'avg meter sale price') {
-    // Fetch the dataset based on the chartId or directly pass the dataset
-    const dataset = chartDataMappings[chartId];
-    if (!dataset) {
-        console.error('Dataset not found for chartId:', chartId);
-        return;
-    }
+    fetch('/check_premium')
+    .then(response => response.json())
+    .then(data => {
+        if (data.isPremium) {
 
-    // Labels for the x-axis
-    const labels = Array.from({ length: end_year - start_year + 1 }, (v, i) => i + start_year);
-
-    // Ensure the canvas context is clear before drawing a new chart
-    const ctx = document.getElementById('landStatsChart').getContext('2d');
-
-    // If there's an existing chart instance, destroy it to avoid overlay issues
-    if (window.myChartInstance) {
-        window.myChartInstance.destroy();
-    }
-
-    // Create a new chart instance
-    window.myChartInstance = new Chart(ctx, {
-        type: 'line', // Define the type of chart you want
-        data: {
-            labels: labels, // Years from start_year to end_year
-            datasets: [{
-                label: label_of_point, // Chart label
-                data: dataset, // The dataset array from the mapping
-                fill: false, // Determines whether the chart should be filled
-                borderColor: 'rgb(36, 22, 235)', // Line color for the main part
-                tension: 0.2, // Line smoothness
-                segment: {
-                    borderColor: ctx => {
-                        // Change the last 5 points to red
-                        const dataIndex = ctx.p0DataIndex;
-                        if (dataIndex >= dataset.length - (end_year-2023)) {
-                            return 'rgb(255, 0, 0)'; // Red color
-                        }
-                        return 'rgb(36, 22, 235)'; // Original color
-                    }
-                }
-            }]
-        },
-        options: {
-            plugins: {
-                legend: {
-                    display: false // Disable legend
-                },
-                title: {
-                    display: true, // Enable title
-                    text: title, // Title text
-                    color: 'black', // Title color
-                    font: {
-                        size: 16 // Title font size
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true // Ensures the y-axis starts at 0
-                }
+            // Fetch the dataset based on the chartId or directly pass the dataset
+            const dataset = chartDataMappings[chartId];
+            if (!dataset) {
+                console.error('Dataset not found for chartId:', chartId);
+                return;
             }
-        }
-    });
 
-    // Show the modal
-    document.getElementById('chartModal').style.display = 'block';
+            // Labels for the x-axis
+            const labels = Array.from({ length: end_year - start_year + 1 }, (v, i) => i + start_year);
+
+            // Ensure the canvas context is clear before drawing a new chart
+            const ctx = document.getElementById('landStatsChart').getContext('2d');
+
+            // If there's an existing chart instance, destroy it to avoid overlay issues
+            if (window.myChartInstance) {
+                window.myChartInstance.destroy();
+            }
+
+            // Create a new chart instance
+            window.myChartInstance = new Chart(ctx, {
+                type: 'line', // Define the type of chart you want
+                data: {
+                    labels: labels, // Years from start_year to end_year
+                    datasets: [{
+                        label: label_of_point, // Chart label
+                        data: dataset, // The dataset array from the mapping
+                        fill: false, // Determines whether the chart should be filled
+                        borderColor: 'rgb(36, 22, 235)', // Line color for the main part
+                        tension: 0.2, // Line smoothness
+                        segment: {
+                            borderColor: ctx => {
+                                // Change the last 5 points to red
+                                const dataIndex = ctx.p0DataIndex;
+                                if (dataIndex >= dataset.length - (end_year-2023)) {
+                                    return 'rgb(255, 0, 0)'; // Red color
+                                }
+                                return 'rgb(36, 22, 235)'; // Original color
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: {
+                            display: false // Disable legend
+                        },
+                        title: {
+                            display: true, // Enable title
+                            text: title, // Title text
+                            color: 'black', // Title color
+                            font: {
+                                size: 16 // Title font size
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true // Ensures the y-axis starts at 0
+                        }
+                    }
+                }
+            });
+
+            // Show the modal
+            document.getElementById('chartModal').style.display = 'block';
+        }
+        else{
+            openModal('Get access to future meter sale price chart by upgrading to premium');
+        }
+    }).catch(error => {
+        console.error('Error checking premium status:', error);
+        // In case of error, default to non-premium behavior
+        openModal('Get access to future meter sale price chart by upgrading to premium');
+    });
 }
-function openModal(title,footnote="Until 31/08/2024 then 19.99 $") {
+function openModal(title,footnote='') {
     const modalTitle = document.querySelector('.modal-title');
     const premiumModal = document.getElementById('premiumModal');
     modalTitle.innerHTML = title;

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cashflow Results</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    
     <style>
         .table-container {
             width: 100%;
@@ -14,16 +16,6 @@
             width: 100%;
             min-width: 600px;
         }
-        h1 {
-            color: #032c58;
-            text-align: center;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #032c58;
-            font-size: 28px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
         th, td {
             border: 1px solid black;
             padding: 8px;
@@ -32,10 +24,74 @@
         th {
             background-color: #f2f2f2;
         }
+        .header-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            border-bottom: 2px solid #032c58;
+        }
+        h1 {
+            color: #032c58;
+            text-align: center;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+        .icon-container {
+            position: absolute;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border-radius: 50%;
+        }
+        .icon-button:hover {
+            background-color: #f0f0f0;
+        }
+        .icon-button img {
+            display: block;
+            width: 20px;
+            height: 20px;
+        }
+        .chart-container {
+            width: 80%;
+            margin: auto;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <h1>Property Investment Analysis</h1>
+    <div class="header-container">
+        <h1>Property Investment Analysis</h1>
+        <div class="icon-container">
+            <button class="icon-button" id="charts-button">
+                <img src="static/charts.svg" alt="Charts" width="20" height="20">
+            </button>
+            <button class="icon-button" id="csv-button">
+                <img src="static/csv.svg" alt="CSV" width="20" height="20">
+            </button>
+            <button class="icon-button" id="pdf-button">
+                <img src="static/pdf-icon2.svg" alt="PDF" width="20" height="20">
+            </button>
+            <button class="icon-button" id="home-button" onclick="window.location.href='/'">
+                <img src="static/home.svg" alt="Home" width="20" height="20">
+            </button>
+        </div>
+    </div>
+    <div class="chart-container" style="display: none;">
+        <canvas id="myChart1"></canvas>
+        <canvas id="myChart2"></canvas>
+        <canvas id="myChart3"></canvas>
+    </div>
     <div class="table-container">
     <table id="resultsTable">
         <thead>
@@ -64,6 +120,7 @@
     </table>
     </div>
     <script>
+        const curr_data = {{ data|tojson }};
         function toggleEdit(id) {
             const element = document.getElementById(id);
             const button = element.nextElementSibling;
@@ -85,8 +142,42 @@
             let newValue = parseFloat(element.innerText);
             if (!isNaN(newValue)) {
                 element.innerText = newValue.toFixed(2);
+                const [metric, year] = element.id.split('_');
+                data[year][metric] = newValue;
                 // Here you would typically send an AJAX request to update the server-side data
-                console.log(`Updated ${element.id} to ${newValue.toFixed(2)}`);
+            } else {
+                // If the input is not a valid number, revert to the original value
+                element.innerText = parseFloat(element.innerText).toFixed(2);
+            }
+        }
+        function updateValue_if_you_want_to_save_everytime_you_modify(element) {
+            let newValue = parseFloat(element.innerText);
+            if (!isNaN(newValue)) {
+                element.innerText = newValue.toFixed(2);
+                // Update the data object
+                const [metric, year] = element.id.split('_');
+                data[year][metric] = newValue;
+                
+                // Send AJAX request to update server-side data
+                fetch('/update_value', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        year: year,
+                        metric: metric,
+                        value: newValue
+                    }),
+                })
+                .then(response => response.json())
+                .then(result => {
+                    console.log('Success:', result);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+
             } else {
                 // If the input is not a valid number, revert to the original value
                 element.innerText = parseFloat(element.innerText).toFixed(2);
@@ -103,6 +194,212 @@
                 }
             });
         });
+        document.addEventListener('DOMContentLoaded', function() {
+        const chartsButton = document.getElementById('charts-button');
+        const chartContainer = document.querySelector('.chart-container');
+        let myChart1 = null;
+        let myChart2 = null;
+        let myChart3 = null;
+
+        chartsButton.addEventListener('click', function() {
+            if (chartContainer.style.display === 'none') {
+                chartContainer.style.display = 'block';
+                createChart();
+            } else {
+                chartContainer.style.display = 'none';
+                if (myChart1) {
+                    myChart1.destroy();
+                }
+                if (myChart2) {
+                    myChart2.destroy();
+                }
+                if (myChart3) {
+                    myChart3.destroy();
+                }
+            }
+        });
+
+        function createChart() {
+            const data = {{ data|tojson }};
+            const years = Object.keys(data).filter(year => year !== '0');
+            // First chart
+            const metrics1 = ['Property Market Value', 'Equity in currency'];
+            if ('Outstanding Payment' in data[years[0]]) {
+                metrics1.push('Outstanding Payment');
+            }
+            const datasets1 = metrics1.map(metric => ({
+                label: metric,
+                data: years.map(year => data[year][metric]),
+                fill: false,
+                borderColor: getRandomColor(),
+                tension: 0.1
+            }));
+
+            const ctx1 = document.getElementById('myChart1').getContext('2d');
+            myChart1 = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: datasets1
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Evolution of Property Market Value and Equity'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Second chart
+            const metrics2 = ['Cashflow', 'Total Expenses'];
+            const datasets2 = metrics2.map(metric => ({
+                label: metric,
+                data: years.map(year => data[year][metric]),
+                fill: false,
+                borderColor: getRandomColor(),
+                tension: 0.1
+            }));
+
+            const ctx2 = document.getElementById('myChart2').getContext('2d');
+            myChart2 = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: datasets2
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Evolution of Cashflow and Expenses'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+
+                //third chart
+                const metrics3 = ['Return on Investment', 'Return on Equity','Cash on Cash return'];
+                const datasets3 = metrics3.map(metric => ({
+                    label: metric,
+                    data: years.map(year => data[year][metric]),
+                    fill: false,
+                    borderColor: getRandomColor(),
+                    tension: 0.1
+                }));
+
+                const ctx3 = document.getElementById('myChart3').getContext('2d');
+                myChart3 = new Chart(ctx3, {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: datasets3
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Evolution of Return on Investment, Return on Equity and Cash on Cash return'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+
+                        }
+                    }
+                });
+            }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+    });
+
+
+    document.getElementById('pdf-button').addEventListener('click', function() {
+        const currentData = curr_data;
+        // Create and show loading bar
+        const loadingBar = document.createElement('div');
+        loadingBar.style.width = '0%';
+        loadingBar.style.height = '5px';
+        loadingBar.style.backgroundColor = 'blue';
+        loadingBar.style.position = 'fixed';
+        loadingBar.style.top = '0';
+        loadingBar.style.left = '0';
+        loadingBar.style.transition = 'width 0.5s';
+        document.body.appendChild(loadingBar);
+
+        // Simulate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += 10;
+            loadingBar.style.width = `${Math.min(progress, 90)}%`;
+        }, 500);
+
+        // Make an AJAX request to the server
+        fetch('/generate-cashflow-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cashflow_data: currentData })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            // Create a new Blob object using the response data
+            var url = window.URL.createObjectURL(blob);
+            
+            // Create a link element
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'cashflow_results.pdf';
+            
+            // Append to the document body
+            document.body.appendChild(link);
+            
+            // Programmatically click the link to trigger the download
+            link.click();
+            
+            // Clean up
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+            
+            // Complete the loading bar
+            loadingBar.style.width = '100%';
+            setTimeout(() => {
+                document.body.removeChild(loadingBar);
+                clearInterval(progressInterval);
+            }, 500);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Remove loading bar on error
+            document.body.removeChild(loadingBar);
+            clearInterval(progressInterval);
+        });
+    });
+
     </script>
     <!--<button onclick="window.location.href='/cashflow_calc'">Back to Form</button>-->
 </body>

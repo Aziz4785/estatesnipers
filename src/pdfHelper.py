@@ -92,14 +92,15 @@ class PDFHelper:
         # Update the y position
         self.y -= used_height + 20
 
-    def draw_paragraph(self, text, font_size=12, font_name='Helvetica',alignment=TA_CENTER):
+    def draw_paragraph(self, text, font_size=12, font_name='Helvetica', alignment=TA_CENTER, text_color=colors.black):
         # Create a custom style for the paragraph
         paragraph_style = ParagraphStyle(
             'CustomParagraph',
             parent=self.styles['Normal'],
             fontSize=font_size,
             fontName=font_name,
-            alignment=alignment
+            alignment=alignment,
+            textColor=text_color  # Add text color to the style
         )
 
         # Create a Paragraph object with the text
@@ -120,7 +121,7 @@ class PDFHelper:
         paragraph.drawOn(self.p, 50, self.y - used_height)
 
         # Update the y position
-        self.y -= used_height -5
+        self.y -= used_height - 5
 
     def draw_contact_info(self):
         self.y -= 20

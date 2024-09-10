@@ -1,4 +1,4 @@
-function openModal(title,footnote="Until 31/08/2024 then 19.99 $") {
+function openModal(title,footnote='') {
     const modalTitle = document.querySelector('.modal-title');
     const premiumModal = document.getElementById('premiumModal');
     modalTitle.innerHTML = title;

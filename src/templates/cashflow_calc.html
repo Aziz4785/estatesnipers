@@ -10,19 +10,26 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background-image: url('/static/dubai_wallpaper2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #fff;
         }
         h1 {
-            color: #032c58;
+            /*color: #032c58;*/
+            color: #ffffff;
             text-align: center;
             padding: 20px 0;
             margin-bottom: 30px;
-            border-bottom: 2px solid #032c58;
+            border-bottom: 2px solid #ffffff;
             font-size: 28px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
         form {
-            background-color: #f9f9f9;
+            background-color: #0a090979;
             padding: 20px;
             border-radius: 8px;
         }
@@ -431,7 +438,6 @@
 
         addButton.addEventListener('click', function() {
             planCount++;
-            console.log("planCount", planCount);
             const newPlan = document.createElement('li');
             newPlan.innerHTML = `
                 <fieldset class="plan-fieldset">

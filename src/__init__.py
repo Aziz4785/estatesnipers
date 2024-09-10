@@ -34,6 +34,7 @@ from flask_login import login_required,current_user
 from reportlab.pdfgen import canvas
 import matplotlib
 matplotlib.use('Agg')
+from scipy.ndimage import gaussian_filter
 import matplotlib.pyplot as plt
 from flask_wtf.csrf import CSRFProtect
 import matplotlib.backends.backend_agg as agg
@@ -43,6 +44,8 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 import stripe
 from flask_mailman import Mail
+from matplotlib.patches import Rectangle
+from matplotlib.colors import to_rgba
 
 # Load environment variables from .env file
 #load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
@@ -146,6 +149,10 @@ def check_premium_user():
                     return True
     return False
 
+@app.route('/check_premium')
+def check_premium():
+    is_premium = check_premium_user()
+    return jsonify({'isPremium': is_premium})
 
 @app.route('/')
 def index():
@@ -470,13 +477,13 @@ list_order_in_memory = []
 def get_area_details():
     try:
         app.logger.info('we call get_area_details')
-        is_premium_user = check_premium_user() or PREMIUM_FOR_ALL_exPDF
+        is_premium_user = check_premium_user()
         if(is_premium_user):
             app.logger.info('the user is premium')
         else:
             app.logger.info('the user is not premium')
         hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
-        if is_premium_user:   
+        if is_premium_user or PREMIUM_FOR_ALL_exPDF:   
             hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
         area_id = request.args.get('area_id')
         if not area_id:
@@ -580,9 +587,10 @@ def get_area_details():
 
             final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
             final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
-
-            final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
-
+            if(is_premium_user):
+                final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
+            else:
+                final_df['avgCapitalAppreciation2029'] = -999
             columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
             # Combine the columns : columns of the group + avg_cap_appreciation_columns
             combined_columns = group + list(set(columns_containing_means) - set(group))
@@ -606,7 +614,7 @@ def get_area_details():
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
 
-            if(not is_premium_user):
+            if(not (is_premium_user or PREMIUM_FOR_ALL_exPDF)):
                 filtered_items = [
                     item for item in fetched_rows.items()
                     if item[1]['means'][0]['avg_meter_price_2013_2023'][-1] is not None
@@ -1100,8 +1108,9 @@ def generate_area_pdf():
 
     else:
         helper.new_page()
-        unlockpremiumtext = """The detailed report includes further insights on the area.\n To access the full report, please upgrade to a Premium subscription.  """
-        helper.draw_paragraph(unlockpremiumtext, font_size=14, font_name='Helvetica-Bold')
+        helper.draw_paragraph("To access the full report, please upgrade to a Premium subscription.", font_size=18, font_name='Helvetica-Bold', text_color=colors.red)
+        helper.y -= 20  # Add some extra space between paragraphs
+        helper.draw_paragraph("The detailed report includes further insights on the area.", font_size=14, font_name='Helvetica')
     helper.new_page()
     helper.draw_contact_info()
 
@@ -1425,7 +1434,30 @@ def create_land_type_pie_chart(data,data_key = 'land_type_en',title = 'Land Type
     return img_buffer
 
 
-def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sale Price 2013-2023',y_axis='Average Meter Price',contain_pred=True):
+def blur_area(fig, ax, start_x, end_x):
+    # Get the y-axis limits
+    y_min, y_max = ax.get_ylim()
+    
+    # Create a rectangle patch to cover the area to be blurred
+    rect = Rectangle((start_x, y_min), end_x - start_x, y_max - y_min, 
+                     fill=True, facecolor='white', edgecolor='none', alpha=0.7)
+    ax.add_patch(rect)
+    
+    # Add a text label
+    mid_x = (start_x + end_x) / 2
+    mid_y = (y_min + y_max) / 2
+    ax.text(mid_x, mid_y, 'Unlock future prices \n with a premium account', ha='center', va='center', 
+            fontsize=12, fontweight='bold', color='red', rotation=35, zorder=100)
+    
+    # Add a semi-transparent overlay
+    overlay = Rectangle((start_x-1, y_min), end_x - start_x+6, y_max - y_min,
+                    fill=True, facecolor='lightgray', edgecolor='none', alpha=0.99,zorder=10)
+    ax.add_patch(overlay)
+    
+    # Redraw the figure to ensure the blur effect is applied
+    fig.canvas.draw()
+
+def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sale Price 2013-2023',y_axis='Average Meter Price',contain_pred=True,is_premium_user=True):
     years = list(range(start_year, start_year + len(avg_meter_price)))
     
     fig, ax = plt.subplots()
@@ -1438,6 +1470,14 @@ def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sal
     else:
         ax.plot(years, avg_meter_price, color='blue', marker='o')
     
+    historical_years = years[:-5]
+    historical_prices = avg_meter_price[:-5]
+    future_years = years[-5:]
+    future_prices = avg_meter_price[-5:]
+
+    if not is_premium_user:
+        blur_area(fig, ax, future_years[0], future_years[-1])
+
     ax.set_title(title)
     ax.set_xlabel('Year')
     ax.set_ylabel(y_axis)
@@ -1701,7 +1741,6 @@ def generate_pdf():
         app.logger.info(f"Received payload size: {payload_size} bytes")
     
         is_premium_user = check_premium_user()
-        
         hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
         if is_premium_user:   
             hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
@@ -1782,22 +1821,32 @@ def generate_pdf():
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
             ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
             ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"],
-            ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
+            ["Projected Capital Appreciation in 5Y:","(Premium Only)"],
         ])
+
+        if is_premium_user:
+            #remove last line
+            general_means.pop()
+            general_means.append(["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"])
+        
 
         footnotes = [
         "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
         "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
         ]
     else :
-         general_means = [
+        general_means = [
             ["Description", "Value"],
             ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
             ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
-            ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
+            ["Projected Capital Appreciation in 5Y:","(Premium Only)"],
         ]
-    
+        if is_premium_user:
+            #remove last line
+            general_means.pop()
+            general_means.append(["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"])
+        
     helper.y+=10
     # Draw the table
     helper.draw_table(general_means)
@@ -1806,7 +1855,7 @@ def generate_pdf():
     # Draw the footnotes
     helper.draw_footnotes(footnotes)
     
-    img_buffer = create_price_chart(avg_meter_price)
+    img_buffer = create_price_chart(avg_meter_price,is_premium_user=is_premium_user)
     # Insert the image into the PDF from the BytesIO object
     helper.y=240
 
@@ -1840,15 +1889,17 @@ def generate_pdf():
         for k in firstkeys:
             if k !="means":
                 parent_name = section
-                render_pdf({k: data[k]},parent_name,helper,p)
+                render_pdf({k: data[k]},parent_name,helper,p,is_premium_user)
 
         #helper.new_page()
 
         
     else:
         helper.new_page()
-        unlockpremiumtext = """The detailed report includes further insights on the project area and a detailed classification of units by property type and subtype.\n To access the full report, please upgrade to a Premium subscription.  """
-        helper.draw_paragraph(unlockpremiumtext, font_size=14, font_name='Helvetica-Bold')
+        helper.draw_paragraph("To access the full report, please upgrade to a Premium subscription.", font_size=18, font_name='Helvetica-Bold', text_color=colors.red)
+        helper.y -= 20  # Add some extra space between paragraphs
+        helper.draw_paragraph("The detailed report includes further insights on the project.", font_size=14, font_name='Helvetica')
+    
     helper.new_page()
     helper.draw_contact_info()
     #p.showPage()
@@ -1858,7 +1909,7 @@ def generate_pdf():
     
     return send_file(buffer, as_attachment=True, download_name=f"{section}_report.pdf", mimetype='application/pdf')
 
-def render_pdf(node,parent_name,helper,p):
+def render_pdf(node,parent_name,helper,p,is_premium_user):
     helper.new_page()
     key, data = next(iter(node.items()))
     node_name = str(key)+" / "+parent_name
@@ -1877,10 +1928,15 @@ def render_pdf(node,parent_name,helper,p):
         ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
         ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
         ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
-        ["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"],
+        ["Projected Capital Appreciation in 5Y:","(Premium Only)"]
     ]
+    if is_premium_user:
+        #remove last line
+        general_means.pop()
+        general_means.append(["Projected Capital Appreciation in 5Y:",str(round_and_percentage(projected_ca,2))+" %"])
+    
     helper.draw_table(general_means)
-    img_buffer = create_price_chart(avg_meter_price)
+    img_buffer = create_price_chart(avg_meter_price,is_premium_user=is_premium_user)
     helper.y =260
     p.drawImage(ImageReader(img_buffer), 95, helper.y, width=400, height=300)
     # Update y position after the image
@@ -1888,8 +1944,81 @@ def render_pdf(node,parent_name,helper,p):
     firstkeys = list(data.keys())
     for key in firstkeys:
         if key !="means":
-            render_pdf({key: data[key]},node_name,helper,p)
+            render_pdf({key: data[key]},node_name,helper,p,is_premium_user)
 
+
+@app.route('/generate-cashflow-pdf', methods=['POST'])
+@csrf.exempt
+def generate_cashflow_pdf():
+    cashflow_data = request.json['cashflow_data']
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    helper = PDFHelper(p, 720, 750, 100)
+    helper.draw_Main_title("Cashflow Analysis", font_size=30)
+
+    # Prepare data for the table
+    keys = list(cashflow_data['1'].keys())
+    table_data = [["Year"] + list(cashflow_data.keys())]
+    for key in keys:
+        row = [key] + [format_value(cashflow_data[year][key]) for year in cashflow_data]
+        table_data.append(row)
+
+    # Draw the table
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2E4053")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+    ]))
+
+    table_width, table_height = table.wrapOn(p, 500, 600)
+    table.drawOn(p, 30, helper.y - table_height - 30)
+
+    helper.y -= table_height + 60
+
+    # Create charts
+    create_line_chart(cashflow_data, 'Cashflow', 'Cashflow Over Time', helper, p)
+    create_line_chart(cashflow_data, 'Property Market Value', 'Property Market Value Over Time', helper, p)
+    create_line_chart(cashflow_data, 'Return on Investment', 'Return on Investment Over Time', helper, p)
+
+    helper.draw_contact_info()
+    p.save()
+    buffer.seek(0)
+    return send_file(buffer, as_attachment=True, download_name="cashflow_analysis.pdf", mimetype='application/pdf')
+
+def format_value(value):
+    if isinstance(value, float):
+        return f"{value:.2f}"
+    return str(value)
+
+def create_line_chart(data, key, title, helper, p):
+    years = list(data.keys())
+    values = [data[year][key] for year in years]
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.plot(years, values, marker='o')
+    ax.set_title(title)
+    ax.set_xlabel('Year')
+    ax.set_ylabel(key)
+    ax.grid(True)
+
+    img_buffer = BytesIO()
+    plt.savefig(img_buffer, format='png')
+    img_buffer.seek(0)
+    plt.close(fig)
+
+    if helper.y - 300 < helper.min_y:
+        helper.new_page()
+
+    p.drawImage(ImageReader(img_buffer), 50, helper.y - 300, width=500, height=250)
+    helper.y -= 320
+    
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
     app.logger.handlers = gunicorn_logger.handlers
