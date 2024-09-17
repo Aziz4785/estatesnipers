@@ -33,8 +33,19 @@
         </div>
     </div>
     {% else %}
-<button id="loginButton">Login/Sign up</button>
+    <div class="login-container">
+      <button id="loginButton">Login/Sign up</button>
+      {% if not is_premium_user or last_billing_period %}
+      <div id="tryPremiumLink">
+          <a href="#" id="tryPremium" onclick="openModal('Unlock all Today for $19.99'); return false;">Try Premium</a>
+      </div>
+      {% endif %}
+    </div>
 <!--<button id="yieldCalculatorButton">Yield Calculator</button>-->
+<div id="assetIdentifierButton">
+  <span>Find a Project</span>
+  <img src="static/sniper.svg" alt="Sniper Logo">
+</div>
 
 <div id="loginModal" class="modal" {% if show_modal %}style="display:block;"{% endif %}>
 <div class="modal-content">
@@ -198,7 +209,7 @@
             <button id="close-panel">x</button>
             <div id = "area_info">
                 <h2 id="area-title"></h2>
-                <div id="last-updated">Last updated: 2024-08-30</div>
+                <div id="last-updated">Last updated: 2024-09-17</div>
                 <div id="stats-container" style="display: flex; overflow-x: auto;">
                 <div class="info-card locked-card" id="card1">
                     <div class="title">Locked</div>

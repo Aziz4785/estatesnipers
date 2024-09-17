@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Asset Identification Results</title>
+    <script src="static/jquery-3.5.1.js"></script>
+    <script src="static/jquery.dataTables.min.js"></script>
+    <link href="static/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://use.fontawesome.com/releases/v5.0.1/css/all.css"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='design4.css') }}" />
+    <style>
+        .icon-container {
+            position: absolute;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .icon-button {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border-radius: 50%;
+        }
+        .icon-button:hover {
+            background-color: #f0f0f0;
+        }
+        .icon-button img {
+            display: block;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+    <!-- Initialize DataTables -->
+    <!--<script>
+        $(document).ready(function() {
+            $('#assetTable').DataTable({
+                // Optional: Customize DataTables options here
+                "paging": true,
+                "searching": false,
+                "ordering": true,
+                "order": [], // Default no ordering
+                "autoWidth": false
+            });
+        });
+    </script>-->
+    
+    
+</head>
+<body>
+    <div class="icon-container">
+        <!--<button class="icon-button" id="csv-button">
+            <img src="static/csv.svg" alt="CSV" width="20" height="20">
+        </button>
+        <button class="icon-button" id="pdf-button">
+            <img src="static/pdf-icon2.svg" alt="PDF" width="20" height="20">
+        </button>-->
+        <button class="icon-button" id="home-button" onclick="window.location.href='/'">
+            <img src="static/home.svg" alt="Home" width="20" height="20">
+        </button>
+    </div>
+    <div id="formContent">
+        <h2 style="text-align: center; color: #032c58; font-size: 28px;">Asset Identification Results</h2>
+        <hr />
+    {% if df is not none and not df.empty %}
+    <table id="tblCustomer" class="display" style="width: 100%;">
+            <thead>
+                <tr>
+                    {% for column in df.columns %}
+                        <th>{{ column }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for index, row in df.iterrows() %}
+                    <tr>
+                        {% for value in row %}
+                            <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+      $(document).ready(function () {
+        $("#tblCustomer").DataTable();
+      });
+    </script>
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+</body>
+</html>

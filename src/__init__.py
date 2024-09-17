@@ -23,6 +23,7 @@ from flask_wtf import FlaskForm, CSRFProtect
 from flask import redirect, url_for, flash
 from flask_httpauth import HTTPBasicAuth
 from .forms import CashflowCalcForm
+from .assetIdentforms import AssetIdentForm
 from flask import jsonify
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -39,6 +40,7 @@ import matplotlib.pyplot as plt
 from flask_wtf.csrf import CSRFProtect
 import matplotlib.backends.backend_agg as agg
 from decouple import config
+from decimal import Decimal
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -515,7 +517,7 @@ def get_area_details():
             propertysubtype pst 
         ON 
             t.property_sub_type_id = pst.property_sub_type_id
-        WHERE area_id = :area_id AND instance_year >= 2013;
+        WHERE area_id = :area_id AND instance_year >= 2014;
         """)
 
         with engine.connect() as connection:
@@ -558,9 +560,9 @@ def get_area_details():
         for group_index,group in enumerate(groupings):
             # # Apply the custom aggregation function for each year of interest
             avg_meter_prices = {}
-            for year in range(2013, 2024):
+            for year in range(2014, 2025):
                 avg_meter_prices[f'AVG_meter_price_{year}'] = conditional_avg(df, group, year).rename(f'AVG_meter_price_{year}')
-            avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
+            #avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
             for year in range(2025, 2030):
                 avg_result = weighted_avg(df_prediction, group, year)
                 if avg_result.empty:
@@ -568,13 +570,13 @@ def get_area_details():
                 else:
                     avg_meter_prices[f'AVG_meter_price_{year}'] = avg_result.rename(f'AVG_meter_price_{year}')
             
-            avg_roi = df[df['instance_year'] >= 2023].groupby(group)['roi'].mean().rename('avg_roi')
-            avg_transaction_value = df[df['instance_year'] >= 2023].groupby(group)['actual_worth'].mean().rename('avg_actual_worth')
+            avg_roi = df[df['instance_year'] >= 2024].groupby(group)['roi'].mean().rename('avg_roi')
+            avg_transaction_value = df[df['instance_year'] >= 2024].groupby(group)['actual_worth'].mean().rename('avg_actual_worth')
             
             final_df = pd.concat([*avg_meter_prices.values(), avg_roi,avg_transaction_value], axis=1).reset_index()
 
             #concat the columns into an array : 
-            final_df['avg_meter_price_2013_2023'] = final_df.apply(
+            final_df['avg_meter_price_2014_2024'] = final_df.apply(
                 lambda row: [
                     replace_nan_with_none(row[col]) if col in row else None
                     for col in avg_meter_prices.keys()
@@ -585,8 +587,8 @@ def get_area_details():
             #print("Grouping {} Execution Time: {:.2f} seconds".format(group_index, time.time() - grouping_start_time))
             #avergae capital apperication calculation for that group:
 
-            final_df['avgCapitalAppreciation2018'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
-            final_df['avgCapitalAppreciation2013'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
+            final_df['avgCapitalAppreciation2019'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
+            final_df['avgCapitalAppreciation2014'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
             if(is_premium_user):
                 final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
             else:
@@ -596,11 +598,11 @@ def get_area_details():
             combined_columns = group + list(set(columns_containing_means) - set(group))
             # Reorder and filter the DataFrame according to the combined list of columns
             final_df = final_df[combined_columns]
-            # Drop rows where 'avgCapitalAppreciation2018' and 'avgCapitalAppreciation2013' and roi are all NaN
+            # Drop rows where 'avgCapitalAppreciation2019' and 'avgCapitalAppreciation2014' and roi are all NaN
 
-            final_df.dropna(subset=['avgCapitalAppreciation2018', 'avgCapitalAppreciation2013','avg_roi','avg_actual_worth'], how='all', inplace=True)
+            final_df.dropna(subset=['avgCapitalAppreciation2019', 'avgCapitalAppreciation2014','avg_roi','avg_actual_worth'], how='all', inplace=True)
 
-            final_df['avg_meter_price_2013_2023'] = final_df['avg_meter_price_2013_2023'].apply(interpolate_price_list)
+            final_df['avg_meter_price_2014_2024'] = final_df['avg_meter_price_2014_2024'].apply(interpolate_price_list)
 
             if 'grouped_project' in final_df.columns: # we drop empty proejct because we dont want to see blank projects in the ui
                 final_df = final_df.dropna(subset=['grouped_project'])
@@ -613,11 +615,11 @@ def get_area_details():
 
         if(nested_dicts):
             fetched_rows= remove_lonely_dash(nested_dicts)
-
+            
             if(not (is_premium_user or PREMIUM_FOR_ALL_exPDF)):
                 filtered_items = [
                     item for item in fetched_rows.items()
-                    if item[1]['means'][0]['avg_meter_price_2013_2023'][-1] is not None
+                    if item[1]['means'][0]['avg_meter_price_2014_2024'][-1] is not None
                 ]
                 # If filtered_items is empty, take the first two items from fetched_rows
                 # Otherwise, take the first two items from filtered_items
@@ -699,7 +701,7 @@ def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=No
     base_query = """
        SELECT instance_date, meter_sale_price
        FROM transactions t
-       WHERE t.area_id = %s AND t.instance_year >= 2013
+       WHERE t.area_id = %s AND t.instance_year >= 2014
     """
     
     conditions = []
@@ -735,24 +737,20 @@ def execute_project_demand_query(area_id):
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
     
     query = """
-       SELECT 
-    MAX(p.project_name_en) AS project_name_en,
-    SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / (p.no_of_units+p.no_of_villas) AS internaldemand2023,
-    (SUM(CASE WHEN t.instance_year = 2023 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2023)) AS externaldemand2023,
-    (SUM(CASE WHEN t.instance_year = 2022 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2022))  AS externalDemand2022,
-    (SUM(CASE WHEN t.instance_year = 2021 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2021))  AS externalDemand2021,
-    (SUM(CASE WHEN t.instance_year = 2020 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2020))  AS externalDemand2020,
-    (SUM(CASE WHEN t.instance_year = 2019 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2019))  AS externalDemand2019,
-    (SUM(CASE WHEN t.instance_year = 2018 THEN t.total ELSE 0 END)::float / (SELECT COUNT(*) FROM transactions_per_year WHERE instance_year = 2018))  AS externalDemand2018
+     SELECT 
+    project_name_en AS project_name_en,
+    internaldemand2024,
+    externaldemand2024,
+    externalDemand2023,
+    externalDemand2022,
+    externalDemand2021,
+    externalDemand2020,
+    externalDemand2019
 FROM 
-    transactions_per_year t
-JOIN 
-    projects p ON t.project_number = p.project_number
+    projects 
 WHERE 
-    t.area_id = %s
-    AND p.no_of_units > 60
-GROUP BY 
-    t.project_number, p.no_of_units, no_of_villas,p.project_name_en;
+    area_id = %s
+    AND no_of_units > 60;
     """
     try:
         cursor.execute(query, (area_id,))
@@ -763,7 +761,6 @@ GROUP BY
         return fetched_rows
     except Exception as e:
         # Log the error securely
-        #print(f"An error occurred: {str(e)}")  # Replace with proper logging
         return None  # Or handle the error appropriately
     finally:
         cursor.close()
@@ -1012,14 +1009,14 @@ def generate_area_pdf():
     # supply_finished_pro
     # supply_offplan_pro
     # supply_lands
-    # aquisitiondemand_2023
-    # rentaldemand_2023
+    # aquisitiondemand_2024
+    # rentaldemand_2024
 
     # Data for the table
     table_data = [
         ['Metric', 'Value'],
-        ['Acquisition Demand 2023', f"{round_and_percentage(safe_get(area_data, 'variableValues', 10))} %"],
-        ['Rental Demand 2023¹', str(round_and_percentage(safe_get(area_data, 'variableValues', 11)))+" %"],
+        ['Acquisition Demand 2024', f"{round_and_percentage(safe_get(area_data, 'variableValues', 10))} %"],
+        ['Rental Demand 2024', str(round_and_percentage(safe_get(area_data, 'variableValues', 11)))+" %"],
         ['Average Sale Price', f"{safe_get(area_data, 'variableValues', 0, 0):,.2f} AED"],
         ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 2)))+" %"],
         ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 1)))+" %"],
@@ -1029,7 +1026,7 @@ def generate_area_pdf():
         ['Supply of Lands', safe_get(area_data, 'variableValues', 9)],
     ]
     footnotes = [
-        "¹: (Number of rental contracts in year 2023) / (Number of units in the area) * 100"]
+        "¹: (Number of rental contracts in year 2024) / (Number of units in the area) * 100"]
     # Create a table
     table = Table(table_data)
     table.setStyle(TableStyle([
@@ -1134,7 +1131,7 @@ def fetch_dubai_areas_data():
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2023,rentaldemand_2023,s_volume_last_12m,s_value_last_12m,r_volume_last_12m FROM areas')
+    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2024,rentaldemand_2024,s_volume_last_12m,s_value_last_12m,r_volume_last_12m FROM areas')
     fetched_rows = cursor.fetchall() 
 
     # Data processing functions for each key
@@ -1147,8 +1144,8 @@ def fetch_dubai_areas_data():
         'supply_finished_pro': int,
         'supply_offplan_pro': int,
         'supply_lands': int,
-        'aquisitiondemand_2023' : float,
-        'rentaldemand_2023' : float,
+        'aquisitiondemand_2024' : float,
+        'rentaldemand_2024' : float,
         's_volume_last_12m' : int,
         's_value_last_12m' : float,
         'r_volume_last_12m' : int
@@ -1163,8 +1160,8 @@ def fetch_dubai_areas_data():
         'supply_finished_pro': {},
         'supply_offplan_pro': {},
         'supply_lands': {},
-        'aquisitiondemand_2023' : {},
-        'rentaldemand_2023' : {},
+        'aquisitiondemand_2024' : {},
+        'rentaldemand_2024' : {},
         's_volume_last_12m' : {},
         's_value_last_12m' : {},
         'r_volume_last_12m' : {}
@@ -1180,8 +1177,8 @@ def fetch_dubai_areas_data():
     valid_prices = [price for price in data_stores['average_sale_price'].values() if price is not None]
     valid_CA = [ca for ca in data_stores['avg_ca_5'].values() if ca is not None]
     valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
-    valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2023'].values() if aqd is not None]
-    valid_rentDemand = [rd for rd in data_stores['rentaldemand_2023'].values() if rd is not None]
+    valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2024'].values() if aqd is not None]
+    valid_rentDemand = [rd for rd in data_stores['rentaldemand_2024'].values() if rd is not None]
     min_price, med_price, max_price = get_min_median_max(valid_prices)
     min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
     min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
@@ -1192,7 +1189,7 @@ def fetch_dubai_areas_data():
         "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
         "avgCA_5Y": [round((min_ca+med_ca)*100/2), round(med_ca*100), round((med_ca+(max_ca-med_ca)/2.0)*100)],
         "avg_roi": [custom_round((min_roi+med_roi)*100/2), custom_round(med_roi*100), custom_round((med_roi+(max_roi-med_roi)/2.0)*100)],
-        "aquisitiondemand_2023" : [
+        "aquisitiondemand_2024" : [
             custom_round((med_aqDemand+min_aqDemand)*100/2) if med_aqDemand is not None else 0,
             custom_round(med_aqDemand*100) if med_aqDemand is not None else 0,
             custom_round((med_aqDemand+(max_asDemand-med_aqDemand)/2.0)*100) if med_aqDemand is not None else 0
@@ -1203,7 +1200,7 @@ def fetch_dubai_areas_data():
         "averageSalePrice": "AED",
         "avgCA_5Y": "%",
         "avg_roi": "%",
-        "aquisitiondemand_2023" : "%"
+        "aquisitiondemand_2024" : "%"
     }
     
     # Load the GeoJSON file
@@ -1221,8 +1218,8 @@ def fetch_dubai_areas_data():
     # supply_finished_pro
     # supply_offplan_pro
     # supply_lands
-    # aquisitiondemand_2023
-    # rentaldemand_2023
+    # aquisitiondemand_2024
+    # rentaldemand_2024
 
     # Enrich GeoJSON with price data and calculate fill colors
     for feature in geojson:
@@ -1335,10 +1332,10 @@ def fetch_dubai_areas_data():
             variables_units.append('-')
             variables_special.append(2)
 
-            # Process aquisitiondemand_2023
-            variable_names.append("Acquisition Demand 2023:")
-            if area_id in data_stores['aquisitiondemand_2023']:
-                ademand = data_stores['aquisitiondemand_2023'][area_id]
+            # Process aquisitiondemand_2024
+            variable_names.append("Acquisition Demand 2024:")
+            if area_id in data_stores['aquisitiondemand_2024']:
+                ademand = data_stores['aquisitiondemand_2024'][area_id]
                 variable_values.append(ademand)
                 feature['fillColorAquDemand'] = get_color(ademand, min_aqDemand, med_aqDemand, max_asDemand)
             else:
@@ -1347,10 +1344,10 @@ def fetch_dubai_areas_data():
             variables_units.append('%')
             variables_special.append(0)
 
-            # Process rentaldemand_2023
-            variable_names.append("Rental Demand 2023:")
-            if area_id in data_stores['rentaldemand_2023']:
-                rdemand = data_stores['rentaldemand_2023'][area_id]
+            # Process rentaldemand_2024
+            variable_names.append("Rental Demand 2024:")
+            if area_id in data_stores['rentaldemand_2024']:
+                rdemand = data_stores['rentaldemand_2024'][area_id]
                 variable_values.append(rdemand)
                 feature['fillColorrentDemand'] = get_color(rdemand, min_rentDemand, med_rentDemand, max_rentDemand)
             else:
@@ -1457,7 +1454,7 @@ def blur_area(fig, ax, start_x, end_x):
     # Redraw the figure to ensure the blur effect is applied
     fig.canvas.draw()
 
-def create_price_chart(avg_meter_price,start_year=2013,title ='Average Meter Sale Price 2013-2023',y_axis='Average Meter Price',contain_pred=True,is_premium_user=True):
+def create_price_chart(avg_meter_price,start_year=2014,title ='Average Meter Sale Price 2014-2024',y_axis='Average Meter Price',contain_pred=True,is_premium_user=True):
     years = list(range(start_year, start_year + len(avg_meter_price)))
     
     fig, ax = plt.subplots()
@@ -1583,7 +1580,7 @@ def recent_rent_contracts():
             'Sub Type': row['rooms_en'],
             'Type': row['property_sub_type_en'],
             'Usage': row['property_usage_en'],
-            'Sub Type': row['project_name_en'],
+            'Project': row['project_name_en'],
             'Gross Rental Yield %': row['roi']
         }
         renamed_rows.append(renamed_row)
@@ -1592,6 +1589,212 @@ def recent_rent_contracts():
 
     return jsonify({'status': 'success', 'result': result})
 
+
+@app.route('/asset_identification', methods=['GET', 'POST'])
+def asset_identification():
+    # Establish database connection
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Fetch areas
+    cur.execute("SELECT area_id, area_name_en FROM areas")
+    areas = cur.fetchall()
+    area_choices = [('Any', 'Any')] + [(str(area[0]), area[1]) for area in areas]
+
+    # Property Usage (Define directly or fetch from database if applicable)
+    #property_usage_choices = [('Any', 'Any'), ('Commercial', 'Commercial'), ('Residential', 'Residential'), ('Hospitality', 'Hospitality')]
+    
+    cur.execute("SELECT DISTINCT property_usage_en FROM transactions WHERE property_usage_en IS NOT NULL")
+    usages = cur.fetchall()
+    property_usage_choices = [('Any', 'Any')] + [(usage[0], usage[0]) for usage in usages]
+
+    # Property Type (Define directly or fetch from database if applicable)
+    #property_type_choices = [('Any', 'Any'), ('Flat', 'Flat'), ('Villa', 'Villa')]
+    cur.execute("SELECT DISTINCT property_sub_type_en FROM propertysubtype WHERE property_sub_type_en IS NOT NULL")
+    types = cur.fetchall()
+    property_type_choices = [('Any', 'Any')] + [(type[0], type[0]) for type in types]
+
+    # Fetch Property Subtypes
+    cur.execute("SELECT DISTINCT rooms_en FROM transactions WHERE rooms_en IS NOT NULL")
+    subtypes = cur.fetchall()
+    subtype_choices = [('Any', 'Any')] + [(subtype[0], subtype[0]) for subtype in subtypes]
+
+    # Select One Choices
+    select_one_choices = [
+        ('high_growth', 'Identify High Growth Potential Assets'),
+        ('high_yield', 'Identify High Rental Yield Assets'),
+        ('distressed', 'Identify Distressed/Undervalued Assets')
+    ]
+
+    cur.close()
+    conn.close()
+
+    # Instantiate the form and set choices
+    form = AssetIdentForm()
+    form.enter_area.choices = area_choices
+    form.property_usage.choices = property_usage_choices
+    form.property_type.choices = property_type_choices
+    form.property_sub_type.choices = subtype_choices
+    form.select_one.choices = select_one_choices
+    if request.method == 'POST':
+        if form.validate_on_submit():
+            is_premium_user = check_premium_user()
+            
+            if not is_premium_user:
+                # Redirect non-premium users to index with premium modal open
+                return redirect(url_for('index', open_premium_modal=True))
+            
+            connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+            if connection_url.startswith("postgres://"):
+                connection_url = connection_url.replace("postgres://", "postgresql://", 1)
+
+            if not connection_url:
+                return jsonify({'error': 'Database connection URL not found'}), 500
+            
+            df = get_combined_data(connection_url)
+            
+
+
+            # Retrieve form data
+            area = form.enter_area.data
+            property_usage = form.property_usage.data
+            property_type = form.property_type.data
+            property_sub_type = form.property_sub_type.data
+            price_from = form.price_from.data
+            price_to = form.price_to.data
+            select_one = form.select_one.data
+            desired_min_capital_appreciation = form.desired_min_capital_appreciation.data
+            desired_min_gross_rental_yield = form.desired_min_gross_rental_yield.data
+            high_demand_projects_only = form.high_demand_projects_only.data
+
+            # Establish database connection
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            # Start building the SQL query
+            query = "SELECT * FROM base_table WHERE 1=1"
+            params = []
+
+            # Apply filters based on the form inputs
+            if area != 'Any':
+                #query += " AND area_id = %s"
+                df = df[df['area_name_en'] == area]
+                params.append(area)
+            if property_usage != 'Any':
+                #query += " AND property_usage_en = %s"
+                df = df[df['property_usage_en'] == property_usage]
+                params.append(property_usage)
+            if property_type != 'Any':
+                df = df[df['property_sub_type_en'] == property_type]
+                #query += " AND property_sub_type_en = %s"
+                params.append(property_type)
+            if property_sub_type != 'Any':
+                df = df[df['rooms_en'] == property_sub_type]
+                #query += " AND rooms_en = %s"
+                params.append(property_sub_type)
+            if price_from is not None:
+                #query += " AND avg_actual_worth >= %s"
+                price_from_float = float(price_from)
+                df = df[df['avg_actual_worth'] >= price_from_float]
+                params.append(price_from)
+            if price_to is not None:
+                #query += " AND avg_actual_worth <= %s"
+                price_to_float = float(price_to)
+                df = df[df['avg_actual_worth'] <= price_to_float]
+                params.append(price_to)
+ 
+            # Adjust validation based on 'select_one'
+            errors = []
+
+            # Apply additional filters based on 'select_one'
+            if select_one == 'high_growth':
+                # Example condition for high growth potential assets
+                #query += " AND growth_potential = 'High'"
+                if desired_min_capital_appreciation:
+                    #desired_min_capital_appreciation/=100
+                    #query += " AND projected_capital_appreciation >= %s"
+                    df = df[df['avg_projected_ca'] >= float(desired_min_capital_appreciation)]
+                    params.append(desired_min_capital_appreciation)
+
+                if desired_min_gross_rental_yield:
+                    #desired_min_gross_rental_yield/=100
+                    #query += " AND gross_rental_yield >= %s"
+                    df = df[df['avg_roi'] >= float(desired_min_gross_rental_yield)]
+                    params.append(desired_min_gross_rental_yield)
+
+                if not desired_min_capital_appreciation:
+                    errors.append('Desired Minimum Capital Appreciation is required.')
+            elif select_one == 'high_yield':
+                # Example condition for high rental yield assets
+                #query += " AND rental_yield >= %s"
+                #params.append(7.0)  # Assume 7% is the threshold for high yield
+                if desired_min_gross_rental_yield:
+                    #desired_min_gross_rental_yield/=100
+
+                    df = df[df['avg_roi'] >= float(desired_min_gross_rental_yield)]
+                    params.append(desired_min_gross_rental_yield)
+                if desired_min_capital_appreciation:
+
+                    print(desired_min_capital_appreciation)
+                    df = df[df['avg_projected_ca'] >= float(desired_min_capital_appreciation)]
+                    params.append(desired_min_capital_appreciation)
+                if not desired_min_gross_rental_yield:
+                    errors.append('Desired Minimum Gross Rental Yield is required.')
+            elif select_one == 'distressed':
+                # Example condition for distressed/undervalued assets
+                #query += " AND is_distressed = TRUE"
+                if desired_min_gross_rental_yield:
+                    #desired_min_gross_rental_yield/=100
+                    #query += " AND gross_rental_yield >= %s"
+                    df = df[df['avg_roi'] >= float(desired_min_gross_rental_yield)]
+                    params.append(desired_min_gross_rental_yield)
+                if desired_min_capital_appreciation:
+                    #desired_min_capital_appreciation/=100
+                    df = df[df['avg_projected_ca'] >= float(desired_min_capital_appreciation)]
+                    #query += " AND projected_capital_appreciation >= %s"
+                    params.append(desired_min_capital_appreciation)
+
+            # High Demand Projects Only
+            if high_demand_projects_only == 'Yes':
+                #query += " AND external_demand >= %s AND internal_demand >= %s"
+                df = df[df['external_demand'] >= 3]
+                df = df[df['internal_demand'] >= 10]
+                params.extend([3, 10])  # Thresholds as per specifications
+                
+            # if errors:
+            #     for error in errors:
+            #         flash(error)
+            #     return render_template('asset_identification.html', form=form)
+            # Execute the query
+            cur.execute(query, params)
+            results = cur.fetchall()
+
+            cur.close()
+            conn.close()
+            if not results:
+                flash('No results found matching your criteria.')
+                return render_template('asset_identification.html', form=form)
+            # Render results
+            column_mapping = {
+                'area_name_en': 'Area',
+                'grouped_project': 'Project',
+                'rooms_en': 'Sub Type',
+                'property_sub_type_en': 'Type',
+                'property_usage_en': 'Usage',
+                'avg_actual_worth': 'Avg Transaction Value (AED)',
+                'avg_projected_ca': 'Projected Capital Appreciation in 5Y (%)',
+                'avg_roi': 'Gross Rental Yield (%)',
+                'external_demand': 'External Demand (%)',
+                'internal_demand': 'Internal Demand (%)'
+            }
+
+            df = df.rename(columns=column_mapping)
+            return render_template('asset_results.html', df=df)
+
+        else:
+            return render_template('asset_identification.html', form=form)
+        
+    return render_template('asset_identification.html', form=form)
 @app.route('/cashflow_calc', methods=['GET', 'POST'])
 def cashflow_calc():
     form = CashflowCalcForm()
@@ -1752,10 +1955,10 @@ def generate_pdf():
         area_data = request_data['area_data']
 
         means_data = request_data['data'].get('means', [{}])[0]
-        avg_capital_appreciation_2013 = means_data.get('avgCapitalAppreciation2013', 'N/A')
-        avg_capital_appreciation_2018 = means_data.get('avgCapitalAppreciation2018', 'N/A')
+        avg_capital_appreciation_2014 = means_data.get('avgCapitalAppreciation2014', 'N/A')
+        avg_capital_appreciation_2019 = means_data.get('avgCapitalAppreciation2019', 'N/A')
         avg_roi = means_data.get('avg_roi', 'N/A')
-        avg_meter_price = means_data.get('avg_meter_price_2013_2023', [])
+        avg_meter_price = means_data.get('avg_meter_price_2014_2024', [])
         projected_ca = means_data.get('avgCapitalAppreciation2029', 'N/A')
         project_demand_data = execute_project_demand_query(area_data['area_id'])
         firstkeys = list(data.keys())
@@ -1765,12 +1968,12 @@ def generate_pdf():
             project_data = execute_projectInfo_query(section)
 
         # Loop through the project_demand_data to find the matching project
-        project_internaldemand2023 = project_externaldemand2023 = None
+        project_internaldemand2024 = project_externaldemand2024 = None
         externalDemand_5Y = []
         for item in project_demand_data:
             if item['project_name_en'] == section:
-                project_internaldemand2023 = item['internaldemand2023']
-                project_externaldemand2023 = item['externaldemand2023']
+                project_internaldemand2024 = item['internaldemand2024']
+                project_externaldemand2024 = item['externaldemand2024']
                 externalDemand_5Y = item['externalDemandYears']
                 break
 
@@ -1816,11 +2019,11 @@ def generate_pdf():
             general_means.append(["Percent Completed: ", str(project_data[0]['percent_completed'])+" %"])
 
         general_means.extend([
-            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
-            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2014,2))+" %"],
+            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2019,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
-            ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2023,2))+" %"],
-            ["External Demand²:",str(round_and_percentage(project_externaldemand2023,2))+" %"],
+            ["Internal Demand¹:",str(round_and_percentage(project_internaldemand2024,2))+" %"],
+            ["External Demand²:",str(round_and_percentage(project_externaldemand2024,2))+" %"],
             ["Projected Capital Appreciation in 5Y:","(Premium Only)"],
         ])
 
@@ -1831,14 +2034,14 @@ def generate_pdf():
         
 
         footnotes = [
-        "¹: (Number of transaction in the project in year 2023) / (Number of units in the project) * 100",
-        "²: (Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100"
+        "¹: (Number of transaction in the project in year 2024) / (Number of units in the project) * 100",
+        "²: (Number of transaction in the project in year 2024) /(Total number of transactions in 2024) * 100"
         ]
     else :
         general_means = [
             ["Description", "Value"],
-            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
-            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+            ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2014,2))+" %"],
+            ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2019,2))+" %"],
             ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
             ["Projected Capital Appreciation in 5Y:","(Premium Only)"],
         ]
@@ -1866,7 +2069,7 @@ def generate_pdf():
     # Update y position after the image
     #helper.y -= 160
     if hierarchy_keys[0]=="grouped_project":
-        img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2018,title ='Evolution of Demand 2018-2023',y_axis='External Demand',contain_pred=False)
+        img_buffer_demand = create_price_chart(externalDemand_5Y,start_year=2019,title ='Evolution of Demand 2019-2024',y_axis='External Demand',contain_pred=False)
         p.drawImage(ImageReader(img_buffer_demand), 332, helper.y, width=270, height=200)
         
         helper.new_page()
@@ -1915,18 +2118,18 @@ def render_pdf(node,parent_name,helper,p,is_premium_user):
     node_name = str(key)+" / "+parent_name
     helper.draw_Main_title(node_name,font_size=26)
     means_data2 = data.get('means', [{}])[0]
-    avg_capital_appreciation_2013 = means_data2.get('avgCapitalAppreciation2013', 'N/A')
-    avg_capital_appreciation_2018 = means_data2.get('avgCapitalAppreciation2018', 'N/A')
+    avg_capital_appreciation_2014 = means_data2.get('avgCapitalAppreciation2014', 'N/A')
+    avg_capital_appreciation_2019 = means_data2.get('avgCapitalAppreciation2019', 'N/A')
     avg_roi = means_data2.get('avg_roi', 'N/A')
     projected_ca = means_data2.get('avgCapitalAppreciation2029', 'N/A')
-    avg_meter_price = means_data2.get('avg_meter_price_2013_2023', [])
-    # helper.draw_info_line("Average Capital Appreciation 10Y:", round(avg_capital_appreciation_2013 * 100, 2)if avg_capital_appreciation_2013 is not None else None)
-    # helper.draw_info_line("Average Capital Appreciation 5Y :", round(avg_capital_appreciation_2018 * 100, 2)if avg_capital_appreciation_2018 is not None else None)
+    avg_meter_price = means_data2.get('avg_meter_price_2014_2024', [])
+    # helper.draw_info_line("Average Capital Appreciation 10Y:", round(avg_capital_appreciation_2014 * 100, 2)if avg_capital_appreciation_2014 is not None else None)
+    # helper.draw_info_line("Average Capital Appreciation 5Y :", round(avg_capital_appreciation_2019 * 100, 2)if avg_capital_appreciation_2019 is not None else None)
     # helper.draw_info_line("Average ROI:", round(avg_roi * 100,2)if avg_roi is not None else None, extra_space=20)
     general_means = [
         ["Description", "Value"],
-        ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2013,2))+" %"],
-        ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2018,2))+" %"],
+        ["Average Capital Appreciation 10Y:", str(round_and_percentage(avg_capital_appreciation_2014,2))+" %"],
+        ["Average Capital Appreciation 5Y:",  str(round_and_percentage(avg_capital_appreciation_2019,2))+" %"],
         ["Average Gross Rental Yield:",str(round_and_percentage(avg_roi,2))+" %"],
         ["Projected Capital Appreciation in 5Y:","(Premium Only)"]
     ]

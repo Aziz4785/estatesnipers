@@ -146,7 +146,6 @@ class Property:
             print(f" yearly_mortgage_payment = {monthly_mortgage_payment} * 12")
             yearly_mortgage_payment = monthly_mortgage_payment * 12
 
-        print("monthly_mortgage_payment",monthly_mortgage_payment)
         OTF_currency = None
         if self.fee_unit == 'percent':
             OTF_currency = self.onetime_acq_fee * self.asking_price / 100
@@ -221,7 +220,7 @@ class Property:
                             ni = 12
                             print(f"so we add only 12 months to sum_instalment_percentage")
                         total_processed_instalment_duration+=ni
-                        print("now, total_processed_instalment_duration = ",total_processed_instalment_duration)
+                        
                         sum_instalment_percentage += (self.instalment_plans[i].percentage * ni)
                         if(total_processed_instalment_duration ==total_instalment_duration):
                             start_i = i+1
@@ -238,8 +237,6 @@ class Property:
                             total_instalment_duration+=self.instalment_plans[i].duration
                             sum_instalment_percentage += (self.instalment_plans[i].percentage * self.instalment_plans[i].duration)
                             total_processed_instalment_duration+=self.instalment_plans[i].duration
-                            print("now, total_processed_instalment_duration = ",total_processed_instalment_duration)
-                            print(f"so now sum_instalment_percentage += {self.instalment_plans[i].percentage} * {self.instalment_plans[i].duration} = {sum_instalment_percentage}")
                             start_i = i+1
                             break
                         else:
@@ -326,7 +323,6 @@ class Property:
             #Return on equity
             table[year]['ROE'] = table[year]['CF'] / table[year]['Equity_currency'] * 100
 
-        print("table")
         del table[0]
 
         table = customize(table)

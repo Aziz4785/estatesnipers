@@ -11,6 +11,7 @@ from email.mime.multipart import MIMEMultipart
 import io
 from io import BytesIO
 import smtplib
+from sqlalchemy import create_engine, text
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -210,9 +211,9 @@ def calculate_CA(row, year_diff,last_year = 2023):
 
     
 def calculate_CA_from_array(row, year_diff):
-    avg_meter_price = row['avg_meter_price_2013_2023']
+    avg_meter_price = row['avg_meter_price_2014_2024']
 
-    current_year_index = 2023 - 2013  # This is the index for the year 2023 in the array.
+    current_year_index = 2024 - 2014  # This is the index for the year 2023 in the array.
     target_year_index = current_year_index - year_diff  # Calculate the index for the target year.
 
     # If avg_meter_price is an array, check if all elements are NaN.
@@ -221,8 +222,8 @@ def calculate_CA_from_array(row, year_diff):
         if np.isnan(avg_meter_price).all():
             return np.nan
         elif 0 <= target_year_index < len(avg_meter_price):
-            price_new = row['avg_meter_price_2013_2023'][current_year_index]  # Price for 2023
-            price_old = row['avg_meter_price_2013_2023'][target_year_index]  # Price for the target year
+            price_new = row['avg_meter_price_2014_2024'][current_year_index]  # Price for 2023
+            price_old = row['avg_meter_price_2014_2024'][target_year_index]  # Price for the target year
             
             # Check if both prices are available and not equal to 0
             if pd.notna(price_new) and pd.notna(price_old) and price_new != 0 and price_old != 0:
@@ -267,8 +268,7 @@ def aggregate_yearly(df):
     # Initialize an array to hold the average values
     averages = []
 
-    # Iterate over the years from 2013 to 2023
-    for year in range(2013, 2024):
+    for year in range(2014, 2025):
         # Calculate the average for the current year
         yearly_average = df[df['instance_year'] == year]['meter_sale_price'].mean()
         # Handle case where there might be no data for a year, ensuring it's a float NaN
@@ -277,7 +277,7 @@ def aggregate_yearly(df):
         averages.append(yearly_average)
 
     # Create a DataFrame with a single row containing the averages array
-    result_df = pd.DataFrame([averages], columns=[f'Year_{year}' for year in range(2013, 2024)])
+    result_df = pd.DataFrame([averages], columns=[f'Year_{year}' for year in range(2014, 2025)])
     return result_df
 
 def conditional_avg(df, group,year, threshold=5):
@@ -447,7 +447,7 @@ def create_transaction_chart(data, title,chart_type='bar'):
     return img_buffer
 
 
-def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5):
+def conditional_avg_array(df, group, start_year=2014, end_year=2024, threshold=5):
     """
     Compute conditional averages for a range of years, returning an array of averages
     or a single None for each group if no year meets the criteria.
@@ -471,20 +471,11 @@ def conditional_avg_array(df, group, start_year=2013, end_year=2023, threshold=5
     combined_averages_df = pd.DataFrame(averages)
 
     combined_averages_df_transposed  = combined_averages_df.transpose()
-
-    # Replace all NaN values with None
-    #combined_averages_df_transposed = combined_averages_df_transposed.replace(np.nan, None)
-
-    # Convert rows to arrays or None
-    # Convert rows to arrays, replacing NaN with None in the process
-    # result_series = combined_averages_df.apply(
-    #     lambda x: [value if not pd.isnull(value) else None for value in x.values] if not all(x.isnull()) else None, axis=1
-    # ).rename('avg_meter_price_2013_2023')
     
     result_series = combined_averages_df_transposed.apply(
         lambda x: [value if not np.isnan(value) else None for value in x.values] if not np.isnan(x.values).all() else None, 
         axis=1
-    ).rename('avg_meter_price_2013_2023')
+    ).rename('avg_meter_price_2014_2024')
 
     return result_series
 
@@ -564,19 +555,60 @@ def create_groupings(input_list):
 
 def group_external_demand_in_array(sql_result):
     transformed_data = []
+
     for item in sql_result:
         project_data = {
             "project_name_en": item["project_name_en"],
-            "internaldemand2023" : float(item["internaldemand2023"]),
-            "externaldemand2023" : float(item["externaldemand2023"]),
+            "internaldemand2024" : float(item["internaldemand2024"]),
+            "externaldemand2024" : float(item["externaldemand2024"]),
             "externalDemandYears": []
         }
-        
-        # Assuming the years go from 2018 to 2023 for each project
-        # Also assuming there's no data for years before 2018, so they will be filled with 0.0
-        for year in range(2018, 2024):
+
+        for year in range(2019, 2025):
             key = f"externaldemand{year}"
             project_data["externalDemandYears"].append(float(item.get(key, 0.0)))
-            
+        
         transformed_data.append(project_data)
     return transformed_data
+
+
+def get_combined_data(connection_string):
+    # Create SQLAlchemy engine
+    engine = create_engine(connection_string)
+
+    # SQL query to join tables and aggregate data
+    query = text("""
+    SELECT 
+        ar.area_name_en,
+        bt.grouped_project,
+        bt.rooms_en,
+        pdt.property_sub_type_en,
+        bt.property_usage_en,
+        AVG(bt.actual_worth) as avg_actual_worth,
+        AVG(bt.projected_ca_5Y)*100 as avg_projected_CA,
+        AVG(bt.roi)*100 as avg_roi,
+        p.externaldemand2024*100 as External_demand,
+        p.internaldemand2024*100 as Internal_demand
+    FROM 
+        base_table bt
+    LEFT JOIN 
+        projects p ON bt.grouped_project = p.project_name_en
+    LEFT JOIN 
+        propertysubtype pdt ON bt.property_sub_type_id = pdt.property_sub_type_id
+    LEFT JOIN 
+        areas ar ON bt.area_id = ar.area_id             
+    GROUP BY 
+        ar.area_name_en, bt.grouped_project, bt.rooms_en, pdt.property_sub_type_en, 
+        bt.property_usage_en, p.externaldemand2024, p.internaldemand2024
+    """)
+
+    # Execute query and create DataFrame
+    with engine.connect() as connection:
+        df = pd.read_sql_query(query, connection)
+
+    numeric_columns = ['avg_roi', 'external_demand', 'internal_demand', 'avg_actual_worth', 'avg_projected_ca']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = df[col].round(2)
+
+    return df

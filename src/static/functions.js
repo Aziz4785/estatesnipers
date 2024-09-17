@@ -4,12 +4,12 @@
     // Create the table header
     var thead = document.createElement('thead');
     var headerRow = document.createElement('tr');
-    ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach((headerText, index) => {
+    ['Project', 'Internal Demand 2024 %', 'External Demand 2024 %','External Demand 2019-2024'].forEach((headerText, index) => {
         var header = document.createElement('th');
-        if (index === 1) { // For 'Internal Demand 2023 %'
-            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) / (Number of units in the project) * 100"">i</span>`;
-        } else if (index === 2) { // For 'External Demand 2023 %'
-            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100">i</span>';
+        if (index === 1) { // For 'Internal Demand 2024 %'
+            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in the project in year 2024) / (Number of units in the project) * 100"">i</span>`;
+        } else if (index === 2) { // For 'External Demand 2024 %'
+            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in the project in year 2024) /(Total number of transactions in 2024) * 100">i</span>';
         } else {
             header.textContent = headerText;
         }
@@ -24,12 +24,12 @@
         var row = document.createElement('tr');
         var row_id =  `project-${item.project_name_en}`
         row.setAttribute('id',row_id);
-        [item.project_name_en, item.internaldemand2023, item.externaldemand2023, item.externalDemandYears].forEach((value, index) => {
+        [item.project_name_en, item.internaldemand2024, item.externaldemand2024, item.externalDemandYears].forEach((value, index) => {
             var cell = document.createElement('td');
             cell.textContent = value;
             if (index === 3) { 
    
-                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand','External Demand');
+                cell.innerHTML = createSvgLineChart(value, row_id,2019,2024,'Evolution of External Demand','External Demand');
                 chartDataMappings[row_id] = value; 
             } 
             else if(index > 0){
@@ -269,7 +269,7 @@ function toggleMenu() {
             break;
         case 'Acquisition Demand':
             setCurrentFillColor("fillColorAquDemand");
-            setCurrentLegend("aquisitiondemand_2023");
+            setCurrentLegend("aquisitiondemand_2024");
             break;
         case 'Remove Filers':
             setCurrentFillColor("blank");
@@ -379,7 +379,7 @@ function clearData() {
                             borderColor: ctx => {
                                 // Change the last 5 points to red
                                 const dataIndex = ctx.p0DataIndex;
-                                if (dataIndex >= dataset.length - (end_year-2023)) {
+                                if (dataIndex >= dataset.length - (end_year-2024)) {
                                     return 'rgb(255, 0, 0)'; // Red color
                                 }
                                 return 'rgb(36, 22, 235)'; // Original color

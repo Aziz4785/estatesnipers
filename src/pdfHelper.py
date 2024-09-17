@@ -265,11 +265,11 @@ class PDFHelper:
         self.p.restoreState()
 
 def create_price_chart(avg_meter_price):
-    years = list(range(2013, 2013 + len(avg_meter_price)))
+    years = list(range(2014, 2014 + len(avg_meter_price)))
 
     fig, ax = plt.subplots()
     ax.plot(years, avg_meter_price, marker='o')
-    ax.set_title('Average Meter Sale Price 2013-2023')
+    ax.set_title('Average Meter Sale Price 2014-2024')
     ax.set_xlabel('Year')
     ax.set_ylabel('Average Meter Price')
     ax.grid(True)

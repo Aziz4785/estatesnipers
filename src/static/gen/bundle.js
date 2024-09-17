@@ -360,7 +360,7 @@ function addRow(name, level, isParent, parentRowId = null, avgMeterPriceId = nul
     }
     //contentCell.classList.add('root-cell'); // Add a class for additional styling if needed
     // Creating placeholders for the other values
-    ['Capital Appreciation 2018', 'Capital Appreciation 2013', 'ROI', 'avg transaction value', 'avg_meter_price_2013_2023','Projected Capital Appreciation 5Y'].forEach(() => row.insertCell());
+    ['Capital Appreciation 2019', 'Capital Appreciation 2014', 'ROI', 'avg transaction value', 'avg_meter_price_2014_2024','Projected Capital Appreciation 5Y'].forEach(() => row.insertCell());
 
     return rowId;
 }
@@ -546,7 +546,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
     isPremiumUser = false;
     Object.entries(dictionary).forEach(([key, value]) => {
         //if the value is a dict with a single key "means", it is a leaf node
-
+        
         // Check if the value is an object and not null or an array
         const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
         
@@ -556,12 +556,12 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
             if (Object.keys(value).length === 1 && value.hasOwnProperty('means')) {
                 hasChildren = false;
             } else {
-                hasChildren = !value.avgCapitalAppreciation2018
-                              && !value.avgCapitalAppreciation2013
+                hasChildren = !value.avgCapitalAppreciation2019
+                              && !value.avgCapitalAppreciation2014
                               && !value.avg_roi
                               && !value.avg_actual_worth
-                              && !value.avg_meter_price_2013_2023
-                              && !value.avgCapitalAppreciation2013
+                              && !value.avg_meter_price_2014_2024
+                              && !value.avgCapitalAppreciation2014
                               && !value.avgCapitalAppreciation2029;
             }
         }
@@ -587,20 +587,20 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 : 'defaultAttribute';
                 row.setAttribute("type", attributeName);
 
-                row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
-                row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
+                row.cells[1].innerText = (value.avgCapitalAppreciation2019 || value.avgCapitalAppreciation2019 === 0) && !isNaN(value.avgCapitalAppreciation2019) ? (value.avgCapitalAppreciation2019 * 100).toFixed(2) : '-';
+                row.cells[2].innerText = (value.avgCapitalAppreciation2014 || value.avgCapitalAppreciation2014 === 0) && !isNaN(value.avgCapitalAppreciation2014) ? (value.avgCapitalAppreciation2014 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
                 row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
-                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,parentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,parentRowId,2014,2029,'Evolution of Meter Sale Price');
                 
                 if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
                     row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
                 } else {
                     row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
                 }
-                chartDataMappings[parentRowId] = value.avg_meter_price_2013_2023; 
+                chartDataMappings[parentRowId] = value.avg_meter_price_2014_2024; 
             }
             else if(value.hasOwnProperty('means'))
             {
@@ -619,19 +619,19 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 : 'defaultAttribute';
                 row.setAttribute("type", attributeName);
                 
-                row.cells[1].innerText = (value.avgCapitalAppreciation2018 || value.avgCapitalAppreciation2018 === 0) && !isNaN(value.avgCapitalAppreciation2018) ? (value.avgCapitalAppreciation2018 * 100).toFixed(2) : '-';
-                row.cells[2].innerText = (value.avgCapitalAppreciation2013 || value.avgCapitalAppreciation2013 === 0) && !isNaN(value.avgCapitalAppreciation2013) ? (value.avgCapitalAppreciation2013 * 100).toFixed(2) : '-';
+                row.cells[1].innerText = (value.avgCapitalAppreciation2019 || value.avgCapitalAppreciation2019 === 0) && !isNaN(value.avgCapitalAppreciation2019) ? (value.avgCapitalAppreciation2019 * 100).toFixed(2) : '-';
+                row.cells[2].innerText = (value.avgCapitalAppreciation2014 || value.avgCapitalAppreciation2014 === 0) && !isNaN(value.avgCapitalAppreciation2014) ? (value.avgCapitalAppreciation2014 * 100).toFixed(2) : '-';
                 row.cells[3].innerText = (value.avg_roi || value.avg_roi === 0) && !isNaN(value.avg_roi) ? (value.avg_roi * 100).toFixed(2) : '-';
                 row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
-                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2013_2023,currentRowId,2013,2029,'Evolution of Meter Sale Price');
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,currentRowId,2014,2029,'Evolution of Meter Sale Price');
                 if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
                     row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
                 } else {
                     row.cells[6].innerText = (value.avgCapitalAppreciation2029 || value.avgCapitalAppreciation2029 === 0) && !isNaN(value.avgCapitalAppreciation2029) ? (value.avgCapitalAppreciation2029 * 100).toFixed(2) : '-';
                 }
-                chartDataMappings[currentRowId] = value.avg_meter_price_2013_2023; 
+                chartDataMappings[currentRowId] = value.avg_meter_price_2014_2024; 
             }
             else if(key.includes("locked project"))
             {
@@ -1046,6 +1046,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const assetIdentifierButton = document.getElementById('assetIdentifierButton');
+    if(assetIdentifierButton)
+    {
+        assetIdentifierButton.addEventListener('click', function() {
+            window.location.href = '/asset_identification';
+        });
+    }
+
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open_premium_modal') === 'True') {
+        openModal('This is a Premium Feature');
+    }
+
+
     var loginmodal = document.getElementById("loginModal");
     var btn = document.getElementById("loginButton");
     var span = document.getElementsByClassName("close")[0];
@@ -1327,12 +1342,12 @@ document.addEventListener("DOMContentLoaded", function() {
     // Create the table header
     var thead = document.createElement('thead');
     var headerRow = document.createElement('tr');
-    ['Project', 'Internal Demand 2023 %', 'External Demand 2023 %','External Demand 2018-2023'].forEach((headerText, index) => {
+    ['Project', 'Internal Demand 2024 %', 'External Demand 2024 %','External Demand 2019-2024'].forEach((headerText, index) => {
         var header = document.createElement('th');
-        if (index === 1) { // For 'Internal Demand 2023 %'
-            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) / (Number of units in the project) * 100"">i</span>`;
-        } else if (index === 2) { // For 'External Demand 2023 %'
-            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in the project in year 2023) /(Total number of transactions in 2023) * 100">i</span>';
+        if (index === 1) { // For 'Internal Demand 2024 %'
+            header.innerHTML = headerText + `<span class="info-icon info-icon-internal" tabindex="0" data-tooltip="(Number of transaction in the project in year 2024) / (Number of units in the project) * 100"">i</span>`;
+        } else if (index === 2) { // For 'External Demand 2024 %'
+            header.innerHTML = headerText + ' <span class="info-icon info-icon-external" tabindex="0" data-tooltip="(Number of transaction in the project in year 2024) /(Total number of transactions in 2024) * 100">i</span>';
         } else {
             header.textContent = headerText;
         }
@@ -1347,12 +1362,12 @@ document.addEventListener("DOMContentLoaded", function() {
         var row = document.createElement('tr');
         var row_id =  `project-${item.project_name_en}`
         row.setAttribute('id',row_id);
-        [item.project_name_en, item.internaldemand2023, item.externaldemand2023, item.externalDemandYears].forEach((value, index) => {
+        [item.project_name_en, item.internaldemand2024, item.externaldemand2024, item.externalDemandYears].forEach((value, index) => {
             var cell = document.createElement('td');
             cell.textContent = value;
             if (index === 3) { 
    
-                cell.innerHTML = createSvgLineChart(value, row_id,2018,2023,'Evolution of External Demand','External Demand');
+                cell.innerHTML = createSvgLineChart(value, row_id,2019,2024,'Evolution of External Demand','External Demand');
                 chartDataMappings[row_id] = value; 
             } 
             else if(index > 0){
@@ -1592,7 +1607,7 @@ function toggleMenu() {
             break;
         case 'Acquisition Demand':
             setCurrentFillColor("fillColorAquDemand");
-            setCurrentLegend("aquisitiondemand_2023");
+            setCurrentLegend("aquisitiondemand_2024");
             break;
         case 'Remove Filers':
             setCurrentFillColor("blank");
@@ -1702,7 +1717,7 @@ function clearData() {
                             borderColor: ctx => {
                                 // Change the last 5 points to red
                                 const dataIndex = ctx.p0DataIndex;
-                                if (dataIndex >= dataset.length - (end_year-2023)) {
+                                if (dataIndex >= dataset.length - (end_year-2024)) {
                                     return 'rgb(255, 0, 0)'; // Red color
                                 }
                                 return 'rgb(36, 22, 235)'; // Original color

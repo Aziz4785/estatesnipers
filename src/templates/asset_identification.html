@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Identification</title>
+    <style>
+        .required-asterisk {
+            color: red;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-image: url('/static/dubai_wallpaper2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #fff;
+        }
+        h1 {
+            /*color: #032c58;*/
+            color: #ffffff;
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ffffff;
+            font-size: 28px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        form {
+            background-color: #0a090979;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #032c58; 
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 30px; 
+        }
+        button:hover {
+            background-color: #003d82; 
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-field {
+            flex-grow: 1;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        .unit-select {
+            width: auto;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 480px) {
+            .input-wrapper {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .unit-select {
+                width: 100%;
+                margin-top: 5px;
+            }
+        }
+
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .price-range {
+            display: flex;
+            gap: 20px;
+        }
+        .price-range .form-group {
+            flex: 1;
+        }
+        .price-range-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #eeeeee;
+        }
+        @media (max-width: 480px) {
+            .price-range {
+                flex-direction: column;
+            }
+        }
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .radio-group label {
+            display: inline;
+        }
+        .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+        margin-top: 0;
+    }
+    .checkbox-group label {
+        display: inline;
+        margin-top: 0;
+    }
+
+
+    .plan-fieldset {
+        position: relative;
+        padding: 20px 20px 20px 1px;
+        margin-top: 15px;
+        border: none;
+        border-top: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .remove-button {
+        position: absolute;
+        top: 0px;
+        right: 0px;
+        background-color: #c13029;
+        color: white;
+        width: 24px;
+        height: 24px;
+        font-size: 18px;
+        line-height: 20px;
+        text-align: center;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+    }
+
+    .remove-button:hover {
+        background-color: #d0342b;
+    }
+
+    label[for="instalment_plans-0"] {
+        display: none;
+    }
+    .inline-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .inline-group label {
+        flex: 0 0 200px; /* Adjust this width as needed */
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .inline-group input {
+        flex: 1 1 auto;
+        max-width: 150px;
+    }
+
+
+    .radio-group {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.radio-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+
+.radio-input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.radio-label {
+    position: relative;
+    padding-left: 35px;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.radio-label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 20px;
+    width: 20px;
+    background-color: #fff;
+    border: 2px solid #000000;
+    border-radius: 50%;
+}
+
+.radio-input:checked + .radio-label::after {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 10px;
+    width: 10px;
+    background-color: #007bff;
+    border-radius: 50%;
+}
+
+.radio-option:hover .radio-label::before {
+    border-color: #2b2b2b;
+}
+
+.radio-label::after {
+    content: '';
+    position: absolute;
+    display: none;
+}
+
+.radio-input:checked + .radio-label::after {
+    display: block;
+}
+    </style>
+
+    <script>
+        function updateFormFields() {
+            //var selectOneValue = document.querySelector('input[name="select_one"]:checked').value;
+            var selectedRadio = document.querySelector('input[name="select_one"]:checked');
+            var selectOneValue = selectedRadio ? selectedRadio.value : null;
+            var capAppreciationField = document.getElementById('cap_appreciation_field');
+            var rentalYieldField = document.getElementById('rental_yield_field');
+            var highDemandField = document.getElementById('high_demand_field');
+
+            // Reset fields
+            capAppreciationField.style.display = 'none';
+            rentalYieldField.style.display = 'none';
+            highDemandField.style.display = 'none';
+
+            if (selectOneValue === 'high_growth') {
+                capAppreciationField.style.display = 'block';
+                rentalYieldField.style.display = 'block';
+                highDemandField.style.display = 'block';
+            } else if (selectOneValue === 'high_yield') {
+                rentalYieldField.style.display = 'block';
+                capAppreciationField.style.display = 'block';
+                highDemandField.style.display = 'block';
+            } else if (selectOneValue === 'distressed') {
+                rentalYieldField.style.display = 'block';
+                capAppreciationField.style.display = 'block';
+                highDemandField.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Attach event listeners to radio buttons
+            var radios = document.querySelectorAll('input[name="select_one"]');
+            radios.forEach(function(radio) {
+                radio.addEventListener('change', updateFormFields);
+            });
+            // Initial call to set the correct fields
+            updateFormFields();
+        });
+    </script>
+</head>
+
+<body>
+    <h1>Find a Project</h1>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <p>
+            <label for="{{ form.enter_area.id }}">
+                {{ form.enter_area.label.text }}
+                <span class="required-asterisk">*</span>
+            </label><br>
+            {{ form.enter_area() }}
+        </p>
+        <p>
+            <label for="{{ form.property_usage.id }}">
+                {{ form.property_usage.label.text }}
+                <span class="required-asterisk">*</span>
+            </label><br>
+            {{ form.property_usage() }}
+        </p>
+        <p>
+            <label for="{{ form.property_type.id }}">
+                {{ form.property_type.label.text }}
+                <span class="required-asterisk">*</span>
+            </label><br>
+            {{ form.property_type() }}
+        </p>
+        <p>
+            <label for="{{ form.property_sub_type.id }}">
+                {{ form.property_sub_type.label.text }}
+                <span class="required-asterisk">*</span>
+            </label><br>
+            {{ form.property_sub_type() }}
+        </p>
+        <div class="price-range-title">Desired Price Range (AED)</div>
+        <div class="price-range">
+            <div class="form-group">
+                <label for="{{ form.price_from.id }}">{{ form.price_from.label }}</label>
+                {{ form.price_from(class_="form-control", type="number", step="0.01", min="0") }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.price_to.id }}">{{ form.price_to.label }}</label>
+                {{ form.price_to(class_="form-control", type="number", step="0.01", min="0") }}
+            </div>
+        </div>
+        <p>
+            <label>
+                Select One
+                <span class="required-asterisk">*</span>
+            </label>
+            <div class="radio-group">
+                {% for subfield in form.select_one %}
+                    <label class="radio-option">
+                        {{ subfield(class="radio-input") }}
+                        <span class="radio-label">{{ subfield.label.text }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+            {% if form.select_one.errors %}
+                {% for error in form.select_one.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+            </p>
+        <div id="cap_appreciation_field" style="display: none;">
+            <p>
+                <label for="{{ form.desired_min_capital_appreciation.id }}">
+                    {{ form.desired_min_capital_appreciation.label.text }}
+                    <span class="required-asterisk">*</span>
+                </label><br>
+                {{ form.desired_min_capital_appreciation() }}
+                {% if form.desired_min_capital_appreciation.errors %}
+                    {% for error in form.desired_min_capital_appreciation.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+            </p>
+        </div>
+        <div id="rental_yield_field" style="display: none;">
+            <p>
+                <label for="{{ form.desired_min_gross_rental_yield.id }}">
+                    {{ form.desired_min_gross_rental_yield.label.text }}
+                    <span class="required-asterisk">*</span>
+                </label><br>
+                {{ form.desired_min_gross_rental_yield() }}
+                {% if form.desired_min_gross_rental_yield.errors %}
+                    {% for error in form.desired_min_gross_rental_yield.errors %}
+                        <span class="error">{{ error }}</span>
+                    {% endfor %}
+                {% endif %}
+            </p>
+        </div>
+        <div id="high_demand_field" style="display: none;">
+            <p>
+                {{ form.high_demand_projects_only.label }}<br>
+                {{ form.high_demand_projects_only() }}
+            </p>
+        </div>
+        <p><input type="submit" value="Submit"></p>
+    </form>
+</body>
+</html>
