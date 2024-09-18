@@ -32,7 +32,7 @@
             <a href="{{ url_for('accounts.logout') }}">Log Out</a>
         </div>
     </div>
-    {% else %}
+{% else %}
     <div class="login-container">
       <button id="loginButton">Login/Sign up</button>
       {% if not is_premium_user or last_billing_period %}
@@ -41,12 +41,15 @@
       </div>
       {% endif %}
     </div>
-    {% endif %}
-<!--<button id="yieldCalculatorButton">Yield Calculator</button>-->
+{% endif %}
+
 <div id="assetIdentifierButton">
   <span>Find a Project</span>
   <img src="static/sniper.svg" alt="Sniper Logo">
 </div>
+
+<!--<button id="yieldCalculatorButton">Yield Calculator</button>-->
+
 
 <div id="loginModal" class="modal" {% if show_modal %}style="display:block;"{% endif %}>
 <div class="modal-content">
@@ -128,7 +131,7 @@
     <p id="toggleFormText">Don't have an account? <a href="#" id="showRegisterForm">Register</a></p>
     </div>
 </div>
-{% endif %}
+
   <div class="search-container">
     <input type="text" id="search" placeholder="Search projects or areas">
     <div id="search-results"></div>
