@@ -1591,6 +1591,7 @@ def recent_rent_contracts():
 
 
 @app.route('/asset_identification', methods=['GET', 'POST'])
+@csrf.exempt
 def asset_identification():
     # Establish database connection
     conn = get_db_connection()
