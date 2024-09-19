@@ -572,7 +572,60 @@ def group_external_demand_in_array(sql_result):
     return transformed_data
 
 
-def get_combined_data(connection_string):
+def get_combined_data(connection_url, area=None, min_roi=None):
+    base_query = """
+    SELECT 
+        ar.area_name_en,
+        bt.grouped_project,
+        bt.rooms_en,
+        pdt.property_sub_type_en,
+        bt.property_usage_en,
+        AVG(bt.actual_worth) as avg_actual_worth,
+        AVG(bt.projected_ca_5Y)*100 as avg_projected_ca,
+        AVG(bt.roi)*100 as avg_roi,
+        p.externaldemand2024*100 as external_demand,
+        p.internaldemand2024*100 as internal_demand
+    FROM 
+        base_table bt
+    LEFT JOIN 
+        projects p ON bt.grouped_project = p.project_name_en
+    LEFT JOIN 
+        propertysubtype pdt ON bt.property_sub_type_id = pdt.property_sub_type_id
+    LEFT JOIN 
+        areas ar ON bt.area_id = ar.area_id
+    WHERE 1=1
+    """
+
+    
+
+    
+    params = {}
+
+    if area:
+        base_query += " AND ar.area_name_en = :area"
+        params['area'] = area
+
+    base_query += """
+    GROUP BY 
+        ar.area_name_en, bt.grouped_project, bt.rooms_en, pdt.property_sub_type_en, 
+        bt.property_usage_en, p.externaldemand2024, p.internaldemand2024
+    """
+    if min_roi is not None:
+        base_query += " HAVING AVG(bt.roi)*100 >= :min_roi"
+        params['min_roi'] = min_roi
+
+    engine = create_engine(connection_url)
+    with engine.connect() as connection:
+        df = pd.read_sql_query(text(base_query), connection, params=params)
+
+    numeric_columns = ['avg_roi', 'external_demand', 'internal_demand', 'avg_actual_worth', 'avg_projected_ca']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = df[col].round(2)
+
+    return df
+
+def get_combined_data_old(connection_string,area=None, min_roi=None):
     # Create SQLAlchemy engine
     engine = create_engine(connection_string)
 
@@ -596,7 +649,14 @@ def get_combined_data(connection_string):
     LEFT JOIN 
         propertysubtype pdt ON bt.property_sub_type_id = pdt.property_sub_type_id
     LEFT JOIN 
-        areas ar ON bt.area_id = ar.area_id             
+        areas ar ON bt.area_id = ar.area_id 
+    WHERE 1=1
+        {% if area %}
+        AND ar.area_name_en = :area
+        {% endif %}
+        {% if min_roi %}
+        AND bt.roi >= :min_roi
+        {% endif %}            
     GROUP BY 
         ar.area_name_en, bt.grouped_project, bt.rooms_en, pdt.property_sub_type_en, 
         bt.property_usage_en, p.externaldemand2024, p.internaldemand2024
@@ -604,7 +664,14 @@ def get_combined_data(connection_string):
 
     # Execute query and create DataFrame
     with engine.connect() as connection:
-        df = pd.read_sql_query(query, connection)
+        params = {}
+        if area:
+            params['area'] = area
+        if min_roi:
+            params['min_roi'] = min_roi / 100  # Convert percentage to decimal
+
+        df = pd.read_sql_query(query, connection, params=params)
+
 
     numeric_columns = ['avg_roi', 'external_demand', 'internal_demand', 'avg_actual_worth', 'avg_projected_ca']
     for col in numeric_columns:

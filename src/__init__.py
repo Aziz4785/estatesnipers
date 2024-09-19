@@ -1498,7 +1498,7 @@ def handle_request():
     cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
     base_query = """
     SELECT t.instance_date, t.grouped_project, t.property_type_en, pst.property_sub_type_en, 
-           t.property_usage_en, t.rooms_en, t.building_name_en, t.meter_sale_price
+           t.property_usage_en, t.rooms_en, t.building_name_en, t.meter_sale_price, t.actual_worth
     FROM transactions t
     JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
     WHERE 
@@ -1531,7 +1531,8 @@ def handle_request():
             'Usage': row['property_usage_en'],
             'Sub Type': row['rooms_en'],
             'Building': row['building_name_en'],
-            'Meter Sale Price (AED)': row['meter_sale_price']
+            'Meter Sale Price (AED)': row['meter_sale_price'],
+            'Actual Worth (AED)': row['actual_worth']
         }
         renamed_rows.append(renamed_row)
 
@@ -1549,7 +1550,7 @@ def recent_rent_contracts():
     cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
     base_query = """
     SELECT t.contract_start_date, t.ejari_bus_property_type_en, t.rooms_en, pst.property_sub_type_en, 
-           t.property_usage_en, t.project_name_en, t.roi*100 AS roi
+           t.property_usage_en, t.project_name_en, t.roi*100 AS roi, t.annual_amount
     FROM rentcontracts t
     JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
     WHERE 
@@ -1581,7 +1582,8 @@ def recent_rent_contracts():
             'Type': row['property_sub_type_en'],
             'Usage': row['property_usage_en'],
             'Project': row['project_name_en'],
-            'Gross Rental Yield %': row['roi']
+            'Gross Rental Yield %': row['roi'],
+            'Annual Amount (AED)': row['annual_amount']
         }
         renamed_rows.append(renamed_row)
     result = [dict(row) for row in renamed_rows]
@@ -1652,9 +1654,6 @@ def asset_identification():
             if not connection_url:
                 return jsonify({'error': 'Database connection URL not found'}), 500
             
-            df = get_combined_data(connection_url)
-            
-
 
             # Retrieve form data
             area = form.enter_area.data
@@ -1668,9 +1667,15 @@ def asset_identification():
             desired_min_gross_rental_yield = form.desired_min_gross_rental_yield.data
             high_demand_projects_only = form.high_demand_projects_only.data
 
+
+            df = get_combined_data(connection_url, 
+                               area=area if area != 'Any' else None, 
+                               min_roi=desired_min_gross_rental_yield)
+
+  
             # Establish database connection
-            conn = get_db_connection()
-            cur = conn.cursor()
+            # conn = get_db_connection()
+            # cur = conn.cursor()
 
             # Start building the SQL query
             query = "SELECT * FROM base_table WHERE 1=1"
@@ -1712,15 +1717,17 @@ def asset_identification():
                 # Example condition for high growth potential assets
                 #query += " AND growth_potential = 'High'"
                 if desired_min_capital_appreciation:
-                    #desired_min_capital_appreciation/=100
                     #query += " AND projected_capital_appreciation >= %s"
                     df = df[df['avg_projected_ca'] >= float(desired_min_capital_appreciation)]
+
                     params.append(desired_min_capital_appreciation)
 
                 if desired_min_gross_rental_yield:
                     #desired_min_gross_rental_yield/=100
                     #query += " AND gross_rental_yield >= %s"
+
                     df = df[df['avg_roi'] >= float(desired_min_gross_rental_yield)]
+   
                     params.append(desired_min_gross_rental_yield)
 
                 if not desired_min_capital_appreciation:
@@ -1730,13 +1737,9 @@ def asset_identification():
                 #query += " AND rental_yield >= %s"
                 #params.append(7.0)  # Assume 7% is the threshold for high yield
                 if desired_min_gross_rental_yield:
-                    #desired_min_gross_rental_yield/=100
-
                     df = df[df['avg_roi'] >= float(desired_min_gross_rental_yield)]
                     params.append(desired_min_gross_rental_yield)
                 if desired_min_capital_appreciation:
-
-                    print(desired_min_capital_appreciation)
                     df = df[df['avg_projected_ca'] >= float(desired_min_capital_appreciation)]
                     params.append(desired_min_capital_appreciation)
                 if not desired_min_gross_rental_yield:
@@ -1755,6 +1758,7 @@ def asset_identification():
                     #query += " AND projected_capital_appreciation >= %s"
                     params.append(desired_min_capital_appreciation)
 
+            
             # High Demand Projects Only
             if high_demand_projects_only == 'Yes':
                 #query += " AND external_demand >= %s AND internal_demand >= %s"
@@ -1767,15 +1771,15 @@ def asset_identification():
             #         flash(error)
             #     return render_template('asset_identification.html', form=form)
             # Execute the query
-            cur.execute(query, params)
-            results = cur.fetchall()
+            #cur.execute(query, params)
+            #results = cur.fetchall()
 
-            cur.close()
-            conn.close()
-            if not results:
-                flash('No results found matching your criteria.')
-                return render_template('asset_identification.html', form=form)
-            # Render results
+            # cur.close()
+            # conn.close()
+            # if not results:
+            #     flash('No results found matching your criteria.')
+            #     return render_template('asset_identification.html', form=form)
+            # # Render results
             column_mapping = {
                 'area_name_en': 'Area',
                 'grouped_project': 'Project',
