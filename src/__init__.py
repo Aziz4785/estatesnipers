@@ -590,7 +590,7 @@ def get_area_details():
             final_df['avgCapitalAppreciation2019'] = final_df.apply(lambda row: calculate_CA(row, 5), axis=1)
             final_df['avgCapitalAppreciation2014'] = final_df.apply(lambda row: calculate_CA(row, 10), axis=1)
             if(is_premium_user):
-                final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 6,2029), axis=1)
+                final_df['avgCapitalAppreciation2029'] = final_df.apply(lambda row: calculate_CA(row, 5,2029), axis=1)
             else:
                 final_df['avgCapitalAppreciation2029'] = -999
             columns_containing_means = [col for col in final_df.columns if col.startswith('avg')]
