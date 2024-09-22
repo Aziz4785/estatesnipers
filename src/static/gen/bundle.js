@@ -2,8 +2,7 @@
 // Initialize the map on the "dubaiMap" div with a given center and zoom
  var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Dubai
 
-// Add a base layer to the map (OpenStreetMap tiles)
-
+console.log("ispremium : ",isPremiumUser)
 // L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 //     attribution: '© OpenStreetMap contributors, © CARTO',
 //     maxZoom: 19
@@ -480,7 +479,7 @@ function generatePDF(name) {
     });
 }
 
- function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title,label_of_point ='avg meter sale price') {
+ function createSvgLineChart(dataPoints, chartId, startYear, endYear,chart_title,label_of_point ='avg meter sale price',blurFuture=false) {
     if (!dataPoints || !dataPoints.length) return '';
 
     const maxVal = Math.max(...dataPoints.filter(point => point !== null));
@@ -494,45 +493,105 @@ function generatePDF(name) {
 
     let pathD = ''; // Path for the main line chart
     let redPathD = ''; // Path for the last 5 points
+    let blurredPathD = ''; // Path for the blurred part (2026-2029)
     let moveToNext = true; // Flag to indicate when to move to the next point without drawing
     let lastBluePointX, lastBluePointY; // Keep track of the last non-null point in the blue line
 
-    dataPoints.forEach((point, index) => {
-        if (point !== null) {
-            const x = padding + pointWidth * index;
-            const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
 
-            if (index < dataPoints.length - Math.max(0,(endYear-2024))) {
-                if (moveToNext) {
-                    pathD += `M ${x},${y} `;
-                    moveToNext = false;
+    if(blurFuture)
+    {
+        dataPoints.forEach((point, index) => {
+            if (point !== null) {
+                const x = padding + pointWidth * index;
+                const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+                if (index < dataPoints.length - Math.max(0, (endYear - 2024))) {
+                    if (moveToNext) {
+                        pathD += `M ${x},${y} `;
+                        moveToNext = false;
+                    } else {
+                        pathD += `L ${x},${y} `;
+                    }
+                    lastBluePointX = x;
+                    lastBluePointY = y;
                 } else {
-                    pathD += `L ${x},${y} `;
+                    if (redPathD === '') {
+                        redPathD += `M ${lastBluePointX},${lastBluePointY} L ${x},${y} `; // Connect the last blue point to the first red point
+                    } else {
+                        redPathD += `L ${x},${y} `;
+                    }
                 }
-                lastBluePointX = x;
-                lastBluePointY = y;
             } else {
-                if (redPathD === '') {
-                    redPathD += `M ${lastBluePointX},${lastBluePointY} L ${x},${y} `; // Connect the last blue point to the first red point
-                } else {
-                    redPathD += `L ${x},${y} `;
-                }
+                moveToNext = true;
             }
-        } else {
-            moveToNext = true;
-        }
-    });
-
-    // Create the axis lines
-    const xAxisY = padding + chartHeight;
-    const yAxisX = padding;
-
-    return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}','${label_of_point}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+        });
+    
+        // Calculate the x-coordinate for the start of the blur (2025)
+        const blurStartX = padding + pointWidth * (2025 - startYear);
+    
+        // Create the axis lines
+        const xAxisY = padding + chartHeight;
+        const yAxisX = padding;
+    
+        return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}','${label_of_point}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+        <filter id="whiteGrainyBlur">
+            <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="2" result="noise"/>
+            <feColorMatrix in="noise" type="matrix" values="1 0 0 0 0
+                                                            1 0 0 0 0
+                                                            1 0 0 0 0
+                                                            0 0 0 0.5 0" result="whiteNoise"/>
+            <feComposite in="whiteNoise" in2="SourceGraphic" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="grainMix"/>
+            <feGaussianBlur in="grainMix" stdDeviation="1.5" result="blurred"/>
+            <feBlend in="SourceGraphic" in2="blurred" mode="screen"/>
+        </filter>
+    </defs>
             <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
             <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
             <path d="${pathD.trim()}" stroke="blue" fill="none"/>
             <path d="${redPathD.trim()}" stroke="red" fill="none"/>
-            </svg>`;
+            <rect x="${blurStartX}" y="${padding}" width="${width - blurStartX - padding}" height="${chartHeight}" fill="grey" opacity="0.97" filter="url(#whiteGrainyBlur)"/>
+        </svg>`;
+    }
+    else 
+    {
+        dataPoints.forEach((point, index) => {
+            if (point !== null) {
+                const x = padding + pointWidth * index;
+                const y = padding + chartHeight - ((point - minVal) / (maxVal - minVal) * chartHeight);
+    
+                if (index < dataPoints.length - Math.max(0,(endYear-2024))) {
+                    if (moveToNext) {
+                        pathD += `M ${x},${y} `;
+                        moveToNext = false;
+                    } else {
+                        pathD += `L ${x},${y} `;
+                    }
+                    lastBluePointX = x;
+                    lastBluePointY = y;
+                } else {
+                    if (redPathD === '') {
+                        redPathD += `M ${lastBluePointX},${lastBluePointY} L ${x},${y} `; // Connect the last blue point to the first red point
+                    } else {
+                        redPathD += `L ${x},${y} `;
+                    }
+                }
+            } else {
+                moveToNext = true;
+            }
+        });
+    
+        // Create the axis lines
+        const xAxisY = padding + chartHeight;
+        const yAxisX = padding;
+    
+        return `<svg class="clickable-chart" data-chart-id="${chartId}" onclick="openChartModal('${chartId}',${startYear},${endYear},'${chart_title}','${label_of_point}')" width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+                <line x1="${padding}" y1="${xAxisY}" x2="${width - padding}" y2="${xAxisY}" stroke="black"/>
+                <line x1="${yAxisX}" y1="${padding}" x2="${yAxisX}" y2="${height - padding}" stroke="black"/>
+                <path d="${pathD.trim()}" stroke="blue" fill="none"/>
+                <path d="${redPathD.trim()}" stroke="red" fill="none"/>
+                </svg>`;
+    }
+    
 }
 
 // Close modal functionality
@@ -543,7 +602,6 @@ document.querySelector('.close').addEventListener('click', function() {
  let chartDataMappings = {};
 
 function processDictionary(dictionary, level = 0, parentRowId = null) {
-    isPremiumUser = false;
     Object.entries(dictionary).forEach(([key, value]) => {
         //if the value is a dict with a single key "means", it is a leaf node
         
@@ -593,7 +651,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
-                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,parentRowId,2014,2029,'Evolution of Meter Sale Price');
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,parentRowId,2014,2029,'Evolution of Meter Sale Price','avg meter sale price',!isPremiumUser);
                 
                 if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
                     row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
@@ -625,7 +683,7 @@ function processDictionary(dictionary, level = 0, parentRowId = null) {
                 row.cells[4].innerText = (value.avg_actual_worth) && !isNaN(value.avg_actual_worth) 
                 ? Number(value.avg_actual_worth).toLocaleString('en-US', {maximumFractionDigits: 2}) 
                 : '-';
-                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,currentRowId,2014,2029,'Evolution of Meter Sale Price');
+                row.cells[5].innerHTML = createSvgLineChart(value.avg_meter_price_2014_2024,currentRowId,2014,2029,'Evolution of Meter Sale Price','avg meter sale price',!isPremiumUser);
                 if (value.avgCapitalAppreciation2029 == -999) { //if the value is -999, it means that the user is not a premium user
                     row.cells[6].innerHTML = '<div class="blurred-content">Blurred</div>';
                 } else {

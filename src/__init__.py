@@ -48,6 +48,7 @@ import stripe
 from flask_mailman import Mail
 from matplotlib.patches import Rectangle
 from matplotlib.colors import to_rgba
+from flask_pyjwt import AuthManager, require_token, current_token
 
 # Load environment variables from .env file
 #load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
@@ -114,6 +115,12 @@ app.register_blueprint(core_bp)
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 if not app.config["SECRET_KEY"]:
     raise ValueError("No SECRET_KEY set for Flask application. Did you follow the setup instructions?")
+app.config["JWT_ISSUER"] = "Flask_PyJWT"  # Issuer of tokens
+app.config["JWT_AUTHTYPE"] = "HS256"      # Token algorithm type
+app.config["JWT_SECRET"] = "SECRETKEY"    # Secret key for signing tokens
+app.config["JWT_AUTHMAXAGE"] = 3600       # Max age for auth tokens
+app.config["JWT_REFRESHMAXAGE"] = 604800  # Max age for refresh tokens
+auth_manager = AuthManager(app)
 
 from src.accounts.models import User,StripeCustomer
 
@@ -151,6 +158,12 @@ def check_premium_user():
                     return True
     return False
 
+def generate_premium_token():
+    is_premium = check_premium_user()
+    payload = {'is_premium': is_premium}
+    auth_token = auth_manager.auth_token('premium_user', payload)  # Generate auth token
+    return auth_token.signed
+
 @app.route('/check_premium')
 def check_premium():
     is_premium = check_premium_user()
@@ -170,8 +183,8 @@ def index():
             last_billing_period = stripe_customer.cancel_at_period_end
 
     current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
-
-    return render_template('index.html', dubai_areas_data= current_app.config['dubai_areas_data'],modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period)
+    premium_token = generate_premium_token()
+    return render_template('index.html', dubai_areas_data= current_app.config['dubai_areas_data'],modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period,premium_token=premium_token)
 
 @app.route("/config")
 def get_publishable_key():
@@ -550,10 +563,10 @@ def get_area_details():
         with engine.connect() as connection:
             df_prediction = pd.read_sql_query(prediction_query, connection, params={"area_id": area_id})
 
-        df_prediction_filtered = df_prediction[df_prediction['instance_year'] == 2024]
+        #df_prediction_filtered = df_prediction[df_prediction['instance_year'] == 2024]
         df_2024 = df[df['instance_year'] == 2024].copy()
         df_2024['total_rows'] = 1
-        df_combined_2024 = pd.concat([df_2024, df_prediction_filtered], ignore_index=True)
+        #df_combined_2024 = pd.concat([df_2024, df_prediction_filtered], ignore_index=True)
 
         nested_dicts = {}
         groupings = create_groupings(hierarchy_keys)
@@ -564,6 +577,7 @@ def get_area_details():
                 avg_meter_prices[f'AVG_meter_price_{year}'] = conditional_avg(df, group, year).rename(f'AVG_meter_price_{year}')
             #avg_meter_prices[f'AVG_meter_price_2024'] = weighted_avg(df_combined_2024, group, 2024).rename(f'AVG_meter_price_2024')
             for year in range(2025, 2030):
+                #avg_result = weighted_avg(df_prediction, group, year)
                 avg_result = weighted_avg(df_prediction, group, year)
                 if avg_result.empty:
                     avg_meter_prices[f'AVG_meter_price_{year}'] = None  # or you can use an empty DataFrame, 0, etc.

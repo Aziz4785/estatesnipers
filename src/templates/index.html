@@ -15,6 +15,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+    <script>
+        var premiumToken = "{{ premium_token }}";
+        let isPremiumUser = false;
+
+        try {
+            // Decode the JWT token to extract claims
+            const decodedToken = jwt_decode(premiumToken);
+            // Check if the token contains the is_premium claim
+            if (decodedToken && decodedToken.scope.is_premium) {
+                isPremiumUser = decodedToken.scope.is_premium;
+            }
+
+        } catch (error) {
+            console.error('Error decoding premium token:', error);
+        }
+    </script>
+
 </head>
 <body data-show-modal="{{ show_modal }}" data-message="{{ message }}" data-form="{{ form_to_show }}">
     <div id="dubaiMap"></div>
@@ -308,10 +326,17 @@
                                 <th>Capital Appr. 10Y %</th>
                                 <th>Gross Rental Yield %</th>
                                 <th>Avg. Transaction value AED</th>
-                                <th>Meter Sale Price</th>
                                 {% if is_premium_user %}
+                                <th>Meter Sale Price</th>
                                 <th>Projected Capital Appreciation 5Y %</th>
                                 {% else %}
+                                <th>
+                                    Meter Sale Price (2014-2029)
+                                    <br>
+                                    <span class="premium-only" onclick="openModal('Unlock all details Today for $19.99')">
+                                        (premium only)
+                                    </span>
+                                </th>
                                 <th>
                                     Projected Capital Appreciation 5Y %
                                     <br>

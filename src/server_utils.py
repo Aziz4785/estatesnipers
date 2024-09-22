@@ -581,7 +581,7 @@ def get_combined_data(connection_url, area=None, min_roi=None):
         pdt.property_sub_type_en,
         bt.property_usage_en,
         AVG(bt.actual_worth) as avg_actual_worth,
-        AVG(bt.projected_ca_5Y)*100 as avg_projected_ca,
+        AVG(bt.projected_CA_5Y)*100 as avg_projected_ca,
         AVG(bt.roi)*100 as avg_roi,
         p.externaldemand2024*100 as external_demand,
         p.internaldemand2024*100 as internal_demand
@@ -594,6 +594,7 @@ def get_combined_data(connection_url, area=None, min_roi=None):
     LEFT JOIN 
         areas ar ON bt.area_id = ar.area_id
     WHERE 1=1
+    AND bt.instance_year>=2021
     """
 
     
