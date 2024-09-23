@@ -764,7 +764,7 @@ FROM
     projects 
 WHERE 
     area_id = %s
-    AND no_of_units > 60;
+    AND (no_of_units > 60 OR no_of_villas>60);
     """
     try:
         cursor.execute(query, (area_id,))

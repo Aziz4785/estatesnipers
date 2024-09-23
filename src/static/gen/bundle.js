@@ -2,7 +2,6 @@
 // Initialize the map on the "dubaiMap" div with a given center and zoom
  var map = L.map('dubaiMap').setView([25.2048, 55.2708], 10); // Centered on Dubai
 
-console.log("ispremium : ",isPremiumUser)
 // L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 //     attribution: '© OpenStreetMap contributors, © CARTO',
 //     maxZoom: 19
