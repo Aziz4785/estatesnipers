@@ -555,20 +555,21 @@ def create_groupings(input_list):
 
 def group_external_demand_in_array(sql_result):
     transformed_data = []
-
     for item in sql_result:
         project_data = {
             "project_name_en": item["project_name_en"],
-            "internaldemand2024" : float(item["internaldemand2024"]),
-            "externaldemand2024" : float(item["externaldemand2024"]),
+            "internaldemand2024": float(item["internaldemand2024"]) if item["internaldemand2024"] is not None else 0.0,
+            "externaldemand2024": float(item["externaldemand2024"]) if item["externaldemand2024"] is not None else 0.0,
             "externalDemandYears": []
         }
 
         for year in range(2019, 2025):
             key = f"externaldemand{year}"
-            project_data["externalDemandYears"].append(float(item.get(key, 0.0)))
+            value = item.get(key)
+            project_data["externalDemandYears"].append(float(value) if value is not None else 0.0)
         
         transformed_data.append(project_data)
+
     return transformed_data
 
 

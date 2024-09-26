@@ -1980,6 +1980,7 @@ def generate_pdf():
         avg_meter_price = means_data.get('avg_meter_price_2014_2024', [])
         projected_ca = means_data.get('avgCapitalAppreciation2029', 'N/A')
         project_demand_data = execute_project_demand_query(area_data['area_id'])
+
         firstkeys = list(data.keys())
         if hierarchy_keys[0]=="grouped_project":
             dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
