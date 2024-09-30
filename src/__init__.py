@@ -137,8 +137,8 @@ stripe_keys = {
     "secret_key": os.environ["STRIPE_SECRET_KEY"],
     "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
     "price_id": os.environ["STRIPE_OLD_PRICE_ID"],
+    "new_price_id":  os.environ["STRIPE_NEW_PRICE_ID"],
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"], #Stripe will now forward events to our endpoint
-    "price_promo_id": os.environ["STRIPE_PRICE_ID_PROMO"],
 }
 
 GOOGLE_MAP_API= os.environ["GOOGLE_MAPS_API_KEY"]
@@ -222,15 +222,10 @@ def create_checkout_session():
             mode="subscription",
             line_items=[
                 {
-                    "price": stripe_keys["price_id"],  # Use your regular price ID
+                    "price": stripe_keys["new_price_id"],  # Use your regular price ID
                     "quantity": 1,
                 }
-            ],
-            discounts=[
-                {
-                    "coupon": stripe_keys["price_promo_id"],  # Replace with your actual coupon ID
-                }
-            ],
+            ]
         )
         return jsonify({"sessionId": checkout_session["id"]})
     except Exception as e:
@@ -239,8 +234,9 @@ def create_checkout_session():
 @app.route("/success")
 def success():
     is_premium_user = check_premium_user()
+    premium_token = generate_premium_token()
     current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
-    return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'],is_premium_user=is_premium_user)
+    return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'],is_premium_user=is_premium_user,premium_token=premium_token)
 
 
 @app.route("/cancel")

@@ -75,6 +75,7 @@
     <h2 id="modalTitle">Login</h2>
     <div id="messageInfo"></div>
     <form id="loginForm" method="POST" action="{{ url_for('accounts.login') }}">
+        {% if login_form %}
       {{ login_form.hidden_tag() }}
         <div class="form-group">
             {{ login_form.email.label }}
@@ -93,8 +94,10 @@
             <a href="{{ url_for('reset_password_request') }}" class="forgot-password-link">Forgot Password?</a>
         </div>
         <button type="submit" class="form-btn">Login</button>
+        {% endif %}
     </form>
     <form id="registerForm" method="POST" action="{{ url_for('accounts.register') }}" style="display:none;">
+        {% if register_form %}
       {{ register_form.hidden_tag() }}
         <div class="form-group">
             {{ register_form.email.label }}
@@ -145,6 +148,7 @@
             {% endif %}
         </div>
         <button type="submit" class="form-btn">Register</button>
+        {% endif %}
     </form>
     <p id="toggleFormText">Don't have an account? <a href="#" id="showRegisterForm">Register</a></p>
     </div>
@@ -324,6 +328,7 @@
         <div class="modal-content">
           <span class="close-button">&times;</span>
           <h2 class="modal-title">Upgrade to Premium $49.99</h2>
+          <p class="money-back-guarantee">(3 days money back guarantee)</p>
           <div class="premium-box-container">
             <div class="premium-box">
               <div class="premium-header">PREMIUM</div>
