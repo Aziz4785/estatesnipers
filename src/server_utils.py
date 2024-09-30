@@ -3,6 +3,7 @@ from decimal import Decimal
 import pandas as pd
 import numpy as np
 from scipy import interpolate
+import json
 from scipy.interpolate import interp1d
 from datetime import datetime
 from scipy.interpolate import PchipInterpolator
@@ -572,6 +573,15 @@ def group_external_demand_in_array(sql_result):
 
     return transformed_data
 
+def load_all_geojson_files(directory):
+    all_features = []
+    for filename in os.listdir(directory):
+        if filename.endswith('.geojson'):
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as file:
+                geojson = json.load(file)
+                all_features.extend(geojson)
+    return all_features
 
 def get_combined_data(connection_url, area=None, min_roi=None):
     base_query = """

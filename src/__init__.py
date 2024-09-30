@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import traceback
 from flask import session,current_app
+import requests
 import os
 from flask_wtf.csrf import generate_csrf
 from smtplib import SMTPException, SMTPServerDisconnected, SMTPAuthenticationError
@@ -51,7 +52,7 @@ from matplotlib.colors import to_rgba
 from flask_pyjwt import AuthManager, require_token, current_token
 
 # Load environment variables from .env file
-#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -135,10 +136,12 @@ login_manager.login_message_category = "danger"
 stripe_keys = {
     "secret_key": os.environ["STRIPE_SECRET_KEY"],
     "publishable_key": os.environ["STRIPE_PUBLISHABLE_KEY"],
-    "price_id": os.environ["STRIPE_PRICE_ID"],
+    "price_id": os.environ["STRIPE_OLD_PRICE_ID"],
     "endpoint_secret": os.environ["STRIPE_ENDPOINT_SECRET"], #Stripe will now forward events to our endpoint
     "price_promo_id": os.environ["STRIPE_PRICE_ID_PROMO"],
 }
+
+GOOGLE_MAP_API= os.environ["GOOGLE_MAPS_API_KEY"]
 
 stripe.api_key = stripe_keys["secret_key"]
 
@@ -488,7 +491,7 @@ def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
 
 list_order_in_memory = []
 
-@app.route('/get-area-details')
+@app.route('/get-more-details')
 def get_area_details():
     try:
         app.logger.info('we call get_area_details')
@@ -500,21 +503,61 @@ def get_area_details():
         hierarchy_keys = ['grouped_project','property_usage_en','property_sub_type_en','rooms_en']
         if is_premium_user or PREMIUM_FOR_ALL_exPDF:   
             hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
-        area_id = request.args.get('area_id')
-        if not area_id:
-            return jsonify({'error': 'Area ID is required'}), 400
-        #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
-        #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
-        connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
-        if connection_url.startswith("postgres://"):
-           connection_url = connection_url.replace("postgres://", "postgresql://", 1)
+        id_ = request.args.get('id')
+        hierarchy_type = request.args.get('hierarchy_type')
+        area_id = None
+        parcel_id = None
+        if hierarchy_type=="parcel":
+            grouped_project = request.args.get('grouped_project')
+            parcel_id = id_
+            if 'grouped_project' in hierarchy_keys:
+                hierarchy_keys.remove('grouped_project')
+            sql_query = text("""
+        SELECT 
+            pst.property_sub_type_en, 
+            rooms_en, 
+            property_usage_en,
+            instance_year,
+            meter_sale_price,
+            roi,
+            actual_worth
+        FROM 
+            base_table t
+        LEFT JOIN
+            propertysubtype pst 
+        ON 
+            t.property_sub_type_id = pst.property_sub_type_id
+        WHERE grouped_project = :grouped_project AND instance_year >= 2014;
+        """)
+            params_={"grouped_project": grouped_project}
 
-        if not connection_url:
-            return jsonify({'error': 'Database connection URL not found'}), 500
+            prediction_query = text("""SELECT
+                        pst.property_sub_type_en, 
+                        proj.project_name_en AS grouped_project, 
+                        rooms_en, 
+                        property_usage_en,
+                        instance_year,
+                        SUM(avg_price * total_rows) / SUM(total_rows) AS meter_sale_price,
+                        SUM(total_rows) AS total_rows
+                    FROM
+                        predictions
+                    LEFT JOIN
+                        propertysubtype pst 
+                    ON 
+                        predictions.property_sub_type_id = pst.property_sub_type_id
+                    LEFT JOIN
+                        projects proj
+                    ON
+                        predictions.project_number = proj.project_number
+                    WHERE
+                        proj.project_name_en = :grouped_project
+                    GROUP BY
+                        pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;""")
+            params_pred_ = {"grouped_project": grouped_project}
 
-        engine = create_engine(connection_url)
-
-        sql_query = text("""
+        elif hierarchy_type=="area":
+            area_id = id_
+            sql_query = text("""
         SELECT 
             pst.property_sub_type_en, 
             grouped_project, 
@@ -532,12 +575,9 @@ def get_area_details():
             t.property_sub_type_id = pst.property_sub_type_id
         WHERE area_id = :area_id AND instance_year >= 2014;
         """)
+            params_={"area_id": area_id}
 
-        with engine.connect() as connection:
-            df = pd.read_sql_query(sql_query, connection, params={"area_id": area_id})
-
-        #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
-        prediction_query = text("""SELECT
+            prediction_query = text("""SELECT
                         pst.property_sub_type_en, 
                         proj.project_name_en AS grouped_project, 
                         rooms_en, 
@@ -559,9 +599,32 @@ def get_area_details():
                         predictions.area_id = :area_id
                     GROUP BY
                         pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;""")
+            
+            params_pred_ = {"area_id": area_id}
+
+
+        if not area_id and not parcel_id:
+            return jsonify({'error': 'ID is required'}), 400
+        #connection_url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}/{db_config['database']}"
+        #connection_url = f"postgresql+psycopg2://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config['port']}/{db_config['dbname']}"
+        connection_url = os.environ.get('HEROKU_POSTGRESQL_NAVY_URL')
+        if connection_url.startswith("postgres://"):
+           connection_url = connection_url.replace("postgres://", "postgresql://", 1)
+
+        if not connection_url:
+            return jsonify({'error': 'Database connection URL not found'}), 500
+
+        engine = create_engine(connection_url)
+
         
         with engine.connect() as connection:
-            df_prediction = pd.read_sql_query(prediction_query, connection, params={"area_id": area_id})
+            df = pd.read_sql_query(sql_query, connection, params=params_)
+
+        #print("SQL Query Execution Time: {:.2f} seconds".format(time.time() - start_time))
+        
+        
+        with engine.connect() as connection:
+            df_prediction = pd.read_sql_query(prediction_query, connection, params=params_pred_)
 
         #df_prediction_filtered = df_prediction[df_prediction['instance_year'] == 2024]
         df_2024 = df[df['instance_year'] == 2024].copy()
@@ -673,7 +736,7 @@ def search():
     try:
         # Search for projects
         cur.execute("""
-            SELECT a.area_id, p.project_name_en, a.area_name_en
+            SELECT a.area_id, p.project_name_en, a.area_name_en, p.project_id
             FROM projects p
             JOIN areas a ON p.area_id = a.area_id
             WHERE p.project_name_en ILIKE %s
@@ -694,7 +757,7 @@ def search():
         conn.close()
         
         results = [
-            {'type': 'project', 'id': p[0], 'name': f"{p[1]} ({p[2]})"} for p in projects
+            {'type': 'project', 'id': p[0], 'project_id':p[3], 'name': f"{p[1]} ({p[2]})"} for p in projects
         ] + [
             {'type': 'area', 'id': a[0], 'name': a[1]} for a in areas
         ]
@@ -977,10 +1040,12 @@ def get_list_order():
     return jsonify({'listOrder': key_to_id(hierarchy_keys)})
 
 
-@app.route('/generate-area-pdf', methods=['POST'])
+@app.route('/generate-MAIN-pdf', methods=['POST'])
 @csrf.exempt
 def generate_area_pdf():
-    area_data = request.json['areaData']
+    main_data = request.json['mainData'] #area or parcel data
+    cursor_position = int(request.json['cP'])
+    
     is_premium_user = check_premium_user()
 
     # Generate your PDF using area_data
@@ -996,8 +1061,15 @@ def generate_area_pdf():
     # Set the font and size for the title
     p.setFont("Helvetica-Bold", 24)
     p.setFillColor(blue)
-    area_name = area_data["name"]
-    title = f"Area : {area_name}"
+    area_name = main_data["name"]
+    if cursor_position == 0:
+        title = f"Area : {area_name}"
+    elif cursor_position == 1:
+        parcel_data = request.json['pData']
+        firstkeys = list(parcel_data.keys())
+        title = f"Project : {area_name}"
+        means_data = parcel_data.get('means', [{}])[0]
+
     title_width = p.stringWidth(title, "Helvetica-Bold", 24)
     page_width = letter[0]
     title_x = (page_width - title_width) / 2
@@ -1009,7 +1081,7 @@ def generate_area_pdf():
     p.setFont("Helvetica", 12)
     p.setFillColor(colors.black)
 
-    app.logger.info(f"length of area_data[variableValues] = {len(area_data['variableValues'])}")
+    app.logger.info(f"length of main_data[variableValues] = {len(main_data['variableValues'])}")
 
 
     # Here is the order :
@@ -1026,21 +1098,26 @@ def generate_area_pdf():
     # aquisitiondemand_2024
     # rentaldemand_2024
 
-    # Data for the table
-    table_data = [
-        ['Metric', 'Value'],
-        ['Acquisition Demand 2024', f"{round_and_percentage(safe_get(area_data, 'variableValues', 10))} %"],
-        ['Rental Demand 2024', str(round_and_percentage(safe_get(area_data, 'variableValues', 11)))+" %"],
-        ['Average Sale Price', f"{safe_get(area_data, 'variableValues', 0, 0):,.2f} AED"],
-        ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 2)))+" %"],
-        ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(area_data, 'variableValues', 1)))+" %"],
-        ['Average Gross Rental Yield', str(round_and_percentage(safe_get(area_data, 'variableValues', 3),2))+" %"],
-        ['Supply of Finished Projects', safe_get(area_data, 'variableValues', 7)],
-        ['Supply of Off-Plan Projects', safe_get(area_data, 'variableValues', 8)],
-        ['Supply of Lands', safe_get(area_data, 'variableValues', 9)],
-    ]
-    footnotes = [
-        "¹: (Number of rental contracts in year 2024) / (Number of units in the area) * 100"]
+    if cursor_position == 0:
+        table_data = [
+            ['Metric', 'Value'],
+            ['Acquisition Demand 2024', f"{round_and_percentage(safe_get(main_data, 'variableValues', 10))} %"],
+            ['Rental Demand 2024', str(round_and_percentage(safe_get(main_data, 'variableValues', 11)))+" %"],
+            ['Average Sale Price', f"{safe_get(main_data, 'variableValues', 0, 0):,.2f} AED"],
+            ['Average Capital Appreciation 10Y', str(round_and_percentage(safe_get(main_data, 'variableValues', 2)))+" %"],
+            ['Average Capital Appreciation 5Y', str(round_and_percentage(safe_get(main_data, 'variableValues', 1)))+" %"],
+            ['Average Gross Rental Yield', str(round_and_percentage(safe_get(main_data, 'variableValues', 3),2))+" %"],
+            ['Supply of Finished Projects', safe_get(main_data, 'variableValues', 7)],
+            ['Supply of Off-Plan Projects', safe_get(main_data, 'variableValues', 8)],
+            ['Supply of Lands', safe_get(main_data, 'variableValues', 9)],
+        ]
+        footnotes = [
+            "¹: (Number of rental contracts in year 2024) / (Number of units in the area) * 100"]
+    elif cursor_position == 1:
+        table_data = [
+            ['Metric', 'Value'],
+            ['Average Sale Price', f"{safe_get(main_data, 'variableValues', 0, 0):,.2f} AED"],
+        ]
     # Create a table
     table = Table(table_data)
     table.setStyle(TableStyle([
@@ -1057,71 +1134,86 @@ def generate_area_pdf():
     # Build the table on canvas
     table.wrapOn(p, 175, 500)
     table.drawOn(p, 175, 500)
-    helper.draw_footnotes(footnotes)
+    if cursor_position == 0:
+        helper.draw_footnotes(footnotes)
     helper.y -= 100
-    land_data=execute_land_query(area_data['area_id'])
-    img_buffer = create_land_type_pie_chart(land_data)
-    p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
+    if cursor_position == 0:
+        land_data=execute_land_query(main_data['area_id'])
+        img_buffer = create_land_type_pie_chart(land_data)
+        p.drawImage(ImageReader(img_buffer), 50, 180, width=500, height=300)
 
-    if is_premium_user: 
-        monthly_trans_counts = execute_monthly_transaction_counts(area_data['area_id'])
-        monthly_RENT_counts = execute_monthly_RENTS_counts(area_data['area_id'])
-        helper.new_page()
-        trans_count_buffer = create_transaction_chart(monthly_trans_counts, title = 'Sales volume',chart_type='bar')
-        helper.y -= 300
-        p.drawImage(ImageReader(trans_count_buffer), 150,  helper.y, width=350, height=250)
-        # Close the PDF object cleanly
+    if cursor_position ==1:
+        if is_premium_user: 
+            for k in firstkeys:
+                if k !="means":
+                    parent_name = area_name
+                    render_pdf({k: parcel_data[k]},parent_name,helper,p,is_premium_user)
+        else:
+            helper.new_page()
+            helper.draw_paragraph("To access the full report, please upgrade to a Premium subscription.", font_size=18, font_name='Helvetica-Bold', text_color=colors.red)
+            helper.y -= 20  # Add some extra space between paragraphs
+            helper.draw_paragraph("The detailed report includes further insights on the project.", font_size=14, font_name='Helvetica')
 
-        rent_count_buffer = create_transaction_chart(monthly_RENT_counts, title = 'Rental Volume', chart_type='bar')
-        helper.y -= 300
-        p.drawImage(ImageReader(rent_count_buffer), 150,  helper.y, width=350, height=250)
-        helper.new_page()
-        helper.draw_section_title("Projects : ")
-        projects_list = get_all_projects_in_area(area_data['area_id'])
-        
-        project_names = [(project['project_name_en'], project['project_status'],project['number_of_trans'])for project in projects_list if project['project_name_en'] is not None]
+    if cursor_position ==0:
+        if is_premium_user: 
+            monthly_trans_counts = execute_monthly_transaction_counts(main_data['area_id'])
+            monthly_RENT_counts = execute_monthly_RENTS_counts(main_data['area_id'])
+            helper.new_page()
+            trans_count_buffer = create_transaction_chart(monthly_trans_counts, title = 'Sales volume',chart_type='bar')
+            helper.y -= 300
+            p.drawImage(ImageReader(trans_count_buffer), 150,  helper.y, width=350, height=250)
+            # Close the PDF object cleanly
 
-        # Define the maximum number of projects per page
-        max_projects_per_page = 20
-
-        # Split the project names into chunks based on the max projects per page
-        chunks = [project_names[i:i + max_projects_per_page] for i in range(0, len(project_names), max_projects_per_page)]
-
-        for i, chunk in enumerate(chunks):
-            if i > 0:  # For chunks beyond the first, create a new page
-                helper.new_page()
-                helper.draw_section_title("Projects (continued) :")
-
-            chunk.insert(0, ["Project Name", "Status", "Number of sales \n (last 30 days)"])
-            # Create a Table object for the current chunk
-            #table = Table(chunk, colWidths=[200])
-            table = Table(chunk, colWidths=[300, 100,100])
-            # Add the same style to the table
-            style = TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),  # Reduce font size for the body
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ])
+            rent_count_buffer = create_transaction_chart(monthly_RENT_counts, title = 'Rental Volume', chart_type='bar')
+            helper.y -= 300
+            p.drawImage(ImageReader(rent_count_buffer), 150,  helper.y, width=350, height=250)
+            helper.new_page()
+            helper.draw_section_title("Projects : ")
+            projects_list = get_all_projects_in_area(main_data['area_id'])
             
-            table.setStyle(style)
-            
-            # Calculate the position where the table will be drawn
-            y_position = 500 - 16 * len(chunk)
-            
-            # Draw the table on the PDF
-            table.wrapOn(p, 500, 600)
-            table.drawOn(p, 50, y_position)
+            project_names = [(project['project_name_en'], project['project_status'],project['number_of_trans'])for project in projects_list if project['project_name_en'] is not None]
 
-    else:
-        helper.new_page()
-        helper.draw_paragraph("To access the full report, please upgrade to a Premium subscription.", font_size=18, font_name='Helvetica-Bold', text_color=colors.red)
-        helper.y -= 20  # Add some extra space between paragraphs
-        helper.draw_paragraph("The detailed report includes further insights on the area.", font_size=14, font_name='Helvetica')
+            # Define the maximum number of projects per page
+            max_projects_per_page = 20
+
+            # Split the project names into chunks based on the max projects per page
+            chunks = [project_names[i:i + max_projects_per_page] for i in range(0, len(project_names), max_projects_per_page)]
+
+            for i, chunk in enumerate(chunks):
+                if i > 0:  # For chunks beyond the first, create a new page
+                    helper.new_page()
+                    helper.draw_section_title("Projects (continued) :")
+
+                chunk.insert(0, ["Project Name", "Status", "Number of sales \n (last 30 days)"])
+                # Create a Table object for the current chunk
+                #table = Table(chunk, colWidths=[200])
+                table = Table(chunk, colWidths=[300, 100,100])
+                # Add the same style to the table
+                style = TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                    ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Header font
+                    ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 1), (-1, -1), 10),  # Reduce font size for the body
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ])
+                
+                table.setStyle(style)
+                
+                # Calculate the position where the table will be drawn
+                y_position = 500 - 16 * len(chunk)
+                
+                # Draw the table on the PDF
+                table.wrapOn(p, 500, 600)
+                table.drawOn(p, 50, y_position)
+
+        else:
+            helper.new_page()
+            helper.draw_paragraph("To access the full report, please upgrade to a Premium subscription.", font_size=18, font_name='Helvetica-Bold', text_color=colors.red)
+            helper.y -= 20  # Add some extra space between paragraphs
+            helper.draw_paragraph("The detailed report includes further insights on the area.", font_size=14, font_name='Helvetica')
     helper.new_page()
     helper.draw_contact_info()
 
@@ -1136,9 +1228,97 @@ def generate_area_pdf():
     return send_file(
         buffer,
         as_attachment=True,
-        download_name='area.pdf',
+        download_name='report.pdf',
         mimetype='application/pdf'
     )
+
+@app.route('/update_position', methods=['POST'])
+def update_position():
+    data = request.json
+    position = data['position']
+    if (position ==1) : 
+        connection = get_db_connection()
+        #cursor = connection.cursor(dictionary=True) mysql
+        cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
+        query ="""SELECT 
+    p.parcel_id, 
+    pr.project_name_en as project_name, 
+    pr.average_meter_sale_price
+FROM 
+    parcels p
+JOIN 
+    projects pr
+ON 
+    p.project_id = pr.project_id;"""
+        cursor.execute(query)
+        fetched_rows = cursor.fetchall() 
+
+        # Data processing functions for each key
+        # Each function is responsible for converting the row entry to the desired type
+        process_funcs = {
+            'average_meter_sale_price': float,
+            'project_name':str
+        }
+
+         # Data storage dictionaries, keyed by type
+        data_stores = {
+            'average_meter_sale_price': {},
+            'project_name':{}
+        }
+
+        # Process all rows in one loop
+        for row in fetched_rows:
+            parcel_id = int(row['parcel_id'])
+            for column, changetype in process_funcs.items():
+                if row.get(column) is not None:  # Use .get to avoid KeyError if key doesn't exist
+                    data_stores[column][parcel_id] = changetype(row[column])
+
+       
+        valid_prices = [price for price in data_stores['average_meter_sale_price'].values() if price is not None]
+        min_price, med_price, max_price = get_min_median_max(valid_prices)
+        
+
+        legends = {
+            "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
+        }
+
+        units = {
+            "averageSalePrice": "AED"
+        }
+
+        geojson = load_all_geojson_files('project_coordinates')
+        for feature in geojson:
+            parcel_id = int(feature['parcel_id'])
+            if parcel_id in data_stores['project_name']:
+                feature["name"]=data_stores['project_name'][parcel_id]
+                variable_names = []
+                variable_values = []
+                variables_units = []
+                variables_special = []  #(variables that have speical info-card) 0 for no special, 1 for projects, 2 for lands
+
+                variable_names.append("Avg. Meter Sale Price:")
+                if parcel_id in data_stores['average_meter_sale_price']:
+                    price = data_stores['average_meter_sale_price'][parcel_id]
+                    variable_values.append(price)   
+                    feature['fillColorPrice'] = get_color(price, min_price, med_price, max_price)
+                else:
+                    variable_values.append(None)
+                    feature['fillColorPrice'] = 'rgb(95,95,95)'  # grey
+                variables_units.append('AED')
+                variables_special.append(0)
+
+                feature["variableNames"] = variable_names
+                feature["variableValues"] = variable_values
+                feature["variableUnits"] = variables_units
+                feature["variableSpecial"] = variables_special
+
+        cursor.close()
+        connection.close()
+        return [legends, geojson, units]
+    elif(position==0):
+        return fetch_dubai_areas_data()
+    
+
 
 def fetch_dubai_areas_data():
     is_premium_user = check_premium_user()
@@ -1445,6 +1625,32 @@ def create_land_type_pie_chart(data,data_key = 'land_type_en',title = 'Land Type
     return img_buffer
 
 
+@app.route('/geocode', methods=['POST'])
+def geocode():
+    address = request.json.get('address')
+    if not address:
+        return jsonify({'error': 'Address is required'}), 400
+
+    url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={GOOGLE_MAP_API}'
+    
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        if data['status'] == 'OK' and data['results']:
+            location = data['results'][0]['geometry']['location']
+            return jsonify({
+                'lat': location['lat'],
+                'lon': location['lng'],
+                'address': data['results'][0]['formatted_address']
+            })
+        else:
+            return jsonify({'error': 'Address not found'}), 404
+
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+    
 def blur_area(fig, ax, start_x, end_x):
     # Get the y-axis limits
     y_min, y_max = ax.get_ylim()
@@ -1529,7 +1735,7 @@ def handle_request():
     conditions.append("t.instance_date >= NOW() - INTERVAL '6 months'")
 
     query = base_query + " AND ".join(conditions)
-    query+=" LIMIT 50;"
+    query+="ORDER BY t.instance_date DESC LIMIT 50;"
     cursor.execute(query, tuple(values))
     
     # Fetch and format the results
@@ -1582,7 +1788,7 @@ def recent_rent_contracts():
     conditions.append("t.contract_start_date >= NOW() - INTERVAL '6 months'")
 
     query = base_query + " AND ".join(conditions)
-    query+=" LIMIT 50;"
+    query += " ORDER BY t.contract_start_date DESC LIMIT 50;"
     cursor.execute(query, tuple(values))
     
     # Fetch and format the results
@@ -1606,6 +1812,27 @@ def recent_rent_contracts():
     return jsonify({'status': 'success', 'result': result})
 
 
+def get_parcel_ids_from_projectId(project_id, cur):
+    try:
+        cur.execute("SELECT parcel_id FROM parcels WHERE project_id = %s", (project_id,))
+        parcels = cur.fetchall()
+        parcel_ids = [parcel[0] for parcel in parcels]
+        return parcel_ids
+    except Exception as e:
+        print(f"Error fetching parcel_ids: {str(e)}")
+        return []
+    
+@app.route('/get_parcels/<int:project_id>', methods=['GET'])
+def get_parcels(project_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        parcel_ids = get_parcel_ids_from_projectId(project_id, cur)
+        return jsonify(parcel_ids=parcel_ids)
+    finally:
+        cur.close()
+        conn.close()
+        
 @app.route('/asset_identification', methods=['GET', 'POST'])
 @csrf.exempt
 def asset_identification():
@@ -1972,7 +2199,7 @@ def generate_pdf():
         data = request_data['data']
 
         area_data = request_data['area_data']
-
+   
         means_data = request_data['data'].get('means', [{}])[0]
         avg_capital_appreciation_2014 = means_data.get('avgCapitalAppreciation2014', 'N/A')
         avg_capital_appreciation_2019 = means_data.get('avgCapitalAppreciation2019', 'N/A')

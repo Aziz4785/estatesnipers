@@ -47,6 +47,46 @@
     return table;
 }
 
+function getParcelIdsFromProjectId(projectId) {
+    return fetch(`/get_parcels/${projectId}`)
+        .then(response => response.json())
+        .then(data => data.parcel_ids);
+}
+
+
+function highlightParcels(parcelIds) {
+    let layersToHighlight = [];
+
+    // Iterate over each layer in the GeoJSON layer
+    const parcelIdStrings = parcelIds.map(id => id.toString());
+
+    window.geoJSONLayer.eachLayer(function(layer) {
+        const parcelId = layer.feature.properties.parcel_id;
+
+        // Check if the current parcel_id is in the list
+        if (parcelIdStrings.includes(parcelId)) {
+            // Change the style of the polygon
+            layer.setStyle({
+                fillOpacity: 0.7, // Adjust opacity as needed
+                color: 'white',     // Outline color
+                weight: 4,         // Outline width
+                opacity: 1
+            });
+
+            // Add the layer to the list for adjusting the map view
+            layersToHighlight.push(layer);
+        }
+    });
+
+    // If any layers were highlighted, adjust the map view
+    if (layersToHighlight.length > 0) {
+        const group = L.featureGroup(layersToHighlight);
+        map.fitBounds(group.getBounds());
+    } else {
+        console.warn('No parcels found with the specified IDs.');
+    }
+}
+
  function highlightFeature(e) {
     const layer = e.target;
 
@@ -70,12 +110,39 @@
 
     // Center the map on the clicked area
     map.fitBounds(layer.getBounds(),{ maxZoom: 12 });
-    // Center the map on the clicked area with a specific zoom level
-    //const bounds = layer.getBounds();
-    //const center = bounds.getCenter();
-    //map.setView(center, map.getZoom() > 16 ? map.getZoom() : 16); // Set a specific zoom level or use current zoom level if it's already greater
 }
 
+function centerMapOnAddress(address) {
+    fetch('/geocode', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address: address })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Geocoding server error: ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.lat && data.lon) {
+            // Center the map on the coordinates and set the zoom level
+            map.setView([data.lat, data.lon], 15);
+
+            // Add a marker at the location
+            L.marker([data.lat, data.lon]).addTo(map)
+                .bindPopup(data.address)
+                .openPopup();
+        } else {
+            alert('Address not found: ' + address);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
 
  function positionOverlay() {
   const tbody = document.getElementById('myTableBody');
@@ -169,7 +236,7 @@ function openTab_v2(evt, tabName) {
 }
 
  function showPremiumMessage() {
-    openModal('Access all content today for $19.99');
+    openModal('Access all content today for $49.99');
 }
 
 // Helper function to get the parent row attribute based on the parent row ID
@@ -277,7 +344,188 @@ function toggleMenu() {
             break;
     }
 
-    applyGeoJSONLayer(getCurrentLegend());
+    if (cursorPosition ==0)
+    {
+        applyGeoJSONLayer();
+    }
+    else if(cursorPosition==1)
+    {
+        applyProjectGeoJSONLayer();
+    }
+    
+}
+
+function createCard(cardInfo) {
+    const card = document.createElement('div');
+    if (cardInfo.type == 'supply')
+    {
+        card.className = 'info-card supply-projects';
+    }
+    else 
+    {
+        card.className = 'info-card';
+    }
+    
+    if (cardInfo.locked) {
+      card.classList.add('locked-card');
+    }
+    if (cardInfo.id == 'card8')
+    {
+        card.classList.add('lastcard');
+    }
+    card.id = cardInfo.id;
+  
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'title';
+    titleDiv.textContent = cardInfo.title;
+    if(card.id=='card8')
+        {
+            const tooltipText = "Fraction of long-term rented units in the area";
+            titleDiv.innerHTML = `${cardInfo.title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+        }
+        else if(card.id=='card7')
+        {
+            const tooltipText = "Fraction of sold units in the area"
+            titleDiv.innerHTML = `${cardInfo.title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+        }
+        else if(card.id=='card9')
+        {
+            const tooltipText = "Number of sales contracts in the last 12 months"
+            titleDiv.innerHTML = `${cardInfo.title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+        }
+        else if(card.id =='card10')
+        {
+            const tooltipText = "Total value of all sales transactions within the last 12 months in millions AED"
+            titleDiv.innerHTML = `${cardInfo.title} <span class="info-icon info-icon-internal" tabindex="0" data-tooltip="${tooltipText}">i</span>`;
+        }
+
+    card.appendChild(titleDiv);
+  
+    const valueDiv = document.createElement('div');
+    valueDiv.className = 'value';
+    valueDiv.textContent = cardInfo.value || '';
+    if (cardInfo.type != 'supply')
+    {
+        card.appendChild(valueDiv);
+    }
+    if (cardInfo.type === 'lands')
+    {
+        const landButton = document.createElement('button');
+        landButton.id = 'land-chart-button';
+        landButton.className = 'stats-button';
+        landButton.innerHTML = '<i class="fas fa-chart-pie"></i>';
+        landButton.addEventListener('click', function() {
+            fetch(`/get-lands-stats?area_id=${getCurrentAreaId()}`)
+              .then(response => {
+                if (response.status === 204) {
+                  return null;
+                }
+                if (!response.ok) {
+                  throw new Error('Network response was not ok');
+                }
+                return response.json();
+              })
+              .then(data => {
+                if (data) {
+                  renderLandStatsChart(data);
+                }
+              })
+              .catch(error => {
+                console.log('Error fetching land stats:', error);
+              });
+          });
+        card.appendChild(landButton);
+    } 
+    
+
+    // Handle special card types
+    if (cardInfo.type === 'supply') {
+      const supplyDetails = document.createElement('div');
+      supplyDetails.className = 'supply-details';
+  
+      const finishedColumn = document.createElement('div');
+      finishedColumn.className = 'supply-column';
+      const finishedTitle = document.createElement('div');
+      finishedTitle.className = 'sub-title';
+      finishedTitle.textContent = 'Finished';
+      const finishedValue = document.createElement('div');
+      finishedValue.className = 'value finished-value';
+      finishedValue.textContent = cardInfo.finishedValue || '-';
+      finishedColumn.appendChild(finishedTitle);
+      finishedColumn.appendChild(finishedValue);
+  
+      const offPlanColumn = document.createElement('div');
+      offPlanColumn.className = 'supply-column';
+      const offPlanTitle = document.createElement('div');
+      offPlanTitle.className = 'sub-title';
+      offPlanTitle.textContent = 'Off Plan';
+      const offPlanValue = document.createElement('div');
+      offPlanValue.className = 'value offplan-value';
+      offPlanValue.textContent = cardInfo.offPlanValue || '-';
+      offPlanColumn.appendChild(offPlanTitle);
+      offPlanColumn.appendChild(offPlanValue);
+  
+      supplyDetails.appendChild(finishedColumn);
+      supplyDetails.appendChild(offPlanColumn);
+      card.appendChild(supplyDetails);
+    }
+  
+    // Add lock icon if the card is locked
+    if (cardInfo.locked) {
+      const lockIconCard = document.createElement('div');
+      lockIconCard.className = 'lock-icon-card';
+      const lockIcon = document.createElement('img');
+      lockIcon.src = 'static/lock_similar.svg';
+      lockIcon.alt = 'Lock Icon';
+      lockIcon.width = 40;
+      lockIcon.height = 40;
+      lockIcon.style.cursor = 'pointer';
+      lockIcon.addEventListener('click', () => {
+        openModal('Unlock all details Today for $49.99');
+      });
+      lockIconCard.appendChild(lockIcon);
+      card.appendChild(lockIconCard);
+    }
+  
+    return card;
+  }
+
+function showSpinner() {
+    const spinner = document.createElement('div');
+    spinner.id = 'loading-spinner';
+    spinner.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        z-index: 1000;
+    `;
+
+    const keyframes = `
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    `;
+
+    const style = document.createElement('style');
+    style.textContent = keyframes;
+    document.head.appendChild(style);
+    document.body.appendChild(spinner);
+}
+
+// Function to hide the loading spinner
+function hideSpinner() {
+    const spinner = document.getElementById('loading-spinner');
+    if (spinner) {
+        spinner.remove();
+    }
 }
 
 

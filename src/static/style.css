@@ -1343,3 +1343,56 @@ tbody td {
   from {opacity: 0;}
   to {opacity: 1;}
 }
+
+
+
+/*VERTICAL CURSOR LEGEND*/
+.selection-container {
+  position: fixed;
+  bottom: 220px;
+  right: 10px;
+  font-family: 'Roboto', sans-serif;
+  display: flex;
+  align-items: stretch;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 10px;
+
+}
+.vertical-bar {
+  width: 4px;
+  height: 90px;
+  background-color: #e0e0e0;
+  position: relative;
+  margin-right: 15px;
+  border-radius: 2px;
+}
+.cursor {
+  width: 20px;
+  height: 20px;
+  background-color: #007bff;
+  border-radius: 50%;
+  position: absolute;
+  left: -8px;
+  cursor: pointer;
+  transition: top 0.3s ease;
+}
+.options {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 90px;
+}
+.option {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 10px;
+  color: #000000;
+  background-color: #efefefad;
+}
+.option.blocked {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background-color: #d3d3d3;
+}

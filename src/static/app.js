@@ -14,13 +14,17 @@ L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/
 
 const mainTableBody = document.querySelector('#mainTableBody');
 const unlockTableBody = document.querySelector('#unlockTableBody');
- const layersByAreaId = {};
+const layersByAreaId = {};
+const layersByParcelId = {};
 
 let state = {
     currentFillColor: 'fillColorPrice',
     currentLegend: 'averageSalePrice',
-    currentAreaId: null
+    currentAreaId: null,
+    currentParcelId: null
 };
+
+let cursorPosition = 0;
 
  function getCurrentFillColor() {
     return state.currentFillColor;
@@ -30,14 +34,27 @@ function getAllAreasData() {
     return allAreasData;
 }
 
+let allParcelsData = null;
+function getAllParcelsData() {
+    return allParcelsData;
+}
+
+
 
  function getCurrentAreaId() {
+    return state.currentAreaId;
+}
+function getCurrentParcelId() {
     return state.currentAreaId;
 }
 
  function setCurrentAreaId(areaidd) {
     state.currentAreaId = areaidd;
 }
+function setCurrentParcelId(parcelId) {
+    state.currentParcelId = parcelId;
+}
+
  function setCurrentFillColor(color) {
     state.currentFillColor = color;
 }
@@ -49,6 +66,107 @@ function getAllAreasData() {
     state.currentLegend = legend;
 }
 
+const cursor = document.getElementById('cursor');
+const verticalBar = document.querySelector('.vertical-bar');
+const options = document.querySelectorAll('.option');
+
+function moveCursor(position) {
+    const maxPosition = options.length - 1;
+    cursorPosition = Math.min(position, maxPosition);
+
+    cursor.style.top = `${cursorPosition * 35}px`;
+
+    showSpinner(); // Show the spinner before sending the request
+
+    sendPositionToServer(position);
+
+    const dropupMenu = document.getElementById('dropupMenu');
+    const capitalAppreciationDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Capital Appreciation\')"]');
+    const grossRentalYieldDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Gross Rental Yield\')"]');
+    const acqDemandDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Acquisition Demand\')"]');
+    const acqDemandDivlOCKED = dropupMenu.querySelector('div[onclick="showPremiumMessage()"]');
+    if (position === 1) {
+        currentAreaData = null;
+        // Remove the specified divs when position is 1
+        if (capitalAppreciationDiv) capitalAppreciationDiv.remove();
+        if (grossRentalYieldDiv) grossRentalYieldDiv.remove();
+        if (acqDemandDiv) acqDemandDiv.remove();
+        if (acqDemandDivlOCKED) acqDemandDivlOCKED.remove();
+    } else if (position === 0) {
+        allParcelsData = null;
+        if (!capitalAppreciationDiv) {
+            const newCapitalDiv = document.createElement('div');
+            newCapitalDiv.setAttribute('onclick', "changeLegendTitle('Capital Appreciation')");
+            newCapitalDiv.textContent = 'Capital appreciation 5Y';
+            dropupMenu.appendChild(newCapitalDiv);
+        }
+        if (!grossRentalYieldDiv) {
+            const newYieldDiv = document.createElement('div');
+            newYieldDiv.setAttribute('onclick', "changeLegendTitle('Gross Rental Yield')");
+            newYieldDiv.textContent = 'Gross Rental Yield';
+            dropupMenu.appendChild(newYieldDiv);
+        }
+        
+        if (!acqDemandDivlOCKED) {
+            const newYieldDiv = document.createElement('div');
+            newYieldDiv.className = 'locked-legend';
+            newYieldDiv.setAttribute('onclick', 'showPremiumMessage()');
+            newYieldDiv.innerHTML = 'Acquisition Demand <span id="lockIcon">🔒</span>';
+            dropupMenu.appendChild(newYieldDiv);
+        }
+        else if(!acqDemandDiv){
+            const newYieldDiv = document.createElement('div');
+            newYieldDiv.setAttribute('onclick', "changeLegendTitle('Acquisition Demand')");
+            newYieldDiv.textContent = 'Acquisition Demand';
+            dropupMenu.appendChild(newYieldDiv);
+        }
+    }
+
+
+}
+
+function sendPositionToServer(position) {
+    fetch('/update_position', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ position: position }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(position ==1)
+        {
+            allParcelsData = data;
+            applyProjectGeoJSONLayer();
+        }
+        else if(position==0)
+        {
+            allAreasData = data;
+            applyGeoJSONLayer();
+        }
+        hideSpinner();
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        hideSpinner(); // Make sure to hide the spinner even if there's an error
+    });
+}
+
+verticalBar.addEventListener('click', (event) => {
+    const rect = verticalBar.getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const position = Math.floor(y / (rect.height / 3));
+    moveCursor(position);
+});
+
+options.forEach((option) => {
+    option.addEventListener('click', () => {
+        const position = parseInt(option.getAttribute('data-position'));
+        moveCursor(position);
+    });
+});
+        
 /*Now, after the page load, a call will be made to /config, which will respond with the Stripe publishable key. 
 We'll then use this key to create a new instance of Stripe.js.*/
 document.addEventListener('DOMContentLoaded', function() {
@@ -90,43 +208,19 @@ document.getElementById('toggle-fullscreen').addEventListener('click', function(
     panel.classList.toggle('fullscreen'); 
 });
 
-// document.getElementById('area-pdf-icon').addEventListener('click', function() {
-//     const currentAreaData = getCurrentAreaData();
-
-//     // Make an AJAX request to the server
-//     fetch('/generate-area-pdf', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({ areaData: currentAreaData })
-//     })
-//     .then(response => response.blob())
-//     .then(blob => {
-//         // Create a new Blob object using the response data
-//         var url = window.URL.createObjectURL(blob);
-        
-//         // Create a link element
-//         var link = document.createElement('a');
-//         link.href = url;
-//         link.download = 'area.pdf';
-        
-//         // Append to the document body
-//         document.body.appendChild(link);
-        
-//         // Programmatically click the link to trigger the download
-//         link.click();
-        
-//         // Clean up
-//         window.URL.revokeObjectURL(url);
-//         document.body.removeChild(link);
-//     })
-//     .catch(error => console.error('Error:', error));
-// });
+let currentJsonData = null;
+let currentAreaData = null;
+let currentParcelData = null;
 
 document.getElementById('area-pdf-icon').addEventListener('click', function() {
-    const currentAreaData = getCurrentAreaData();
-    
+    let currentData;
+    let parcelData;
+    if (cursorPosition == 0) {
+        currentData = getCurrentAreaData();
+    } else if (cursorPosition == 1) {
+        currentData = getCurrentParcelData();
+        parcelData = getCurrentJsonData();
+    }
     // Create and show loading bar
     const loadingBar = document.createElement('div');
     loadingBar.style.width = '0%';
@@ -146,12 +240,17 @@ document.getElementById('area-pdf-icon').addEventListener('click', function() {
     }, 500);
 
     // Make an AJAX request to the server
-    fetch('/generate-area-pdf', {
+    // Make an AJAX request to the server
+    fetch('/generate-MAIN-pdf', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ areaData: currentAreaData })
+        body: JSON.stringify({ 
+            mainData: currentData,
+            cP: cursorPosition,  // Send the cursor position too
+            pData: parcelData
+        })
     })
     .then(response => response.blob())
     .then(blob => {
@@ -161,7 +260,7 @@ document.getElementById('area-pdf-icon').addEventListener('click', function() {
         // Create a link element
         var link = document.createElement('a');
         link.href = url;
-        link.download = 'area.pdf';
+        link.download = 'report.pdf';
         
         // Append to the document body
         document.body.appendChild(link);
@@ -188,8 +287,7 @@ document.getElementById('area-pdf-icon').addEventListener('click', function() {
     });
 });
 
-let currentJsonData = null;
-let currentAreaData = null;
+
 
 document.addEventListener('DOMContentLoaded', function () {
     // Set the default checked radio button (in settings)
@@ -268,8 +366,38 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
+function applyProjectGeoJSONLayer() {
+    const data = getAllParcelsData();
+    const legends = data[0];
+    const units = data[2];
+
+    const features = data[1].map(item => ({
+        type: 'Feature',
+        properties: item, // Store all item properties directly
+        geometry: item.geometry
+    }));
+    const featureCollection = {
+        type: 'FeatureCollection',
+        features: features
+    };
+
+    // Clear existing GeoJSON layer
+    if (window.geoJSONLayer) {
+        window.geoJSONLayer.remove();
+    }
+
+    // Apply new GeoJSON layer with dynamic fill color
+    window.geoJSONLayer = L.geoJSON(featureCollection, {
+        style: feature => featureStyle(feature, getCurrentFillColor(),"project"),
+        onEachFeature: onEachFeature
+    }).addTo(map);
+
+    updateLegend(legends[getCurrentLegend()],units[getCurrentLegend()]);
+}
+
+
 // load the .geojson file to display the areas
- function applyGeoJSONLayer(currentLegend) {
+ function applyGeoJSONLayer() {
     const data = allAreasData;
     //data[0] contains legends of map and data[1] contains the areas and data[2]  contain units
     const legends = data[0];
@@ -288,17 +416,17 @@ document.addEventListener('DOMContentLoaded', function () {
     if (window.geoJSONLayer) {
         window.geoJSONLayer.remove();
     }
-    
+
     // Apply new GeoJSON layer with dynamic fill color
     window.geoJSONLayer = L.geoJSON(featureCollection, {
-        style: feature => areaStyle(feature, getCurrentFillColor()),
+        style: feature => featureStyle(feature, getCurrentFillColor()),
         onEachFeature: onEachFeature
     }).addTo(map);
 
-    updateLegend(legends[currentLegend],units[currentLegend]);
+    updateLegend(legends[getCurrentLegend()],units[getCurrentLegend()]);
 }
 
-// Add a click event listener to the close button outside the onEachFeature function
+
 document.getElementById('close-panel').addEventListener('click', function() {
     document.getElementById('info-panel').style.display = 'none';
 });
@@ -749,7 +877,26 @@ document.addEventListener('click', function(e) {
 });
 
 // Function to style the GeoJSON layers
-function areaStyle(feature, fillColorProperty) {
+function featureStyle(feature, fillColorProperty,type="area") {
+    if (type=="project")
+    {
+        if (fillColorProperty == "blank") {
+            return {
+                fillColor: 'transparent',
+                weight: 1,
+                opacity: 0.1,
+                color: 'black',
+                fillOpacity: 0.7
+            }; 
+        }
+        return {
+            fillColor: feature.properties[fillColorProperty], // Dynamic fill color based on the property
+            weight: 1,
+            opacity: 0.1,
+            color: 'black',
+            fillOpacity: 0.85
+        }; 
+    }
     if (fillColorProperty == "blank") {
         return {
             fillColor: 'transparent',
@@ -813,19 +960,178 @@ function updateProjectsDemand() {
 }
 
 function onEachFeature(feature, layer) {
-    const areaId = feature.properties.area_id;
-    layersByAreaId[areaId] = layer; // Store layer by area_id
+    if(cursorPosition==0)
+    {
+        const areaId = feature.properties.area_id;
+        layersByAreaId[areaId] = layer; // Store layer by area_id
+        layer.on({
+            click: function(e) {
+                highlightFeature(e);
+                updateAreaInfo(feature);
+            }
+        });
+    }
+    else if(cursorPosition==1)
+    {
+        const parcelId = feature.properties.parcel_id;
+        layersByParcelId[parcelId] = layer; // Store layer by area_id
+        layer.on({
+            click: function(e) {
+                highlightFeature(e);
+                updateParcelInfo(feature);
+            }
+        });
+    }
+    
+    
+}
 
-    layer.on({
-        click: function(e) {
-            highlightFeature(e);
-            updateAreaInfo(feature);
+function updateParcelInfo(feature) {
+    mainTableBody.innerHTML = ''; // Clear existing rows
+    setCurrentParcelId(feature.properties.parcel_id);
+    // Create a copy of feature.properties without the "geometry" property
+    const { geometry, ...propertiesWithoutGeometry } = feature.properties;
+    currentParcelData = propertiesWithoutGeometry; // Save as global variable for later
+
+    const projectName = feature.properties.name;
+    const areaInfo = document.getElementById('area_info');
+    const areaTitleH2 = document.getElementById('area-title');
+    const buttonToRemove = document.querySelector('#panel-content .tab button[onclick*="ProjectsDemand"]');
+    if (buttonToRemove) {
+        buttonToRemove.remove();
+    }
+
+    areaTitleH2.innerHTML = projectName;
+
+    const variableNames = feature.properties.variableNames;
+    const variableValues = feature.properties.variableValues;
+    const variableunits = feature.properties.variableUnits;
+    const variableSpecial= feature.properties.variableSpecial;
+    const cards = document.querySelectorAll('.info-card');
+
+    const statsContainer = document.getElementById('stats-container');
+    statsContainer.innerHTML = '';
+    const cardData = [
+        { id: 'card1', title: 'Locked', value: '99', locked: false },
+      ];
+      offset_on_index =0;
+      cardData.forEach((cardInfo, index) => {
+        if (!cardInfo.locked && variableSpecial[index+offset_on_index] === 0) {
+          cardInfo.title = variableNames[index+offset_on_index];
+
+          let value = variableValues[index+offset_on_index];
+          if (variableunits[index+offset_on_index] === '%') {
+            cardInfo.value = `${(value * 100).toFixed(2)} %`;
+          } else if (variableunits[index+offset_on_index] === 'AED') {
+            cardInfo.value = `${value} AED`;
+          } else if (variableunits[index+offset_on_index] === 'm AED') {
+            cardInfo.value = `${value.toFixed(2)} M AED`;
+          } else {
+            cardInfo.value = value;
+          }
         }
+        else if(cardInfo.id =='card5')
+        {
+            offset_on_index=1;
+        }
+        else if(cardInfo.id =='card6') //todo :use the special variable is better than id
+        {
+            cardInfo.title = 'Supply of Lands:';
+            cardInfo.value = variableValues[index+offset_on_index];
+        }
+
+        const card = createCard(cardInfo);
+        statsContainer.appendChild(card);
+      });
+
+
+   /* let array_index = 0;
+
+    // Loop through each card and populate with the corresponding variable name and value
+    cards.forEach((card) => {
+            if(card.id !='card1')
+            {
+                card.classList.remove('locked-card');  // Remove locked-card class
+                const wrapper = card.closest('.info-card-wrapper');
+                // Remove the lock icon
+                if(wrapper){
+                    const lockIcon = wrapper.querySelector('.lock-icon-card');
+                    if (lockIcon) {
+                        lockIcon.remove();
+                    }
+                    // Move the card outside of the wrapper
+                    wrapper.parentNode.insertBefore(card, wrapper);
+                    // Remove the empty wrapper
+                    wrapper.remove();
+                }
+            
+                card.remove();
+            }
+            if(variableSpecial[array_index]==0)
+            {
+                const title = variableNames[array_index];
+                let value = variableValues[array_index];
+
+                if(card.id =='card1')
+                {
+                    card.querySelector('.title').textContent = title;
+                }
+                
+                if(variableunits[array_index]=="%")
+                {
+                    card.querySelector('.value').textContent= `${(value * 100).toFixed(2)} %`;
+                }
+                else if(variableunits[array_index]=="AED")
+                {
+                    card.querySelector('.value').textContent= `${value} AED`;
+                }
+                else if(variableunits[array_index] == "m AED")
+                {
+                    card.querySelector('.value').textContent= `${value.toFixed(2)} M AED`;
+                }
+                else{
+                    card.querySelector('.value').textContent = value;
+                }
+                
+                card.classList.remove('locked-card');  // Remove locked-card class
+                const wrapper = card.closest('.info-card-wrapper');
+                // Remove the lock icon
+                if(wrapper){
+                    const lockIcon = wrapper.querySelector('.lock-icon-card');
+                    if (lockIcon) {
+                        lockIcon.remove();
+                    }
+                    // Move the card outside of the wrapper
+                    wrapper.parentNode.insertBefore(card, wrapper);
+                    // Remove the empty wrapper
+                    wrapper.remove();
+                }
+            
+    
+                array_index++;
+            }
     });
+    // Append the container of cards to the panel content
+    const statsContainer = document.getElementById('stats-container');*/
+    areaInfo.appendChild(statsContainer);
+
+    const panel = document.getElementById('info-panel');
+    panel.style.display = 'block';
+    
+    // Remove any existing error messages before fetching new data
+    const existingErrorMessage = document.getElementById('error-message');
+    if (existingErrorMessage) {
+        existingErrorMessage.remove();
+    }
+
+    fetchMoreDetails(getCurrentParcelId(),"parcel",projectName);
+
+
 }
 
 function updateAreaInfo(feature) {
     mainTableBody.innerHTML = ''; // Clear existing rows
+
     setCurrentAreaId(feature.properties.area_id);
     // Create a copy of feature.properties without the "geometry" property
     const { geometry, ...propertiesWithoutGeometry } = feature.properties;
@@ -843,10 +1149,78 @@ function updateAreaInfo(feature) {
     const variableunits = feature.properties.variableUnits;
     const variableSpecial= feature.properties.variableSpecial;
     const cards = document.querySelectorAll('.info-card');
+    const statsContainer = document.getElementById('stats-container');
+    statsContainer.innerHTML = '';
+    const cardData = [
+        { id: 'card1', title: 'Locked', value: '99', locked: false },
+        { id: 'card2', title: 'Locked', value: '99', locked: false },
+        { id: 'card3', title: 'Locked', value: '99', locked: false },
+        { id: 'card4', title: 'Locked', value: '99', locked: false },
+        { id: 'card9', title: 'Locked', value: '99', locked: false },
+        { id: 'card10', title: 'Locked', value: '99', locked: false },
+        { id: 'card11', title: 'Locked', value: '99', locked: false },
+        // Add more cards as needed
+        {
+          id: 'card5',
+          type: 'supply',
+          title: 'Supply of Projects:',
+          finishedValue: variableValues[7],
+          offPlanValue: variableValues[8],
+          locked: false
+        },
+        {
+        id: 'card6',
+        type: 'lands',
+        title: 'Supply of Lands:',
+        value: '99',
+        locked: false
+        },
+        {
+        id: 'card7',
+        title: 'Locked',
+        value: '99',
+        locked: false
+        },
+        {
+        id: 'card8',
+        title: 'Locked:',
+        value: '99',
+        locked: false
+        },
+        // Include other special cards similarly
+      ];
+      offset_on_index =0;
+      cardData.forEach((cardInfo, index) => {
+        if (!cardInfo.locked && variableSpecial[index+offset_on_index] === 0) {
+          cardInfo.title = variableNames[index+offset_on_index];
+          let value = variableValues[index+offset_on_index];
+          if (variableunits[index+offset_on_index] === '%') {
+            cardInfo.value = `${(value * 100).toFixed(2)} %`;
+          } else if (variableunits[index+offset_on_index] === 'AED') {
+            cardInfo.value = `${value} AED`;
+          } else if (variableunits[index+offset_on_index] === 'm AED') {
+            cardInfo.value = `${value.toFixed(2)} M AED`;
+          } else {
+            cardInfo.value = value;
+          }
+        }
+        else if(cardInfo.id =='card5')
+        {
+            offset_on_index=1;
+        }
+        else if(cardInfo.id =='card6') //todo :use the special variable is better than id
+        {
+            cardInfo.title = 'Supply of Lands:';
+            cardInfo.value = variableValues[index+offset_on_index];
+        }
+
+        const card = createCard(cardInfo);
+        statsContainer.appendChild(card);
+      });
 
     let array_index = 0;
     // Loop through each card and populate with the corresponding variable name and value
-    cards.forEach((card) => {
+    /*cards.forEach((card) => {
         // Ensure we have a corresponding variable name and value
         
         if(card.id=='card5' && variableNames.length >8)
@@ -988,10 +1362,9 @@ function updateAreaInfo(feature) {
 
             array_index++;
         }
-});
+});*/
     
     // Append the container of cards to the panel content
-    const statsContainer = document.getElementById('stats-container');
     areaInfo.appendChild(statsContainer);
 
     const panel = document.getElementById('info-panel');
@@ -1003,8 +1376,8 @@ function updateAreaInfo(feature) {
         existingErrorMessage.remove();
     }
     
-    // Use the new fetchAreaDetails function
-    fetchAreaDetails(getCurrentAreaId());
+    // Use the new fetchMoreDetails function
+    fetchMoreDetails(getCurrentAreaId(),"area");
 
         // If ProjectsDemand tab is active, refetch data with new area_id
 
@@ -1019,6 +1392,7 @@ function updateAreaInfo(feature) {
     var detailsButton = document.querySelector(".tablinks.active");
     detailsButton.dispatchEvent(evt);   
 }
+
 // Save settings button functionality
 document.getElementById("saveSettings").onclick = function() {
     const listOrder = getListOrderFromUI();
@@ -1040,7 +1414,7 @@ document.getElementById("saveSettings").onclick = function() {
     .then(data => {
         // After successfully saving the settings, refetch the area details
         if (getCurrentAreaId()) {
-            fetchAreaDetails(getCurrentAreaId());
+            fetchMoreDetails(getCurrentAreaId(),"area");
         }
     })
     .catch(error => {
@@ -1048,12 +1422,17 @@ document.getElementById("saveSettings").onclick = function() {
     });
 };
 
-function fetchAreaDetails(areaId) {
+function fetchMoreDetails(iD,HierarchyType,grouped_project) {
     mainTableBody.innerHTML = ''; // Clear existing rows
     const loader = document.querySelector('.loader');
     loader.style.display = 'grid'; // Display loader
     
-    fetch(`/get-area-details?area_id=${areaId}`)
+    let url = `/get-more-details?id=${iD}&hierarchy_type=${HierarchyType}`;
+    if (grouped_project) {
+        url += `&grouped_project=${grouped_project}`;
+    }
+
+    fetch(url)
         .then(response => {
             if (!response.ok) {
                 if (response.status === 404) {
@@ -1201,77 +1580,100 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById("unlock-button-table").onclick = function() {
-        openModal('Unlock all projects Today for $19.99');
+        openModal('Unlock all projects Today for $49.99');
     };
 
 });
-
 $(function() {
     const searchInput = $("#search");
     const searchResults = $("#search-results");
+  
     searchInput.on("input", function() {
-        const query = $(this).val();
-        if (query.length >= 2) {
-          $.getJSON("/search", { q: query }, function(data) {
-            displayResults(data);
-          });
-        } else {
-          searchResults.hide().empty();
-        }
-      });
-
-    function displayResults(results) {
-    searchResults.empty();
-    
-    if (results.length === 0) {
-      searchResults.hide();
-      return;
-    }
-
-    results.forEach(item => {
-      const resultItem = $("<div>")
-        .addClass("search-item")
-        .addClass(item.type);
-
-      const itemName = $("<span>")
-        .addClass("item-name")
-        .text(item.name);
-
-      const itemType = $("<span>")
-        .addClass("item-type")
-        .text(item.type);
-
-      resultItem.append(itemName, itemType);
-
-      if (item.type === 'project') {
-        const itemArea = $("<div>")
-          .addClass("item-area")
-          .text(item.area_name);
-        resultItem.append(itemArea);
+      const query = $(this).val();
+      if (query.length >= 2) {
+        $.getJSON("/search", { q: query }, function(data) {
+          displayResults(data);
+        });
+      } else {
+        searchResults.hide().empty();
       }
-
-      resultItem.on("click", function() {
-        if (item.type === 'project') {
-          simulateClick(item.id);
-        } else if (item.type === 'area') {
-            simulateClick(item.id);
-        }
-        searchInput.val(item.name);
-        searchResults.hide();
-      });
-
-      searchResults.append(resultItem);
     });
-
-    searchResults.show();
-  }
-
-  $(document).on("click", function(event) {
-    if (!$(event.target).closest(".search-container").length) {
-      searchResults.hide();
+  
+    // Add keypress event listener for Enter key
+    searchInput.on("keypress", function(e) {
+      if (e.which === 13) { // Enter key code
+        e.preventDefault();
+        const query = $(this).val();
+        if (query.length > 0) {
+          centerMapOnAddress(query);
+        }
+        searchResults.hide();
+      }
+    });
+  
+    function displayResults(results) {
+      searchResults.empty();
+  
+      if (results.length === 0) {
+        searchResults.hide();
+        return;
+      }
+  
+      results.forEach(item => {
+        const resultItem = $("<div>")
+          .addClass("search-item")
+          .addClass(item.type)
+          .addClass(item.project_id);
+  
+        const itemName = $("<span>")
+          .addClass("item-name")
+          .text(item.name);
+  
+        const itemType = $("<span>")
+          .addClass("item-type")
+          .text(item.type);
+  
+        if (cursorPosition != 1 || item.type != 'area') {
+          resultItem.append(itemName, itemType);
+        }
+  
+        if (item.type === 'project') {
+          const itemArea = $("<div>")
+            .addClass("item-area")
+            .text(item.area_name);
+          resultItem.append(itemArea);
+        }
+  
+        resultItem.on("click", function() {
+          if (cursorPosition == 0) {
+            if (item.type === 'project' || item.type === 'area') {
+              simulateClick(item.id);
+            }
+          } else if (cursorPosition == 1) {
+            if (item.type === 'project') {
+              getParcelIdsFromProjectId(item.project_id)
+                .then(parcelIds => {
+                  highlightParcels(parcelIds);
+                })
+                .catch(error => console.error('Error:', error));
+            }
+          }
+          searchInput.val(item.name);
+          searchResults.hide();
+        });
+  
+        searchResults.append(resultItem);
+      });
+  
+      searchResults.show();
     }
+  
+    $(document).on("click", function(event) {
+      if (!$(event.target).closest(".search-container").length) {
+        searchResults.hide();
+      }
+    });
   });
-});
 
 function getCurrentJsonData() {
     return currentJsonData;
@@ -1279,7 +1681,9 @@ function getCurrentJsonData() {
 function getCurrentAreaData() {
     return currentAreaData;
 }
-
+function getCurrentParcelData(){
+    return currentParcelData;
+}
 // Declare a variable outside of the function to hold the chart instance
 function renderLandStatsChart(data) {
     const ctx = document.getElementById('landStatsChart').getContext('2d');
@@ -1346,7 +1750,7 @@ function renderLandStatsChart(data) {
 // On document ready or when initializing your app
 document.addEventListener('DOMContentLoaded', () => {
     allAreasData = serverSideData;
-    applyGeoJSONLayer("averageSalePrice");
+    applyGeoJSONLayer();
 });
 
 
