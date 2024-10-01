@@ -1229,6 +1229,7 @@ def generate_area_pdf():
     )
 
 @app.route('/update_position', methods=['POST'])
+@csrf.exempt
 def update_position():
     data = request.json
     position = data['position']
@@ -1622,6 +1623,7 @@ def create_land_type_pie_chart(data,data_key = 'land_type_en',title = 'Land Type
 
 
 @app.route('/geocode', methods=['POST'])
+@csrf.exempt
 def geocode():
     address = request.json.get('address')
     if not address:
@@ -1822,6 +1824,7 @@ def get_parcel_ids_from_projectId(project_id, cur):
         return []
     
 @app.route('/get_parcels/<int:project_id>', methods=['GET'])
+@csrf.exempt
 def get_parcels(project_id):
     conn = get_db_connection()
     cur = conn.cursor()
