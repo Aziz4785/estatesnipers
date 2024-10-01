@@ -23,7 +23,7 @@ let state = {
     currentAreaId: null,
     currentParcelId: null
 };
-
+let currentMarker = null;
 let cursorPosition = 0;
 
  function getCurrentFillColor() {

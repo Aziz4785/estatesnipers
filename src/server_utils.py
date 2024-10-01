@@ -361,8 +361,8 @@ def get_monthly_rents_counts(connection, area_id):
         
         query = """
         SELECT COUNT(*) as count
-        FROM rentcontracts
-        WHERE area_id = %s
+        FROM base_table 
+        WHERE trans_or_rent = 'R' AND area_id = %s
           AND contract_start_date >= %s
           AND contract_start_date <= %s
         """

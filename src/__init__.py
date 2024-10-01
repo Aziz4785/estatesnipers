@@ -52,7 +52,7 @@ from matplotlib.colors import to_rgba
 from flask_pyjwt import AuthManager, require_token, current_token
 
 # Load environment variables from .env file
-load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
+#load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
 pd.set_option('display.max_columns', None)
 # pd.set_option('display.width', 1000)
@@ -1627,6 +1627,9 @@ def geocode():
     if not address:
         return jsonify({'error': 'Address is required'}), 400
 
+    if 'dubai' not in address.lower():
+        address = f"{address}, Dubai"
+        
     url = f'https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={GOOGLE_MAP_API}'
     
     try:
@@ -1767,9 +1770,9 @@ def recent_rent_contracts():
     base_query = """
     SELECT t.contract_start_date, t.ejari_bus_property_type_en, t.rooms_en, pst.property_sub_type_en, 
            t.property_usage_en, t.project_name_en, t.roi*100 AS roi, t.annual_amount
-    FROM rentcontracts t
+    FROM base_table t
     JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
-    WHERE 
+    WHERE trans_or_rent = 'R' AND
     """
     conditions = []
     values = []

@@ -23,7 +23,7 @@ let state = {
     currentAreaId: null,
     currentParcelId: null
 };
-
+let currentMarker = null;
 let cursorPosition = 0;
 
  function getCurrentFillColor() {
@@ -1929,9 +1929,14 @@ function centerMapOnAddress(address) {
         if (data.lat && data.lon) {
             // Center the map on the coordinates and set the zoom level
             map.setView([data.lat, data.lon], 15);
+            
+            // If there's an existing marker, remove it
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
 
             // Add a marker at the location
-            L.marker([data.lat, data.lon]).addTo(map)
+            currentMarker = L.marker([data.lat, data.lon]).addTo(map)
                 .bindPopup(data.address)
                 .openPopup();
         } else {
