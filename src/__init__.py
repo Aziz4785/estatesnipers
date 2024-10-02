@@ -50,7 +50,7 @@ from flask_mailman import Mail
 from matplotlib.patches import Rectangle
 from matplotlib.colors import to_rgba
 from flask_pyjwt import AuthManager, require_token, current_token
-from flask_compress import Compress
+#from flask_compress import Compress
 # Load environment variables from .env file
 #load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
