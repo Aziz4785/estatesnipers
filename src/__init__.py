@@ -59,7 +59,7 @@ pd.set_option('display.max_columns', None)
 #pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
-Compress(app)
+#Compress(app)
 app.config.from_object(config("APP_SETTINGS"))
 csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
