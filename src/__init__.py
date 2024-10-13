@@ -169,16 +169,19 @@ def generate_premium_token():
     return auth_token.signed
 
 @app.route('/update_project_type', methods=['POST'])
+@csrf.exempt
 def update_project_type():
     data = request.json
     session['project_type'] = data.get('projectType', "both")
     return fetch_dubai_areas_data(session['project_type'])
 
 @app.route('/get_project_type', methods=['GET'])
+@csrf.exempt
 def get_project_type():
     return jsonify({"projectType": session.get('project_type', "both")})
 
 @app.route('/reset_session', methods=['POST'])
+@csrf.exempt
 def reset_session():
     session.clear()
     return jsonify({"status": "success", "message": "Session reset"})
