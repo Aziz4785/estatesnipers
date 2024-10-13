@@ -1346,10 +1346,9 @@ tbody td {
 
 
 
-/*VERTICAL CURSOR LEGEND*/
+/* PROJECT TYPE SELECTION*/
 .selection-container {
   position: fixed;
-  bottom: 220px;
   right: 10px;
   font-family: 'Roboto', sans-serif;
   display: flex;
@@ -1358,7 +1357,30 @@ tbody td {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding: 10px;
+}
+.selection-container h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+}
+#project-type {
+  flex-direction: column;
+  bottom: 350px;
+}
 
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/*VERTICAL CURSOR LEGEND*/
+#selection-slider {
+  bottom: 210px;
+}
+#selection-slider.locked {
+  opacity: 0.5;
+  pointer-events: none;
 }
 .vertical-bar {
   width: 4px;

@@ -25,7 +25,7 @@ let state = {
 };
 let currentMarker = null;
 let cursorPosition = 0;
-
+let selectedProjectType = 'both';
  function getCurrentFillColor() {
     return state.currentFillColor;
 }
@@ -72,58 +72,128 @@ const options = document.querySelectorAll('.option');
 
 function moveCursor(position) {
     const maxPosition = options.length - 1;
-    cursorPosition = Math.min(position, maxPosition);
+    if(isPremiumUser)
+    {
+        cursorPosition = Math.min(position, maxPosition);
 
-    cursor.style.top = `${cursorPosition * 35}px`;
+        cursor.style.top = `${cursorPosition * 35}px`;
 
-    showSpinner(); // Show the spinner before sending the request
+        showSpinner(); // Show the spinner before sending the request
 
-    sendPositionToServer(position);
+        sendPositionToServer(position);
 
-    const dropupMenu = document.getElementById('dropupMenu');
-    const capitalAppreciationDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Capital Appreciation\')"]');
-    const grossRentalYieldDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Gross Rental Yield\')"]');
-    const acqDemandDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Acquisition Demand\')"]');
-    const acqDemandDivlOCKED = dropupMenu.querySelector('div[onclick="showPremiumMessage()"]');
-    if (position === 1) {
-        currentAreaData = null;
-        // Remove the specified divs when position is 1
-        if (capitalAppreciationDiv) capitalAppreciationDiv.remove();
-        if (grossRentalYieldDiv) grossRentalYieldDiv.remove();
-        if (acqDemandDiv) acqDemandDiv.remove();
-        if (acqDemandDivlOCKED) acqDemandDivlOCKED.remove();
-    } else if (position === 0) {
-        allParcelsData = null;
-        if (!capitalAppreciationDiv) {
-            const newCapitalDiv = document.createElement('div');
-            newCapitalDiv.setAttribute('onclick', "changeLegendTitle('Capital Appreciation')");
-            newCapitalDiv.textContent = 'Capital appreciation 5Y';
-            dropupMenu.appendChild(newCapitalDiv);
-        }
-        if (!grossRentalYieldDiv) {
-            const newYieldDiv = document.createElement('div');
-            newYieldDiv.setAttribute('onclick', "changeLegendTitle('Gross Rental Yield')");
-            newYieldDiv.textContent = 'Gross Rental Yield';
-            dropupMenu.appendChild(newYieldDiv);
-        }
-        
-        if (!acqDemandDivlOCKED) {
-            const newYieldDiv = document.createElement('div');
-            newYieldDiv.className = 'locked-legend';
-            newYieldDiv.setAttribute('onclick', 'showPremiumMessage()');
-            newYieldDiv.innerHTML = 'Acquisition Demand <span id="lockIcon">🔒</span>';
-            dropupMenu.appendChild(newYieldDiv);
-        }
-        else if(!acqDemandDiv){
-            const newYieldDiv = document.createElement('div');
-            newYieldDiv.setAttribute('onclick', "changeLegendTitle('Acquisition Demand')");
-            newYieldDiv.textContent = 'Acquisition Demand';
-            dropupMenu.appendChild(newYieldDiv);
+        const dropupMenu = document.getElementById('dropupMenu');
+        const capitalAppreciationDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Capital Appreciation\')"]');
+        const grossRentalYieldDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Gross Rental Yield\')"]');
+        const acqDemandDiv = dropupMenu.querySelector('div[onclick="changeLegendTitle(\'Acquisition Demand\')"]');
+        const acqDemandDivlOCKED = dropupMenu.querySelector('div[onclick="showPremiumMessage()"]');
+        if (position === 1) {
+            currentAreaData = null;
+            // Remove the specified divs when position is 1
+            if (capitalAppreciationDiv) capitalAppreciationDiv.remove();
+            if (grossRentalYieldDiv) grossRentalYieldDiv.remove();
+            if (acqDemandDiv) acqDemandDiv.remove();
+            if (acqDemandDivlOCKED) acqDemandDivlOCKED.remove();
+        } else if (position === 0) {
+            allParcelsData = null;
+            if (!capitalAppreciationDiv) {
+                const newCapitalDiv = document.createElement('div');
+                newCapitalDiv.setAttribute('onclick', "changeLegendTitle('Capital Appreciation')");
+                newCapitalDiv.textContent = 'Capital appreciation 5Y';
+                dropupMenu.appendChild(newCapitalDiv);
+            }
+            if (!grossRentalYieldDiv) {
+                const newYieldDiv = document.createElement('div');
+                newYieldDiv.setAttribute('onclick', "changeLegendTitle('Gross Rental Yield')");
+                newYieldDiv.textContent = 'Gross Rental Yield';
+                dropupMenu.appendChild(newYieldDiv);
+            }
+            
+            if (!acqDemandDivlOCKED) {
+                const newYieldDiv = document.createElement('div');
+                newYieldDiv.className = 'locked-legend';
+                newYieldDiv.setAttribute('onclick', 'showPremiumMessage()');
+                newYieldDiv.innerHTML = 'Acquisition Demand <span id="lockIcon">🔒</span>';
+                dropupMenu.appendChild(newYieldDiv);
+            }
+            else if(!acqDemandDiv){
+                const newYieldDiv = document.createElement('div');
+                newYieldDiv.setAttribute('onclick', "changeLegendTitle('Acquisition Demand')");
+                newYieldDiv.textContent = 'Acquisition Demand';
+                dropupMenu.appendChild(newYieldDiv);
+            }
         }
     }
-
+else
+{
+    cursorPosition = Math.min(position, maxPosition);
+    cursor.style.top = `${cursorPosition * 35}px`;
+    openModal('Unlock project view and more for $49.99');
+    cursorPosition = 0;
+    cursor.style.top = `${cursorPosition * 35}px`;
+}
 
 }
+
+// Function to handle radio button change
+function handleProjectTypeChange(event) {
+    selectedProjectType = event.target.value;
+    // Get the selection slider element
+    const selectionSlider = document.getElementById('selection-slider');
+    // Lock or unlock the selection slider based on the selected project type
+    if (selectedProjectType === 'finished' || selectedProjectType === 'off-plan') {
+        selectionSlider.classList.add('locked');
+        // Optionally, disable all inputs within the selection slider
+        selectionSlider.querySelectorAll('input').forEach(input => input.disabled = true);
+    } else {
+        selectionSlider.classList.remove('locked');
+        // Re-enable inputs if they were disabled
+        selectionSlider.querySelectorAll('input').forEach(input => input.disabled = false);
+    }
+
+    // Send the selected project type to the server
+    fetch('/update_project_type', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectType: selectedProjectType }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        //console.log('Server response:', data);
+        allAreasData = data;
+        applyGeoJSONLayer();
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+// Function to get the current project type from the server
+function getCurrentProjectType() {
+    fetch('/get_project_type')
+    .then(response => response.json())
+    .then(data => {
+        selectedProjectType = data.projectType;
+        // Update the radio button selection
+        const radioButton = document.querySelector(`input[name="project-type"][value="${selectedProjectType}"]`);
+        if (radioButton) {
+            radioButton.checked = true;
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+    });
+}
+
+// Add event listeners to radio buttons
+document.querySelectorAll('input[name="project-type"]').forEach(radio => {
+    radio.addEventListener('change', handleProjectTypeChange);
+});
+
+// Get the current project type when the page loads
+document.addEventListener('DOMContentLoaded', getCurrentProjectType);
 
 function sendPositionToServer(position) {
     fetch('/update_position', {
@@ -249,7 +319,8 @@ document.getElementById('area-pdf-icon').addEventListener('click', function() {
         body: JSON.stringify({ 
             mainData: currentData,
             cP: cursorPosition,  // Send the cursor position too
-            pData: parcelData
+            pData: parcelData,
+            project_type: selectedProjectType
         })
     })
     .then(response => response.blob())
@@ -581,7 +652,8 @@ function generatePDF(name) {
         body: JSON.stringify({
             section: name,
             data: currentData[name],
-            area_data: currentAreaData
+            area_data: currentAreaData,
+            project_type: selectedProjectType
         })
     })
     .then(response => {
@@ -942,7 +1014,7 @@ function featureStyle(feature, fillColorProperty,type="area") {
 
 function updateProjectsDemand() {
     if (getCurrentAreaId()) {
-        fetch(`/get-demand-per-project?area_id=${getCurrentAreaId()}`)
+        fetch(`/get-demand-per-project?area_id=${getCurrentAreaId()}&project_type=${selectedProjectType}`)
 
             .then(response => response.json())
             .then(data => {
@@ -1427,7 +1499,7 @@ function fetchMoreDetails(iD,HierarchyType,grouped_project) {
     const loader = document.querySelector('.loader');
     loader.style.display = 'grid'; // Display loader
     
-    let url = `/get-more-details?id=${iD}&hierarchy_type=${HierarchyType}`;
+    let url = `/get-more-details?id=${iD}&hierarchy_type=${HierarchyType}&project_type=${selectedProjectType}`;
     if (grouped_project) {
         url += `&grouped_project=${grouped_project}`;
     }
@@ -1579,9 +1651,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.getElementById("unlock-button-table").onclick = function() {
+    const unlockButtonTable = document.getElementById("unlock-button-table");
+    if(unlockButtonTable)
+    {
+        unlockButtonTable.onclick = function() {
         openModal('Unlock all projects Today for $49.99');
-    };
+        };
+    }
 
 });
 $(function() {

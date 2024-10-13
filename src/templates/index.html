@@ -171,7 +171,22 @@
       </div>
     </div>
     
-    <div class="selection-container">
+    <div id="project-type" class="selection-container">
+        <h3>Include projects:</h3>
+        <div class="radio-group">
+            <label class="radio-option">
+                <input type="radio" name="project-type" value="finished"> Ready
+            </label>
+            <label class="radio-option">
+                <input type="radio" name="project-type" value="off-plan"> Off-plan
+            </label>
+            <label class="radio-option">
+                <input type="radio" name="project-type" value="both" checked> Both
+            </label>
+        </div>
+    </div>
+
+    <div id="selection-slider" class="selection-container">
         <div class="vertical-bar">
             <div class="cursor" id="cursor"></div>
         </div>

@@ -50,7 +50,7 @@ from flask_mailman import Mail
 from matplotlib.patches import Rectangle
 from matplotlib.colors import to_rgba
 from flask_pyjwt import AuthManager, require_token, current_token
-#from flask_compress import Compress
+from flask_compress import Compress
 # Load environment variables from .env file
 #load_dotenv() #!!! COMENT THIS FOR DEPLOYMENT
 #pd.set_option('display.max_rows', None) 
@@ -59,7 +59,7 @@ pd.set_option('display.max_columns', None)
 #pd.set_option('display.max_colwidth', None)
 
 app = Flask(__name__)
-#Compress(app)
+Compress(app)
 app.config.from_object(config("APP_SETTINGS"))
 csrf = CSRFProtect(app)
 login_manager = LoginManager() # create and init the login manager
@@ -168,6 +168,21 @@ def generate_premium_token():
     auth_token = auth_manager.auth_token('premium_user', payload)  # Generate auth token
     return auth_token.signed
 
+@app.route('/update_project_type', methods=['POST'])
+def update_project_type():
+    data = request.json
+    session['project_type'] = data.get('projectType', "both")
+    return fetch_dubai_areas_data(session['project_type'])
+
+@app.route('/get_project_type', methods=['GET'])
+def get_project_type():
+    return jsonify({"projectType": session.get('project_type', "both")})
+
+@app.route('/reset_session', methods=['POST'])
+def reset_session():
+    session.clear()
+    return jsonify({"status": "success", "message": "Session reset"})
+
 @app.route('/check_premium')
 def check_premium():
     is_premium = check_premium_user()
@@ -186,7 +201,8 @@ def index():
         if(stripe_customer):
             last_billing_period = stripe_customer.cancel_at_period_end
 
-    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
+    project_type = session.get('project_type', "both")
+    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data(project_type)
     premium_token = generate_premium_token()
     return render_template('index.html', dubai_areas_data= current_app.config['dubai_areas_data'],modal_open=False, login_form=login_form,register_form=register_form,show_modal=show_modal,message='',form_to_show="login",is_premium_user=is_premium_user,last_billing_period=last_billing_period,premium_token=premium_token)
 
@@ -236,7 +252,8 @@ def create_checkout_session():
 def success():
     is_premium_user = check_premium_user()
     premium_token = generate_premium_token()
-    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
+    project_type = session.get('project_type', "both")
+    current_app.config['dubai_areas_data'] = fetch_dubai_areas_data(project_type)
     return render_template("index.html",dubai_areas_data= current_app.config['dubai_areas_data'],is_premium_user=is_premium_user,premium_token=premium_token)
 
 
@@ -502,6 +519,7 @@ def get_area_details():
             hierarchy_keys = session.get('hierarchy_keys', ['grouped_project','property_usage_en','property_sub_type_en','rooms_en'])
         id_ = request.args.get('id')
         hierarchy_type = request.args.get('hierarchy_type')
+        project_type = request.args.get('project_type')
         area_id = None
         parcel_id = None
         if hierarchy_type=="parcel":
@@ -554,7 +572,15 @@ def get_area_details():
 
         elif hierarchy_type=="area":
             area_id = id_
-            sql_query = text("""
+            project_type_condition = ""
+            project_type_condition_pred = ""
+            if project_type =="off-plan":
+                project_type_condition = " AND project_status_simple = 'O'"
+                project_type_condition_pred = " AND proj.project_status_simple = 'O'"
+            elif project_type =="finished":
+                project_type_condition = " AND project_status_simple = 'F'"
+                project_type_condition_pred = " AND proj.project_status_simple = 'F'"
+            sql_query = text(f"""
         SELECT 
             pst.property_sub_type_en, 
             grouped_project, 
@@ -570,11 +596,11 @@ def get_area_details():
             propertysubtype pst 
         ON 
             t.property_sub_type_id = pst.property_sub_type_id
-        WHERE area_id = :area_id AND instance_year >= 2014;
+        WHERE area_id = :area_id AND instance_year >= 2014 {project_type_condition};
         """)
             params_={"area_id": area_id}
 
-            prediction_query = text("""SELECT
+            prediction_query = text(f"""SELECT
                         pst.property_sub_type_en, 
                         proj.project_name_en AS grouped_project, 
                         rooms_en, 
@@ -594,6 +620,7 @@ def get_area_details():
                         predictions.project_number = proj.project_number
                     WHERE
                         predictions.area_id = :area_id
+                        {project_type_condition_pred}
                     GROUP BY
                         pst.property_sub_type_en,proj.project_name_en, rooms_en, property_usage_en,instance_year;""")
             
@@ -613,7 +640,6 @@ def get_area_details():
 
         engine = create_engine(connection_url)
 
-        
         with engine.connect() as connection:
             df = pd.read_sql_query(sql_query, connection, params=params_)
 
@@ -768,14 +794,22 @@ def search():
         cur.close()
         conn.close()
 
-def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=None, rooms=None):
+def execute_DATE_PRICE_pairs_query(area_id,project_type, project=None, Usage=None, subtype=None, rooms=None):
     connection = get_db_connection()
     cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
 
-    base_query = """
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " AND p.project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " AND p.project_status_simple = 'F'"
+
+    base_query = f"""
        SELECT instance_date, meter_sale_price
        FROM transactions t
+       JOIN Projects p ON t.project_number = p.project_number
        WHERE t.area_id = %s AND t.instance_year >= 2014
+       {project_type_condition}
     """
     
     conditions = []
@@ -805,12 +839,18 @@ def execute_DATE_PRICE_pairs_query(area_id, project=None, Usage=None, subtype=No
     fetched_rows = cursor.fetchall()
     return fetched_rows
 
-def execute_project_demand_query(area_id):
+def execute_project_demand_query(area_id,project_type):
     connection = get_db_connection()
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
     
-    query = """
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " AND project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " AND project_status_simple = 'F'"
+
+    query = f"""
      SELECT 
     project_name_en AS project_name_en,
     internaldemand2024,
@@ -823,7 +863,7 @@ def execute_project_demand_query(area_id):
 FROM 
     projects 
 WHERE 
-    area_id = %s
+    area_id = %s {project_type_condition}
     AND (no_of_units > 60 OR no_of_villas>60);
     """
     try:
@@ -843,7 +883,8 @@ WHERE
 @app.route('/get-demand-per-project')
 def get_demand_per_project():
     area_id = request.args.get('area_id')
-    fetched_rows = execute_project_demand_query(area_id)
+    project_type = request.args.get('project_type')
+    fetched_rows = execute_project_demand_query(area_id,project_type)
     fetched_rows_json = jsonify(fetched_rows)
     return fetched_rows_json
 
@@ -1042,7 +1083,7 @@ def get_list_order():
 def generate_area_pdf():
     main_data = request.json['mainData'] #area or parcel data
     cursor_position = int(request.json['cP'])
-    
+    project_type = request.json['project_type']
     is_premium_user = check_premium_user()
 
     # Generate your PDF using area_data
@@ -1153,8 +1194,8 @@ def generate_area_pdf():
 
     if cursor_position ==0:
         if is_premium_user: 
-            monthly_trans_counts = execute_monthly_transaction_counts(main_data['area_id'])
-            monthly_RENT_counts = execute_monthly_RENTS_counts(main_data['area_id'])
+            monthly_trans_counts = execute_monthly_transaction_counts(main_data['area_id'],project_type)
+            monthly_RENT_counts = execute_monthly_RENTS_counts(main_data['area_id'],project_type)
             helper.new_page()
             trans_count_buffer = create_transaction_chart(monthly_trans_counts, title = 'Sales volume',chart_type='bar')
             helper.y -= 300
@@ -1314,16 +1355,51 @@ ON
         connection.close()
         return [legends, geojson, units]
     elif(position==0):
-        return fetch_dubai_areas_data()
+        project_type = session.get('project_type', "both")
+        return fetch_dubai_areas_data(project_type)
     
 
 
-def fetch_dubai_areas_data():
+def fetch_dubai_areas_data(project_type):
     is_premium_user = check_premium_user()
     connection = get_db_connection()
+
+    average_sale_price = "average_sale_price"
+    avg_ca_5 = "avg_ca_5"
+    avg_ca_10 = "avg_ca_10"
+    avg_roi = "avg_roi"
+    aquisitiondemand_2024 = "aquisitiondemand_2024"
+    rentaldemand_2024 = "rentaldemand_2024"
+    s_volume_last_12m = "s_volume_last_12m"
+    s_value_last_12m = "s_value_last_12m"
+    r_volume_last_12m = "r_volume_last_12m"
+    if project_type =="off-plan":
+        average_sale_price = "average_sale_price_offplan"
+        avg_ca_5 = "avg_ca_5_offplan"
+        avg_ca_10 = "avg_ca_10_offplan"
+        avg_roi = "avg_roi_offplan"
+        aquisitiondemand_2024 ="aquisitiondemand_2024_offplan"
+        rentaldemand_2024 = "rentaldemand_2024_offplan"
+        s_volume_last_12m = "s_volume_last_12m_offplan"
+        s_value_last_12m = "s_value_last_12m_offplan"
+        r_volume_last_12m = "r_volume_last_12m_offplan"
+    elif project_type =="finished":
+        average_sale_price = "average_sale_price_finished"
+        avg_ca_5 = "avg_ca_5_finished"
+        avg_ca_10 = "avg_ca_10_finished"
+        avg_roi = "avg_roi_finished"
+        aquisitiondemand_2024 = "aquisitiondemand_2024_finished"
+        rentaldemand_2024 = "rentaldemand_2024_finished"
+        s_volume_last_12m = "s_volume_last_12m_finished"
+        s_value_last_12m = "s_value_last_12m_finished"
+        r_volume_last_12m = "r_volume_last_12m_finished"
+
+
     #cursor = connection.cursor(dictionary=True) mysql
     cursor = connection.cursor(cursor_factory=RealDictCursor) #postgresql
-    cursor.execute('SELECT area_id, average_sale_price, avg_ca_5, avg_ca_10, avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, aquisitiondemand_2024,rentaldemand_2024,s_volume_last_12m,s_value_last_12m,r_volume_last_12m FROM areas')
+    query_sql = f'SELECT area_id, {average_sale_price} as average_sale_price, {avg_ca_5} as avg_ca_5, {avg_ca_10} as avg_ca_10, {avg_roi} as avg_roi, supply_finished_pro, supply_offplan_pro, supply_lands, {aquisitiondemand_2024} as aquisitiondemand_2024,{rentaldemand_2024} as rentaldemand_2024,{s_volume_last_12m} as s_volume_last_12m,{s_value_last_12m} as s_value_last_12m,{r_volume_last_12m} as r_volume_last_12m FROM areas'
+
+    cursor.execute(query_sql)
     fetched_rows = cursor.fetchall() 
 
     # Data processing functions for each key
@@ -1371,11 +1447,13 @@ def fetch_dubai_areas_data():
     valid_roi = [ro for ro in data_stores['avg_roi'].values() if ro is not None]
     valid_aquDemand = [aqd for aqd in data_stores['aquisitiondemand_2024'].values() if aqd is not None]
     valid_rentDemand = [rd for rd in data_stores['rentaldemand_2024'].values() if rd is not None]
+
     min_price, med_price, max_price = get_min_median_max(valid_prices)
     min_ca, med_ca, max_ca = get_min_median_max(valid_CA)
     min_roi, med_roi, max_roi = get_min_median_max(valid_roi)
     min_aqDemand,med_aqDemand, max_asDemand = get_min_median_max(valid_aquDemand)
     min_rentDemand,med_rentDemand, max_rentDemand = get_min_median_max(valid_rentDemand)
+
 
     legends = {
         "averageSalePrice": [round((med_price+min_price)/2), round(med_price), round(med_price+(max_price-med_price)/2.0)],
@@ -1570,14 +1648,19 @@ def fetch_dubai_areas_data():
 
 @app.before_request
 def initialize_dubai_areas_data():
+    if 'project_type' not in session:
+        session['project_type'] = "both"
     if 'dubai_areas_data' not in current_app.config:
-        current_app.config['dubai_areas_data'] = fetch_dubai_areas_data()
+        project_type = session.get('project_type', "both")
+        current_app.config['dubai_areas_data'] = fetch_dubai_areas_data(project_type)
+    
 
 @app.route('/dubai-areas')
 def dubai_areas():
     try:
         app.logger.info('we call dubai areas')
-        data_received = fetch_dubai_areas_data()
+        project_type = session.get('project_type', "both")
+        data_received = fetch_dubai_areas_data(project_type)
         return jsonify(data_received)
     except FileNotFoundError:
         return jsonify({'error': 'File not found'}), 404
@@ -1718,11 +1801,20 @@ def handle_request():
     data = request.get_json()
     connection = get_db_connection()
     cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
+    project_type = session.get('project_type', "both")
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " p.project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " p.project_status_simple = 'F'"
+
     base_query = """
     SELECT t.instance_date, t.grouped_project, t.property_type_en, pst.property_sub_type_en, 
            t.property_usage_en, t.rooms_en, t.building_name_en, t.meter_sale_price, t.actual_worth
     FROM transactions t
     JOIN propertysubtype pst ON t.property_sub_type_id = pst.property_sub_type_id
+    JOIN 
+    projects p ON t.project_number = p.project_number
     WHERE 
     """
     conditions = []
@@ -1735,7 +1827,8 @@ def handle_request():
         values.append(value)
 
     conditions.append("t.instance_date >= NOW() - INTERVAL '6 months'")
-
+    if project_type_condition != "":
+        conditions.append(project_type_condition)
     query = base_query + " AND ".join(conditions)
     query+="ORDER BY t.instance_date DESC LIMIT 50;"
     cursor.execute(query, tuple(values))
@@ -1769,6 +1862,14 @@ def handle_request():
 def recent_rent_contracts():
     data = request.get_json()
     connection = get_db_connection()
+
+    project_type = session.get('project_type', "both")
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " project_status_simple = 'F'"
+
     cursor = connection.cursor(cursor_factory=RealDictCursor)  # postgresql
     base_query = """
     SELECT t.contract_start_date, t.ejari_bus_property_type_en, t.rooms_en, pst.property_sub_type_en, 
@@ -1788,6 +1889,8 @@ def recent_rent_contracts():
         values.append(value)
 
     conditions.append("t.contract_start_date >= NOW() - INTERVAL '6 months'")
+    if project_type_condition != "":
+        conditions.append(project_type_condition)
 
     query = base_query + " AND ".join(conditions)
     query += " ORDER BY t.contract_start_date DESC LIMIT 50;"
@@ -1821,7 +1924,6 @@ def get_parcel_ids_from_projectId(project_id, cur):
         parcel_ids = [parcel[0] for parcel in parcels]
         return parcel_ids
     except Exception as e:
-        print(f"Error fetching parcel_ids: {str(e)}")
         return []
     
 @app.route('/get_parcels/<int:project_id>', methods=['GET'])
@@ -2200,7 +2302,7 @@ def generate_pdf():
         request_data = request.get_json()
         section = request_data['section']
         data = request_data['data']
-
+        project_type = request_data['project_type']
         area_data = request_data['area_data']
    
         means_data = request_data['data'].get('means', [{}])[0]
@@ -2209,11 +2311,11 @@ def generate_pdf():
         avg_roi = means_data.get('avg_roi', 'N/A')
         avg_meter_price = means_data.get('avg_meter_price_2014_2024', [])
         projected_ca = means_data.get('avgCapitalAppreciation2029', 'N/A')
-        project_demand_data = execute_project_demand_query(area_data['area_id'])
+        project_demand_data = execute_project_demand_query(area_data['area_id'],project_type)
 
         firstkeys = list(data.keys())
         if hierarchy_keys[0]=="grouped_project":
-            dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'], project=section)
+            dateprice_paires = execute_DATE_PRICE_pairs_query(area_data['area_id'],project_type, project=section)
             rooms_count_pairs = execute_unitsbyRooms_query(section)
             project_data = execute_projectInfo_query(section)
 

@@ -302,7 +302,7 @@ from datetime import datetime, timedelta
 
 from calendar import monthrange
 from psycopg2.extras import RealDictCursor
-def get_monthly_transaction_counts(connection, area_id):
+def get_monthly_transaction_counts(connection, area_id, project_type):
     # Get the last day of the previous month
     today = datetime.now().date()
     first_of_this_month = today.replace(day=1)
@@ -310,6 +310,12 @@ def get_monthly_transaction_counts(connection, area_id):
     
     cursor = connection.cursor(cursor_factory=RealDictCursor)
     
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " AND p.project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " AND p.project_status_simple = 'F'"
+
     results = []
     for i in range(12):
         year, month = (last_of_previous_month.year, last_of_previous_month.month)
@@ -318,12 +324,13 @@ def get_monthly_transaction_counts(connection, area_id):
         start_date = datetime(year, month, 1).date()
         end_date = datetime(year, month, last_day).date()
         
-        query = """
+        query = f"""
         SELECT COUNT(*) as count
         FROM transactions
+        JOIN Projects p ON t.project_number = p.project_number
         WHERE area_id = %s
           AND instance_date >= %s
-          AND instance_date <= %s
+          AND instance_date <= %s {project_type_condition}
         """
         
         cursor.execute(query, (area_id, start_date, end_date))
@@ -343,12 +350,18 @@ def get_monthly_transaction_counts(connection, area_id):
     return results[::-1]  # Reverse the list to have the oldest month first
 
 
-def get_monthly_rents_counts(connection, area_id):
+def get_monthly_rents_counts(connection, area_id, project_type):
     # Get the last day of the previous month
     today = datetime.now().date()
     first_of_this_month = today.replace(day=1)
     last_of_previous_month = first_of_this_month - timedelta(days=1)
     
+    project_type_condition = ""
+    if project_type =="off-plan":
+        project_type_condition = " AND project_status_simple = 'O'"
+    elif project_type =="finished":
+        project_type_condition = " AND project_status_simple = 'F'"
+
     cursor = connection.cursor(cursor_factory=RealDictCursor)
     
     results = []
@@ -359,12 +372,12 @@ def get_monthly_rents_counts(connection, area_id):
         start_date = datetime(year, month, 1).date()
         end_date = datetime(year, month, last_day).date()
         
-        query = """
+        query = f"""
         SELECT COUNT(*) as count
         FROM base_table 
         WHERE trans_or_rent = 'R' AND area_id = %s
           AND contract_start_date >= %s
-          AND contract_start_date <= %s
+          AND contract_start_date <= %s {project_type_condition}
         """
         
         cursor.execute(query, (area_id, start_date, end_date))
@@ -392,18 +405,18 @@ def get_db_connection():
     connection = psycopg2.connect(DATABASE_URL)
     return connection
 
-def execute_monthly_transaction_counts(area_id):
+def execute_monthly_transaction_counts(area_id,project_type):
     connection = get_db_connection()  # Assuming you have this function defined
     try:
-        monthly_counts = get_monthly_transaction_counts(connection, area_id)
+        monthly_counts = get_monthly_transaction_counts(connection, area_id, project_type)
         return monthly_counts
     finally:
         connection.close()
 
-def execute_monthly_RENTS_counts(area_id):
+def execute_monthly_RENTS_counts(area_id,project_type):
     connection = get_db_connection()  # Assuming you have this function defined
     try:
-        monthly_counts = get_monthly_rents_counts(connection, area_id)
+        monthly_counts = get_monthly_rents_counts(connection, area_id, project_type)
         return monthly_counts
     finally:
         connection.close()
