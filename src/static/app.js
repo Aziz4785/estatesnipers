@@ -128,7 +128,7 @@ else
 {
     cursorPosition = Math.min(position, maxPosition);
     cursor.style.top = `${cursorPosition * 35}px`;
-    openModal('Unlock project view and more for $49.99');
+    openModal('Unlock project view and more for $19.99');
     cursorPosition = 0;
     cursor.style.top = `${cursorPosition * 35}px`;
 }
@@ -1049,6 +1049,7 @@ function onEachFeature(feature, layer) {
         layersByParcelId[parcelId] = layer; // Store layer by area_id
         layer.on({
             click: function(e) {
+                //console.log("layer : ",layer)
                 highlightFeature(e);
                 updateParcelInfo(feature);
             }
@@ -1059,6 +1060,7 @@ function onEachFeature(feature, layer) {
 }
 
 function updateParcelInfo(feature) {
+    console.log("feature : ",feature)
     mainTableBody.innerHTML = ''; // Clear existing rows
     setCurrentParcelId(feature.properties.parcel_id);
     // Create a copy of feature.properties without the "geometry" property
@@ -1655,7 +1657,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if(unlockButtonTable)
     {
         unlockButtonTable.onclick = function() {
-        openModal('Unlock all projects Today for $49.99');
+        openModal('Unlock all projects Today for $19.99');
         };
     }
 

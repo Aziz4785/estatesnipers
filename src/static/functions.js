@@ -241,7 +241,7 @@ function openTab_v2(evt, tabName) {
 }
 
  function showPremiumMessage() {
-    openModal('Access all content today for $49.99');
+    openModal('Access all content today for $19.99');
 }
 
 // Helper function to get the parent row attribute based on the parent row ID
@@ -486,7 +486,7 @@ function createCard(cardInfo) {
       lockIcon.height = 40;
       lockIcon.style.cursor = 'pointer';
       lockIcon.addEventListener('click', () => {
-        openModal('Unlock all details Today for $49.99');
+        openModal('Unlock all details Today for $19.99');
       });
       lockIconCard.appendChild(lockIcon);
       card.appendChild(lockIconCard);
